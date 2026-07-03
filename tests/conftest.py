@@ -10,7 +10,12 @@ from __future__ import annotations
 import pytest
 
 from veritascore.core.config import EngineConfig, ModelConfig, SearchConfig
-from veritascore.core.types import Claim, ClaimVerdict, Verdict, VerificationMode
+from veritascore.core.types import (
+    Claim,
+    ClaimVerdict,
+    Verdict,
+    VerificationMode,
+)
 
 
 # ── Config Fixtures ───────────────────────────────────────────────────────────

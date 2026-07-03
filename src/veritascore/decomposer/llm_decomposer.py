@@ -156,7 +156,7 @@ class LLMDecomposer(BaseDecomposer):
     def _load_ollama(self) -> None:
         """Verify Ollama server is reachable and model is available."""
         try:
-            import ollama  # type: ignore[import]
+            import ollama  # noqa: F811
         except ImportError as e:
             raise ModelLoadError(
                 "Ollama backend requires 'ollama' package: pip install ollama[dev]"
@@ -204,11 +204,12 @@ class LLMDecomposer(BaseDecomposer):
 
         # Decode only the newly generated tokens
         generated_ids = outputs[0][inputs.shape[1]:]
-        return self._tokenizer.decode(generated_ids, skip_special_tokens=True)
+        result: str = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
+        return result
 
     def _generate_ollama(self, messages: list[dict[str, str]]) -> str:
         """Run inference with Ollama."""
-        import ollama  # type: ignore[import]
+        import ollama  # noqa: F811
 
         response = ollama.chat(
             model=self.config.models.decomposer_model,
@@ -219,7 +220,8 @@ class LLMDecomposer(BaseDecomposer):
                 "num_predict": _MAX_NEW_TOKENS,
             },
         )
-        return response["message"]["content"]
+        result: str = response["message"]["content"]
+        return result
 
     def _generate(self, messages: list[dict[str, str]]) -> str:
         """Route to the appropriate backend for generation."""
