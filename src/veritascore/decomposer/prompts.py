@@ -16,10 +16,117 @@ from __future__ import annotations
 
 # ── Version Registry ──────────────────────────────────────────────────────────
 
-DECOMPOSITION_VERSION = "v2"   # Bump when making substantive prompt changes
+DECOMPOSITION_VERSION = "v3"   # Bump when making substantive prompt changes
 
 
-# ── v2 Prompts (current) ──────────────────────────────────────────────────────
+# ── v3 Prompts (current — improved accuracy) ──────────────────────────────────
+
+_SYSTEM_V3 = """\
+You are a precise fact extraction system. Extract atomic factual claims from text.
+
+RULES:
+1. If a sentence states ONE fact, output it as ONE claim. Do NOT split a single fact into parts.
+   Example — "Photosynthesis converts sunlight into chemical energy." → ONE claim, not three.
+   Example — "Mount Everest is the tallest mountain in the world." → ONE claim.
+   Example — "Penguins are flightless birds." → ONE claim (do NOT split into "Penguins are birds" and "Penguins cannot fly").
+2. If a sentence contains MULTIPLE distinct facts joined by "and", "but", "while", or a semicolon, split them.
+3. Each claim must be SELF-CONTAINED: replace pronouns with the full name.
+4. SKIP opinions, beliefs, subjective assessments, and hedged statements.
+   Skip sentences containing: "I think", "I believe", "in my opinion", "it seems", "arguably", "reportedly", "probably", "perhaps", "maybe", "personally".
+5. SKIP questions, commands, and non-factual statements.
+6. SKIP code blocks and programming syntax.
+7. Preserve all numbers, dates, units, and proper nouns exactly.
+8. Output ONLY numbered claims (1. 2. 3.). No preamble, no explanation, no commentary.
+9. If there are NO factual claims, output exactly: NONE
+
+EXAMPLES:
+
+Input: "The Pacific Ocean is the largest ocean on Earth."
+Output:
+1. The Pacific Ocean is the largest ocean on Earth
+
+Input: "Penguins are flightless birds."
+Output:
+1. Penguins are flightless birds
+
+Input: "In machine learning, a convolutional neural network uses convolutional layers to extract spatial features from images."
+Output:
+1. A convolutional neural network uses convolutional layers to extract spatial features from images
+
+Input: "In statistics, a p-value below 0.05 is commonly used as a threshold for statistical significance."
+Output:
+1. A p-value below 0.05 is commonly used as a threshold for statistical significance
+
+Input: "The temperature ranged from -10°C to 35°C throughout the year."
+Output:
+1. The temperature ranged from -10°C to 35°C throughout the year
+
+Input: "Marie Curie was born in Warsaw, Poland on November 7, 1867, and she won Nobel Prizes in both Physics and Chemistry."
+Output:
+1. Marie Curie was born in Warsaw, Poland
+2. Marie Curie was born on November 7, 1867
+3. Marie Curie won a Nobel Prize in Physics
+4. Marie Curie won a Nobel Prize in Chemistry
+
+Input: "I think climate change is a serious issue. Global average temperatures have risen by approximately 1.1°C since pre-industrial times."
+Output:
+1. Global average temperatures have risen by approximately 1.1°C since pre-industrial times
+
+Input: "Arguably, Beethoven was the greatest composer in history. Beethoven composed nine symphonies during his lifetime."
+Output:
+1. Beethoven composed nine symphonies during his lifetime
+
+Input: "In my opinion, the new policy is unfair. The policy was implemented on January 1, 2024."
+Output:
+1. The policy was implemented on January 1, 2024
+
+Input: "It seems like electric cars are becoming more popular. Electric vehicle sales increased by 35% in 2023."
+Output:
+1. Electric vehicle sales increased by 35% in 2023
+
+Input: "The Wright brothers, Orville and Wilbur, achieved the first powered flight in 1903 near Kitty Hawk, North Carolina."
+Output:
+1. The Wright brothers achieved the first powered flight in 1903
+2. The first powered flight occurred near Kitty Hawk, North Carolina
+
+Input: "Blockchain technology uses cryptographic hashing to link blocks of data, and each block contains a hash of the previous block."
+Output:
+1. Blockchain technology uses cryptographic hashing to link blocks of data
+2. Each block contains a hash of the previous block
+
+Input: "Big-O notation describes the upper bound of an algorithm's time complexity, and O(n log n) is the complexity of efficient sorting algorithms like mergesort."
+Output:
+1. Big-O notation describes the upper bound of an algorithm's time complexity
+2. O(n log n) is the complexity of efficient sorting algorithms like mergesort
+
+Input: "DNA consists of four nucleotide bases: adenine, thymine, guanine, and cytosine."
+Output:
+1. DNA consists of four nucleotide bases: adenine, thymine, guanine, and cytosine
+
+Input: "REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations."
+Output:
+1. REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations
+
+Input: "What time is it?"
+Output:
+NONE
+
+Input: "def add(a, b):\\n    return a + b"
+Output:
+NONE
+"""
+
+_USER_V3 = """\
+{context_block}Extract atomic factual claims from this text. Output ONLY numbered claims, or NONE if no facts exist.
+
+Text:
+\"\"\"
+{response_text}
+\"\"\"
+"""
+
+
+# ── v2 Prompts ────────────────────────────────────────────────────────────────
 
 _SYSTEM_V2 = """\
 You are a precise fact extraction system. Your task is to decompose a given text \
@@ -130,6 +237,7 @@ Output each claim on a separate line, numbered (1. 2. 3. etc.):"""
 _VERSIONS: dict[str, tuple[str, str]] = {
     "v1": (_SYSTEM_V1, _USER_V1),
     "v2": (_SYSTEM_V2, _USER_V2),
+    "v3": (_SYSTEM_V3, _USER_V3),
 }
 
 
@@ -139,7 +247,7 @@ def get_system_prompt(version: str = DECOMPOSITION_VERSION) -> str:
     """Return the system prompt for a given version.
 
     Args:
-        version: Prompt version string (e.g. "v2").
+        version: Prompt version string (e.g. "v3").
 
     Returns:
         System prompt string.

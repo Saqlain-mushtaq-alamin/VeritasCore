@@ -9,7 +9,9 @@ Key design decisions:
     - Supports Ollama as an alternative backend (no HuggingFace Transformers)
     - unload() frees GPU memory so the NLI model (Phase 2) can be loaded
     - Falls back to RuleDecomposer on LLM failure if fallback_on_error=True
-    - Temperature=0.1 for deterministic, consistent extraction
+    - Temperature=0.0 for deterministic, consistent extraction
+    - Pre-filtering skips non-factual inputs before invoking the LLM
+    - Post-filtering removes opinion/hedge claims from LLM output
 
 Memory note:
     Phi-3-mini-4k-instruct in float16 ≈ 4GB VRAM.
@@ -43,16 +45,50 @@ logger = logging.getLogger(__name__)
 _NUMBERED_LINE = re.compile(r'^\s*\d+[.)]\s*(.+)$')
 
 # Maximum tokens to generate for the claim list
-_MAX_NEW_TOKENS = 1024
+# Reduced from 1024 to prevent rambling / hallucinated outputs
+_MAX_NEW_TOKENS = 512
 
-# Generation parameters
+# Generation parameters — deterministic (temperature=0)
 _GENERATION_KWARGS: dict[str, Any] = {
     "max_new_tokens": _MAX_NEW_TOKENS,
-    "temperature": 0.1,
-    "do_sample": True,
-    "top_p": 0.9,
-    "repetition_penalty": 1.1,
+    "temperature": 0.0,
+    "do_sample": False,
+    "repetition_penalty": 1.15,
 }
+
+# ── Pre-filtering constants ──────────────────────────────────────────────────
+
+# Minimum text length to send to LLM (shorter inputs bypass to rule-based)
+_MIN_LLM_INPUT_LENGTH = 5
+
+# Pattern to detect code blocks
+_CODE_PATTERN = re.compile(
+    r'^\s*(?:def |class |import |from |if |for |while |return |'
+    r'print\(|console\.|var |let |const |function |public |private |'
+    r'#include|#define|package |using |namespace )',
+    re.MULTILINE,
+)
+
+# Pattern to detect if text is purely a question
+_PURE_QUESTION = re.compile(
+    r'^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did'
+    r'|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$',
+    re.IGNORECASE,
+)
+
+# ── Post-filtering constants ─────────────────────────────────────────────────
+
+# Hedge/opinion words in generated claims that should be filtered
+_HEDGE_WORDS: frozenset[str] = frozenset([
+    "probably", "perhaps", "possibly", "maybe", "arguably",
+    "reportedly", "allegedly", "supposedly", "presumably",
+])
+
+# Claim-level opinion prefixes (case-insensitive start-of-claim)
+_OPINION_CLAIM_PREFIXES: tuple[str, ...] = (
+    "i think", "i believe", "i feel", "in my opinion",
+    "in my view", "personally", "it seems", "it appears",
+)
 
 
 class LLMDecomposer(BaseDecomposer):
@@ -184,6 +220,52 @@ class LLMDecomposer(BaseDecomposer):
             self._load_ollama()
         self._loaded = True
 
+    # ── Pre-filtering ─────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _should_skip_input(text: str) -> bool:
+        """Check if the input should be skipped entirely (no LLM call needed).
+
+        Returns True for:
+            - Very short text (< 5 chars)
+            - Code blocks / programming syntax
+            - Pure questions with no factual content
+            - Single non-factual words (e.g. "Yes.", "No.", "OK.")
+
+        Args:
+            text: Input text to check.
+
+        Returns:
+            True if the input has no factual content worth decomposing.
+        """
+        stripped = text.strip()
+
+        # Too short to contain a meaningful fact
+        if len(stripped) < _MIN_LLM_INPUT_LENGTH:
+            return True
+
+        # Pure code block
+        if _CODE_PATTERN.search(stripped) and not any(
+            c.isalpha() and c.isupper() for c in stripped[:50]
+            if not stripped[:50].startswith(("def ", "class ", "import "))
+        ):
+            # Heuristic: if it looks like code throughout, skip
+            lines = stripped.splitlines()
+            code_lines = sum(1 for line in lines if _CODE_PATTERN.match(line))
+            if code_lines >= len(lines) * 0.5:
+                return True
+
+        # Pure question (single sentence ending with ?)
+        if _PURE_QUESTION.match(stripped):
+            return True
+
+        # Single word / very short non-factual response
+        words = stripped.rstrip(".!?").split()
+        if len(words) <= 1:
+            return True
+
+        return False
+
     # ── Inference ─────────────────────────────────────────────────────────────
 
     def _generate_transformers(self, messages: list[dict[str, str]]) -> str:
@@ -215,8 +297,8 @@ class LLMDecomposer(BaseDecomposer):
             model=self.config.models.decomposer_model,
             messages=messages,
             options={
-                "temperature": _GENERATION_KWARGS["temperature"],
-                "top_p": _GENERATION_KWARGS["top_p"],
+                "temperature": 0.0,
+                "top_p": 0.9,
                 "num_predict": _MAX_NEW_TOKENS,
             },
         )
@@ -237,6 +319,7 @@ class LLMDecomposer(BaseDecomposer):
 
         Accepts formats: "1. claim text", "1) claim text", " 1. claim text"
         Filters trivially short outputs (< 8 chars).
+        Handles the "NONE" sentinel for no-claims case.
 
         Args:
             text: Raw LLM generation string.
@@ -244,8 +327,13 @@ class LLMDecomposer(BaseDecomposer):
         Returns:
             List of clean claim strings.
         """
+        # Check for the "NONE" sentinel (no factual claims)
+        stripped = text.strip()
+        if stripped.upper() in ("NONE", "NONE."):
+            return []
+
         claims: list[str] = []
-        for line in text.strip().splitlines():
+        for line in stripped.splitlines():
             match = _NUMBERED_LINE.match(line)
             if match:
                 claim_text = match.group(1).strip()
@@ -254,6 +342,52 @@ class LLMDecomposer(BaseDecomposer):
                 if len(claim_text) >= 8:
                     claims.append(claim_text)
         return claims
+
+    # ── Post-filtering ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _filter_claims(raw_claims: list[str]) -> list[str]:
+        """Post-filter claims to remove opinions and hedged statements.
+
+        The LLM sometimes lets opinion/hedge claims slip through despite
+        instructions. This catches them deterministically.
+
+        Args:
+            raw_claims: Claims parsed from LLM output.
+
+        Returns:
+            Filtered list of factual claims.
+        """
+        filtered: list[str] = []
+        for claim in raw_claims:
+            claim_lower = claim.lower().strip()
+
+            # Skip opinion-prefixed claims
+            if any(claim_lower.startswith(prefix) for prefix in _OPINION_CLAIM_PREFIXES):
+                logger.debug("Post-filter: skipped opinion claim: %s", claim[:60])
+                continue
+
+            # Skip claims containing hedge words
+            words = set(re.findall(r'\b\w+\b', claim_lower))
+            if words & _HEDGE_WORDS:
+                logger.debug("Post-filter: skipped hedged claim: %s", claim[:60])
+                continue
+
+            # Skip claims that are absurdly long (hallucinated/rambling)
+            # A well-formed atomic claim should rarely exceed 200 chars
+            if len(claim) > 300:
+                logger.debug("Post-filter: skipped over-long claim: %s", claim[:60])
+                continue
+
+            filtered.append(claim)
+
+        if len(filtered) < len(raw_claims):
+            logger.info(
+                "Post-filter: %d → %d claims (removed %d)",
+                len(raw_claims), len(filtered), len(raw_claims) - len(filtered),
+            )
+
+        return filtered
 
     # ── Public Interface ──────────────────────────────────────────────────────
 
@@ -275,6 +409,14 @@ class LLMDecomposer(BaseDecomposer):
             DecompositionError: If decomposition fails and fallback_on_error=False.
         """
         if not response_text or not response_text.strip():
+            return []
+
+        # Pre-filter: skip inputs that clearly have no factual content
+        if self._should_skip_input(response_text):
+            logger.info(
+                "Pre-filter: input skipped (non-factual or too short): '%s'",
+                response_text[:60],
+            )
             return []
 
         # Enforce max-claims limit from config
@@ -299,6 +441,9 @@ class LLMDecomposer(BaseDecomposer):
 
             # Parse numbered claims from the output
             raw_claims = self._parse_numbered_claims(raw_output)
+
+            # Post-filter: remove opinions, hedges, and rambling
+            raw_claims = self._filter_claims(raw_claims)
 
             if not raw_claims:
                 logger.warning(
