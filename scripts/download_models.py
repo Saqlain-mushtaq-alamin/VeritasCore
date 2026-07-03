@@ -36,7 +36,7 @@ def check_gpu() -> bool:
         return False
 
     gpu_name = torch.cuda.get_device_name(0)
-    vram_gb = torch.cuda.get_device_properties(0).total_mem / (1024**3)
+    vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
     cuda_ver = torch.version.cuda
     print(f"✓  GPU: {gpu_name} ({vram_gb:.1f} GB VRAM, CUDA {cuda_ver})")
     return True
