@@ -44,16 +44,18 @@ logger = logging.getLogger(__name__)
 # Regex to parse numbered claim lines: "1. text" or "1) text"
 _NUMBERED_LINE = re.compile(r'^\s*\d+[.)]\s*(.+)$')
 
-# Maximum tokens to generate for the claim list
-# Reduced from 1024 to prevent rambling / hallucinated outputs
-_MAX_NEW_TOKENS = 512
+# Regex for dash/bullet list lines: "- text" or "* text"
+_BULLET_LINE = re.compile(r'^\s*[-*•]\s*(.+)$')
+
+# Maximum tokens to generate for the claim list.
+# 384 tokens is sufficient for ~15 atomic claims with pronoun-resolved text.
+_MAX_NEW_TOKENS = 384
 
 # Generation parameters — deterministic (temperature=0)
 _GENERATION_KWARGS: dict[str, Any] = {
     "max_new_tokens": _MAX_NEW_TOKENS,
-    "temperature": 0.0,
     "do_sample": False,
-    "repetition_penalty": 1.15,
+    "repetition_penalty": 1.1,
 }
 
 # ── Pre-filtering constants ──────────────────────────────────────────────────
@@ -78,16 +80,31 @@ _PURE_QUESTION = re.compile(
 
 # ── Post-filtering constants ─────────────────────────────────────────────────
 
-# Hedge/opinion words in generated claims that should be filtered
-_HEDGE_WORDS: frozenset[str] = frozenset([
-    "probably", "perhaps", "possibly", "maybe", "arguably",
-    "reportedly", "allegedly", "supposedly", "presumably",
-])
+# Hedge/opinion words that indicate a claim is subjective ONLY when they are
+# at the BEGINNING of the claim (sentence-level hedges), NOT when embedded
+# inside a factual statement (e.g. "approximately 300,000 km/s" is factual).
+#
+# We match these only at claim-start to avoid falsely dropping legitimate
+# claims like "Solar panel costs dropped by about 90%".
+_SENTENCE_HEDGE_STARTERS: tuple[str, ...] = (
+    "probably ", "perhaps ", "possibly ", "maybe ", "arguably ",
+    "supposedly ", "presumably ",
+)
 
 # Claim-level opinion prefixes (case-insensitive start-of-claim)
 _OPINION_CLAIM_PREFIXES: tuple[str, ...] = (
     "i think", "i believe", "i feel", "in my opinion",
     "in my view", "personally", "it seems", "it appears",
+)
+
+# Preamble / apology patterns the model sometimes outputs before actual claims.
+# We strip lines matching these before attempting to parse numbered items.
+_APOLOGY_LINE = re.compile(
+    r'^\s*(?:i apologize|i\'m sorry|since i am|since we need|'
+    r'based upon your|here (?:is|are) the|to address your|'
+    r'since your instruction|please note|note that|'
+    r'unfortunately|as per your)',
+    re.IGNORECASE,
 )
 
 
@@ -145,7 +162,13 @@ class LLMDecomposer(BaseDecomposer):
         return device
 
     def _load_transformers(self) -> None:
-        """Load model via HuggingFace Transformers."""
+        """Load model via HuggingFace Transformers.
+
+        Uses float16 with device_map='auto' on CUDA, which may offload some
+        layers to CPU on 8GB GPUs. While slower than full-GPU inference, this
+        preserves instruction-following quality which degrades with 4-bit
+        quantization on Phi-3-mini.
+        """
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
@@ -154,22 +177,20 @@ class LLMDecomposer(BaseDecomposer):
         t0 = time.time()
 
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(
-                model_name,
-                trust_remote_code=True,
-            )
+            self._tokenizer = AutoTokenizer.from_pretrained(model_name)
 
             self._device = self._resolve_device()
-            dtype = torch.float16 if self._device != "cpu" else torch.float32
 
             load_kwargs: dict[str, Any] = {
-                "torch_dtype": dtype,
-                "trust_remote_code": True,
+                "attn_implementation": "eager",
             }
-            if self._device == "cpu":
-                load_kwargs["device_map"] = None
-            else:
+
+            if self._device != "cpu":
+                load_kwargs["torch_dtype"] = torch.float16
                 load_kwargs["device_map"] = "auto"
+            else:
+                load_kwargs["torch_dtype"] = torch.float32
+                load_kwargs["device_map"] = None
 
             self._model = AutoModelForCausalLM.from_pretrained(
                 model_name, **load_kwargs
@@ -272,20 +293,43 @@ class LLMDecomposer(BaseDecomposer):
         """Run inference with HuggingFace Transformers."""
         import torch
 
-        inputs = self._tokenizer.apply_chat_template(
+        # Two-step approach: render chat template to text, then tokenize.
+        # This is more reliable across transformers versions than using
+        # apply_chat_template with return_tensors directly.
+        prompt_text = self._tokenizer.apply_chat_template(
             messages,
-            return_tensors="pt",
+            tokenize=False,
             add_generation_prompt=True,
         )
 
+        encoded = self._tokenizer(
+            prompt_text,
+            return_tensors="pt",
+            return_attention_mask=True,
+        )
+
+        input_ids = encoded.input_ids
+        attention_mask = encoded.attention_mask
+
         if self._device != "cpu":
-            inputs = inputs.to(self._device)
+            input_ids = input_ids.to(self._device)
+            attention_mask = attention_mask.to(self._device)
+
+        prompt_len = input_ids.shape[1]
+
+        gen_kwargs = dict(_GENERATION_KWARGS)
+        gen_kwargs["attention_mask"] = attention_mask
+
+        # Suppress pad_token warning — use eos as pad for open-ended generation
+        eos_id = self._tokenizer.eos_token_id
+        if eos_id is not None:
+            gen_kwargs["pad_token_id"] = eos_id
 
         with torch.no_grad():
-            outputs = self._model.generate(inputs, **_GENERATION_KWARGS)
+            outputs = self._model.generate(input_ids, **gen_kwargs)
 
         # Decode only the newly generated tokens
-        generated_ids = outputs[0][inputs.shape[1]:]
+        generated_ids = outputs[0][prompt_len:]
         result: str = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
         return result
 
@@ -318,8 +362,11 @@ class LLMDecomposer(BaseDecomposer):
         """Parse numbered claim lines from LLM output.
 
         Accepts formats: "1. claim text", "1) claim text", " 1. claim text"
+        Also accepts dash/bullet lists as a fallback: "- claim", "* claim"
         Filters trivially short outputs (< 8 chars).
         Handles the "NONE" sentinel for no-claims case.
+        Strips markdown code fences that some models wrap output in.
+        Strips leading apology/preamble lines before looking for numbered items.
 
         Args:
             text: Raw LLM generation string.
@@ -327,13 +374,35 @@ class LLMDecomposer(BaseDecomposer):
         Returns:
             List of clean claim strings.
         """
+        # Strip markdown code fences (```plaintext, ```text, ``` etc.)
+        stripped = re.sub(
+            r'```(?:plaintext|text|markdown)?\s*\n?', '', text
+        ).strip()
+        # Strip closing fence
+        stripped = re.sub(r'\n?```\s*$', '', stripped).strip()
+
         # Check for the "NONE" sentinel (no factual claims)
-        stripped = text.strip()
         if stripped.upper() in ("NONE", "NONE."):
             return []
 
+        # Remove leading apology / preamble lines so numbered items are reachable
+        lines_raw = stripped.splitlines()
+        lines: list[str] = []
+        found_first_claim = False
+        for line in lines_raw:
+            if not found_first_claim:
+                # Skip apology lines that appear before the first numbered claim
+                if _APOLOGY_LINE.match(line):
+                    logger.debug("Parser: stripped preamble line: %s", line[:80])
+                    continue
+                # Once we see a numbered or bullet line, start collecting
+                if _NUMBERED_LINE.match(line) or _BULLET_LINE.match(line):
+                    found_first_claim = True
+            lines.append(line)
+
+        # ── Pass 1: numbered lines ────────────────────────────────────────────
         claims: list[str] = []
-        for line in stripped.splitlines():
+        for line in lines:
             match = _NUMBERED_LINE.match(line)
             if match:
                 claim_text = match.group(1).strip()
@@ -341,16 +410,31 @@ class LLMDecomposer(BaseDecomposer):
                 claim_text = claim_text.rstrip(".")
                 if len(claim_text) >= 8:
                     claims.append(claim_text)
+
+        if claims:
+            return claims
+
+        # ── Pass 2: bullet / dash list fallback ──────────────────────────────
+        for line in lines:
+            match = _BULLET_LINE.match(line)
+            if match:
+                claim_text = match.group(1).strip().rstrip(".")
+                if len(claim_text) >= 8:
+                    claims.append(claim_text)
+
         return claims
 
     # ── Post-filtering ────────────────────────────────────────────────────────
 
     @staticmethod
     def _filter_claims(raw_claims: list[str]) -> list[str]:
-        """Post-filter claims to remove opinions and hedged statements.
+        """Post-filter claims to remove opinions and sentence-level hedges.
 
-        The LLM sometimes lets opinion/hedge claims slip through despite
-        instructions. This catches them deterministically.
+        KEY CHANGE from v3: hedge words (probably, perhaps, etc.) are only
+        filtered when they appear at the BEGINNING of a claim, indicating a
+        sentence-level hedge. Embedded qualifiers like "approximately",
+        "about", "commonly", "generally", "typically" are preserved because
+        they are part of verifiable factual statements.
 
         Args:
             raw_claims: Claims parsed from LLM output.
@@ -367,15 +451,17 @@ class LLMDecomposer(BaseDecomposer):
                 logger.debug("Post-filter: skipped opinion claim: %s", claim[:60])
                 continue
 
-            # Skip claims containing hedge words
-            words = set(re.findall(r'\b\w+\b', claim_lower))
-            if words & _HEDGE_WORDS:
-                logger.debug("Post-filter: skipped hedged claim: %s", claim[:60])
+            # Skip claims that START with a sentence-level hedge word
+            # (e.g. "Probably the most important..." or "Perhaps Einstein...")
+            # but NOT claims that merely CONTAIN embedded qualifiers
+            # (e.g. "Solar costs dropped by approximately 90%")
+            if any(claim_lower.startswith(hedge) for hedge in _SENTENCE_HEDGE_STARTERS):
+                logger.debug("Post-filter: skipped sentence-hedge claim: %s", claim[:60])
                 continue
 
             # Skip claims that are absurdly long (hallucinated/rambling)
-            # A well-formed atomic claim should rarely exceed 200 chars
-            if len(claim) > 300:
+            # A well-formed atomic claim should rarely exceed 300 chars
+            if len(claim) > 350:
                 logger.debug("Post-filter: skipped over-long claim: %s", claim[:60])
                 continue
 
@@ -442,7 +528,7 @@ class LLMDecomposer(BaseDecomposer):
             # Parse numbered claims from the output
             raw_claims = self._parse_numbered_claims(raw_output)
 
-            # Post-filter: remove opinions, hedges, and rambling
+            # Post-filter: remove opinions and sentence-level hedges
             raw_claims = self._filter_claims(raw_claims)
 
             if not raw_claims:

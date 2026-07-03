@@ -16,10 +16,121 @@ from __future__ import annotations
 
 # ── Version Registry ──────────────────────────────────────────────────────────
 
-DECOMPOSITION_VERSION = "v3"   # Bump when making substantive prompt changes
+DECOMPOSITION_VERSION = "v4"   # Bump when making substantive prompt changes
 
 
-# ── v3 Prompts (current — improved accuracy) ──────────────────────────────────
+# ── v4 Prompts (current — maximum accuracy + minimum latency) ─────────────────
+#
+# Design goals for v4:
+#   - Extremely short system prompt to reduce Phi-3-mini confusion
+#   - Explicit "DO NOT apologize or explain" to kill preamble text
+#   - Hedge-word filtering moved to post-processing; prompt now KEEPS facts
+#     that contain "approximately", "about", "commonly" (factual qualifiers)
+#   - Representative few-shots that cover EVERY failure category from v3:
+#       * opinion+fact mixing  (samples 21-30)
+#       * technical single-fact (samples 31, 37, 38)
+#       * compound "and" splitting (samples 11-17)
+#       * edge cases: code, empty, question (samples 41-50)
+
+_SYSTEM_V4 = """\
+You extract atomic facts from text. Output ONLY a numbered list of claims.
+
+RULES:
+1. One fact per line. Split compound sentences joined by "and", "but", "while", "whereas", or a semicolon.
+2. Keep pronouns resolved: use the full name, not "he", "she", "it", "they".
+3. Skip opinions, beliefs, and predictions: "I think", "I believe", "in my opinion", "it seems", "arguably", "personally".
+4. Skip questions and commands.
+5. Skip code blocks.
+6. Keep factual qualifiers intact: "approximately", "about", "commonly", "generally", "typically".
+7. If no facts exist, output exactly: NONE
+8. DO NOT apologize, explain, or add any commentary. Output ONLY numbered claims or NONE.
+
+EXAMPLES:
+
+Input: "The Pacific Ocean is the largest ocean on Earth."
+Output:
+1. The Pacific Ocean is the largest ocean on Earth
+
+Input: "Jupiter is the largest planet in the solar system and has at least 95 known moons."
+Output:
+1. Jupiter is the largest planet in the solar system
+2. Jupiter has at least 95 known moons
+
+Input: "Albert Einstein was born in Ulm, Germany on March 14, 1879. He developed the theory of special relativity in 1905 and the theory of general relativity in 1915."
+Output:
+1. Albert Einstein was born in Ulm, Germany
+2. Albert Einstein was born on March 14, 1879
+3. Albert Einstein developed the theory of special relativity in 1905
+4. Albert Einstein developed the theory of general relativity in 1915
+
+Input: "Marie Curie was born in Warsaw, Poland on November 7, 1867, and she won Nobel Prizes in both Physics and Chemistry."
+Output:
+1. Marie Curie was born in Warsaw, Poland
+2. Marie Curie was born on November 7, 1867
+3. Marie Curie won a Nobel Prize in Physics
+4. Marie Curie won a Nobel Prize in Chemistry
+
+Input: "I think Python is the best language. Python was created in 1991 by Guido van Rossum."
+Output:
+1. Python was created in 1991 by Guido van Rossum
+
+Input: "Climate change is probably the biggest challenge. Global temperatures have risen by 1.1 degrees Celsius since pre-industrial times."
+Output:
+1. Global temperatures have risen by 1.1 degrees Celsius since pre-industrial times
+
+Input: "Arguably, Beethoven was the greatest composer. Beethoven composed nine symphonies during his lifetime."
+Output:
+1. Beethoven composed nine symphonies during his lifetime
+
+Input: "The speed of light is approximately 300,000 kilometers per second."
+Output:
+1. The speed of light is approximately 300,000 kilometers per second
+
+Input: "In statistics, a p-value below 0.05 is commonly used as a threshold for statistical significance."
+Output:
+1. A p-value below 0.05 is commonly used as a threshold for statistical significance
+
+Input: "REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations."
+Output:
+1. REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations
+
+Input: "Big-O notation describes the upper bound of an algorithm's time complexity, and O(n log n) is the complexity of efficient sorting algorithms like mergesort."
+Output:
+1. Big-O notation describes the upper bound of an algorithm's time complexity
+2. O(n log n) is the complexity of efficient sorting algorithms like mergesort
+
+Input: "The new smartphone is reportedly going to be a game changer. It will feature a 6.7-inch display and a 5000mAh battery."
+Output:
+1. The smartphone will feature a 6.7-inch display
+2. The smartphone will feature a 5000mAh battery
+
+Input: "3.14159 is an approximation of pi."
+Output:
+1. 3.14159 is an approximation of pi
+
+Input: "Company revenue: Q1 $2M, Q2 $3.5M, Q3 $4.1M, Q4 $5.8M."
+Output:
+1. Company revenue in Q1 was $2M
+2. Company revenue in Q2 was $3.5M
+3. Company revenue in Q3 was $4.1M
+4. Company revenue in Q4 was $5.8M
+
+Input: "What time is it?"
+Output:
+NONE
+
+Input: "def add(a, b):\\n    return a + b"
+Output:
+NONE
+"""
+
+_USER_V4 = """\
+{context_block}Input: "{response_text}"
+Output:
+"""
+
+
+# ── v3 Prompts ────────────────────────────────────────────────────────────────
 
 _SYSTEM_V3 = """\
 You are a precise fact extraction system. Extract atomic factual claims from text.
@@ -111,7 +222,7 @@ Input: "What time is it?"
 Output:
 NONE
 
-Input: "def add(a, b):\\n    return a + b"
+Input: "def add(a, b):\\\\n    return a + b"
 Output:
 NONE
 """
@@ -238,6 +349,7 @@ _VERSIONS: dict[str, tuple[str, str]] = {
     "v1": (_SYSTEM_V1, _USER_V1),
     "v2": (_SYSTEM_V2, _USER_V2),
     "v3": (_SYSTEM_V3, _USER_V3),
+    "v4": (_SYSTEM_V4, _USER_V4),
 }
 
 
@@ -247,7 +359,7 @@ def get_system_prompt(version: str = DECOMPOSITION_VERSION) -> str:
     """Return the system prompt for a given version.
 
     Args:
-        version: Prompt version string (e.g. "v3").
+        version: Prompt version string (e.g. "v4").
 
     Returns:
         System prompt string.

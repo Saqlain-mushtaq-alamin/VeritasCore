@@ -16,11 +16,18 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+# Force UTF-8 output on Windows so Unicode symbols don't crash CP1252 consoles.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+else:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -93,7 +100,7 @@ def evaluate_decomposer(
         total_spans += n_spans
 
         if verbose or not in_range:
-            status = "✓" if in_range else "✗"
+            status = "[PASS]" if in_range else "[FAIL]"
             print(
                 f"  {status} [{sample['id']:>2}] expected [{min_c}-{max_c}], got {n_claims} "
                 f"| {sample['notes'][:50]}"
@@ -128,7 +135,7 @@ def evaluate_decomposer(
     print(f"    Avg latency:            {results['avg_latency_ms']} ms")
     print(f"    Max latency:            {results['max_latency_ms']} ms")
     if failures:
-        print(f"    ⚠ Failures: {len(failures)}")
+        print(f"    [WARN] Failures: {len(failures)}")
 
     return results
 
@@ -162,9 +169,9 @@ def main() -> None:
     print(f"{'=' * 70}")
     for r in all_results:
         print(f"\n  {r['name']}:")
-        print(f"    [{'✓' if r['in_range_pct'] >= 90 else '✗'}] Atomic accuracy >90%   : {r['in_range_pct']}%")
-        print(f"    [{'✓' if r['span_validity_pct'] >= 85 else '✗'}] Span validity >85%     : {r['span_validity_pct']}%")
-        print(f"    [{'✓' if 1.0 <= r['claims_per_sentence_ratio'] <= 3.5 else '⚠'}] Claims/sentence 1.5-3.0: {r['claims_per_sentence_ratio']}")
+        print(f"    [{'PASS' if r['in_range_pct'] >= 90 else 'FAIL'}] Atomic accuracy >90%   : {r['in_range_pct']}%")
+        print(f"    [{'PASS' if r['span_validity_pct'] >= 85 else 'FAIL'}] Span validity >85%     : {r['span_validity_pct']}%")
+        print(f"    [{'PASS' if 1.0 <= r['claims_per_sentence_ratio'] <= 3.5 else 'WARN'}] Claims/sentence 1.5-3.0: {r['claims_per_sentence_ratio']}")
 
 
 if __name__ == "__main__":
