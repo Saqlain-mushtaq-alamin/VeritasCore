@@ -1,0 +1,75 @@
+.PHONY: install dev test lint format type-check validate-hw download-models download-data clean help
+
+# ── Installation ──────────────────────────────────────────────────────────────
+
+install:
+	pip install -e .
+
+dev:
+	pip install -e ".[dev]"
+	pre-commit install
+
+# ── Quality ───────────────────────────────────────────────────────────────────
+
+test:
+	pytest tests/ -v --cov=veritascore --cov-report=term-missing
+
+test-unit:
+	pytest tests/unit/ -v
+
+test-integration:
+	pytest tests/integration/ -v
+
+lint:
+	ruff check src/ tests/
+
+format:
+	ruff format src/ tests/
+
+type-check:
+	mypy src/veritascore/ --ignore-missing-imports
+
+check: lint type-check test
+
+# ── Setup Scripts ─────────────────────────────────────────────────────────────
+
+validate-hw:
+	python scripts/validate_hardware.py
+
+download-models:
+	python scripts/download_models.py
+
+download-data:
+	python scripts/download_datasets.py
+
+setup: dev validate-hw download-models download-data
+	@echo "✓ Full setup complete"
+
+# ── Cleanup ───────────────────────────────────────────────────────────────────
+
+clean:
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .mypy_cache -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
+	rm -rf dist/ build/ *.egg-info
+
+# ── Help ──────────────────────────────────────────────────────────────────────
+
+help:
+	@echo "VeritasCore — Development Commands"
+	@echo ""
+	@echo "  make install         Install package"
+	@echo "  make dev             Install with dev dependencies"
+	@echo "  make test            Run all tests with coverage"
+	@echo "  make test-unit       Run unit tests only"
+	@echo "  make lint            Run ruff linter"
+	@echo "  make format          Format code with ruff"
+	@echo "  make type-check      Run mypy type checker"
+	@echo "  make check           lint + type-check + test"
+	@echo "  make validate-hw     Check hardware requirements"
+	@echo "  make download-models Download all ML models"
+	@echo "  make download-data   Download benchmark datasets"
+	@echo "  make setup           Full first-time setup"
+	@echo "  make clean           Remove cache and build artifacts"
+ 
