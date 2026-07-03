@@ -1,0 +1,21 @@
+# VeritasCore — Default Configuration
+# Override individual values in your own config file, or via environment variables.
+
+models:
+  nli_model: "cross-encoder/nli-deberta-v3-base"
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  decomposer_model: "microsoft/Phi-3-mini-4k-instruct"
+  device: "auto"          # auto | cuda | cpu | cuda:0
+  max_batch_size: 16
+
+search:
+  provider: "tavily"      # tavily | brave | none
+  max_results: 5
+  timeout_seconds: 10.0
+  cache_enabled: true
+  cache_dir: ".cache/search"
+
+domain_profile: "general"         # general | medical | legal
+verification_mode: "auto"         # auto | grounded | ungrounded | offline
+log_level: "INFO"                 # DEBUG | INFO | WARNING | ERROR
+max_claims_per_response: 50
