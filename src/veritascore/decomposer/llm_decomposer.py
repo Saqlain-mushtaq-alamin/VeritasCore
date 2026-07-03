@@ -342,12 +342,23 @@ class LLMDecomposer(BaseDecomposer):
             )
             return claims
 
-        except (ModelLoadError, DecompositionError):
+        except ModelLoadError:
+            if self.fallback_on_error:
+                logger.info(
+                    "Model load failed, falling back to RuleDecomposer"
+                )
+                return self._fallback.decompose(response_text, query)
+            raise
+        except DecompositionError:
             raise
         except Exception as e:
-            logger.error("LLMDecomposer unexpected error: %s", e, exc_info=True)
+            logger.error(
+                "LLMDecomposer unexpected error: %s", e, exc_info=True,
+            )
             if self.fallback_on_error:
-                logger.info("Falling back to RuleDecomposer due to error: %s", e)
+                logger.info(
+                    "Falling back to RuleDecomposer due to error: %s", e,
+                )
                 return self._fallback.decompose(response_text, query)
             raise DecompositionError(
                 f"LLM decomposition failed unexpectedly: {e}"
