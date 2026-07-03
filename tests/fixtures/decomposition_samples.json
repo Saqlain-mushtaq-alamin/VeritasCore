@@ -1,0 +1,539 @@
+{
+  "version": "1.0",
+  "description": "Manual evaluation dataset for claim decomposition quality (Phase 1, Quality Gate G1)",
+  "categories": {
+    "simple_single_fact": "1-10",
+    "multi_fact_sentences": "11-20",
+    "mixed_factual_opinion": "21-30",
+    "technical_domain": "31-40",
+    "edge_cases": "41-50"
+  },
+  "samples": [
+    {
+      "response": "The Pacific Ocean is the largest ocean on Earth.",
+      "expected_claims": [
+        "The Pacific Ocean is the largest ocean on Earth."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single atomic fact, no decomposition needed",
+      "id": 1
+    },
+    {
+      "response": "Mount Everest is the tallest mountain in the world.",
+      "expected_claims": [
+        "Mount Everest is the tallest mountain in the world."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single atomic fact",
+      "id": 2
+    },
+    {
+      "response": "Water freezes at 0 degrees Celsius.",
+      "expected_claims": [
+        "Water freezes at 0 degrees Celsius."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single scientific fact with a number",
+      "id": 3
+    },
+    {
+      "response": "The human heart has four chambers.",
+      "expected_claims": [
+        "The human heart has four chambers."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single biology fact",
+      "id": 4
+    },
+    {
+      "response": "Tokyo is the capital of Japan.",
+      "expected_claims": [
+        "Tokyo is the capital of Japan."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single geography fact",
+      "id": 5
+    },
+    {
+      "response": "Shakespeare wrote Romeo and Juliet.",
+      "expected_claims": [
+        "Shakespeare wrote Romeo and Juliet."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single attribution fact",
+      "id": 6
+    },
+    {
+      "response": "The speed of light is approximately 300,000 kilometers per second.",
+      "expected_claims": [
+        "The speed of light is approximately 300,000 kilometers per second."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single physics constant",
+      "id": 7
+    },
+    {
+      "response": "Photosynthesis converts sunlight into chemical energy.",
+      "expected_claims": [
+        "Photosynthesis converts sunlight into chemical energy."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single process definition",
+      "id": 8
+    },
+    {
+      "response": "The Great Barrier Reef is located off the coast of Australia.",
+      "expected_claims": [
+        "The Great Barrier Reef is located off the coast of Australia."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single location fact",
+      "id": 9
+    },
+    {
+      "response": "Penguins are flightless birds.",
+      "expected_claims": [
+        "Penguins are flightless birds."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Single classification fact",
+      "id": 10
+    },
+    {
+      "response": "Albert Einstein was born in Ulm, Germany on March 14, 1879. He developed the theory of special relativity in 1905 and the theory of general relativity in 1915.",
+      "expected_claims": [
+        "Albert Einstein was born in Ulm, Germany.",
+        "Albert Einstein was born on March 14, 1879.",
+        "Albert Einstein developed the theory of special relativity.",
+        "Albert Einstein developed the theory of special relativity in 1905.",
+        "Albert Einstein developed the theory of general relativity.",
+        "Albert Einstein developed the theory of general relativity in 1915."
+      ],
+      "min_claims": 4,
+      "max_claims": 7,
+      "notes": "Multiple facts packed into two sentences, requires pronoun resolution",
+      "id": 11
+    },
+    {
+      "response": "Marie Curie was born in Warsaw, Poland on November 7, 1867, and she won Nobel Prizes in both Physics and Chemistry.",
+      "expected_claims": [
+        "Marie Curie was born in Warsaw, Poland.",
+        "Marie Curie was born on November 7, 1867.",
+        "Marie Curie won a Nobel Prize in Physics.",
+        "Marie Curie won a Nobel Prize in Chemistry."
+      ],
+      "min_claims": 3,
+      "max_claims": 5,
+      "notes": "Compound sentence joined by 'and', two-domain achievement",
+      "id": 12
+    },
+    {
+      "response": "The Python programming language was created by Guido van Rossum and was first released in 1991.",
+      "expected_claims": [
+        "The Python programming language was created by Guido van Rossum.",
+        "The Python programming language was first released in 1991."
+      ],
+      "min_claims": 2,
+      "max_claims": 3,
+      "notes": "Creator + release year compound fact",
+      "id": 13
+    },
+    {
+      "response": "The Eiffel Tower was completed in 1889, stands 330 meters tall, and was designed by Gustave Eiffel.",
+      "expected_claims": [
+        "The Eiffel Tower was completed in 1889.",
+        "The Eiffel Tower stands 330 meters tall.",
+        "The Eiffel Tower was designed by Gustave Eiffel."
+      ],
+      "min_claims": 3,
+      "max_claims": 4,
+      "notes": "Three facts in a single sentence with serial commas",
+      "id": 14
+    },
+    {
+      "response": "Leonardo da Vinci painted the Mona Lisa and also designed early concepts for helicopters and tanks.",
+      "expected_claims": [
+        "Leonardo da Vinci painted the Mona Lisa.",
+        "Leonardo da Vinci designed early concepts for helicopters.",
+        "Leonardo da Vinci designed early concepts for tanks."
+      ],
+      "min_claims": 2,
+      "max_claims": 4,
+      "notes": "List-like compound object requiring fact splitting",
+      "id": 15
+    },
+    {
+      "response": "The United Nations was founded in 1945 and is headquartered in New York City.",
+      "expected_claims": [
+        "The United Nations was founded in 1945.",
+        "The United Nations is headquartered in New York City."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Founding date + location compound",
+      "id": 16
+    },
+    {
+      "response": "Jupiter is the largest planet in the solar system and has at least 95 known moons.",
+      "expected_claims": [
+        "Jupiter is the largest planet in the solar system.",
+        "Jupiter has at least 95 known moons."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Size superlative + count fact",
+      "id": 17
+    },
+    {
+      "response": "The Wright brothers, Orville and Wilbur, achieved the first powered flight in 1903 near Kitty Hawk, North Carolina.",
+      "expected_claims": [
+        "Orville Wright achieved the first powered flight in 1903.",
+        "Wilbur Wright achieved the first powered flight in 1903.",
+        "The first powered flight occurred near Kitty Hawk, North Carolina."
+      ],
+      "min_claims": 2,
+      "max_claims": 4,
+      "notes": "Appositive naming two people, requires entity expansion",
+      "id": 18
+    },
+    {
+      "response": "The Amazon River is the largest river by discharge volume and flows through Brazil, Peru, and Colombia.",
+      "expected_claims": [
+        "The Amazon River is the largest river by discharge volume.",
+        "The Amazon River flows through Brazil.",
+        "The Amazon River flows through Peru.",
+        "The Amazon River flows through Colombia."
+      ],
+      "min_claims": 3,
+      "max_claims": 5,
+      "notes": "List of countries requiring per-item fact splitting",
+      "id": 19
+    },
+    {
+      "response": "Isaac Newton formulated the laws of motion and also made significant contributions to optics and calculus.",
+      "expected_claims": [
+        "Isaac Newton formulated the laws of motion.",
+        "Isaac Newton made significant contributions to optics.",
+        "Isaac Newton made significant contributions to calculus."
+      ],
+      "min_claims": 2,
+      "max_claims": 4,
+      "notes": "Multiple contribution areas in one sentence",
+      "id": 20
+    },
+    {
+      "response": "I think Python is the best programming language. Python was created in 1991 by Guido van Rossum.",
+      "expected_claims": [
+        "Python was created in 1991 by Guido van Rossum."
+      ],
+      "min_claims": 1,
+      "max_claims": 2,
+      "notes": "Opinion sentence should be filtered, factual sentence kept",
+      "id": 21
+    },
+    {
+      "response": "In my opinion, the new policy is unfair. The policy was implemented on January 1, 2024.",
+      "expected_claims": [
+        "The policy was implemented on January 1, 2024."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Clear opinion marker 'in my opinion' should be excluded",
+      "id": 22
+    },
+    {
+      "response": "Climate change is probably the biggest challenge of our time. Global temperatures have risen by 1.1 degrees Celsius since pre-industrial times.",
+      "expected_claims": [
+        "Global temperatures have risen by 1.1 degrees Celsius since pre-industrial times."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Hedge word 'probably' marks opinion sentence for filtering",
+      "id": 23
+    },
+    {
+      "response": "This movie is amazing and everyone should watch it. It was released in 2010 and grossed over $800 million worldwide.",
+      "expected_claims": [
+        "It was released in 2010.",
+        "It grossed over $800 million worldwide."
+      ],
+      "min_claims": 1,
+      "max_claims": 2,
+      "notes": "Subjective praise sentence filtered, financial facts retained",
+      "id": 24
+    },
+    {
+      "response": "I believe renewable energy is the future. Solar panel costs have dropped by about 90% over the past decade.",
+      "expected_claims": [
+        "Solar panel costs have dropped by about 90% over the past decade."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "'I believe' opinion marker filtered",
+      "id": 25
+    },
+    {
+      "response": "It seems like electric cars are becoming more popular. Electric vehicle sales increased by 35% in 2023.",
+      "expected_claims": [
+        "Electric vehicle sales increased by 35% in 2023."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Hedged 'it seems' opinion vs hard statistic",
+      "id": 26
+    },
+    {
+      "response": "Arguably, Beethoven was the greatest composer in history. Beethoven composed nine symphonies during his lifetime.",
+      "expected_claims": [
+        "Beethoven composed nine symphonies during his lifetime."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "'Arguably' superlative opinion filtered, count fact retained",
+      "id": 27
+    },
+    {
+      "response": "Personally, I find quantum mechanics fascinating. Quantum mechanics describes the behavior of matter at subatomic scales.",
+      "expected_claims": [
+        "Quantum mechanics describes the behavior of matter at subatomic scales."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "'Personally' marker filtered",
+      "id": 28
+    },
+    {
+      "response": "The new smartphone is reportedly going to be a game changer. It will feature a 6.7-inch display and a 5000mAh battery.",
+      "expected_claims": [
+        "It will feature a 6.7-inch display.",
+        "It will feature a 5000mAh battery."
+      ],
+      "min_claims": 1,
+      "max_claims": 2,
+      "notes": "'Reportedly' hedge filtered, spec facts retained",
+      "id": 29
+    },
+    {
+      "response": "Maybe the stock market will crash next year. The S&P 500 fell by 19% in 2022.",
+      "expected_claims": [
+        "The S&P 500 fell by 19% in 2022."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Speculative 'maybe' sentence filtered, historical fact retained",
+      "id": 30
+    },
+    {
+      "response": "In machine learning, a convolutional neural network uses convolutional layers to extract spatial features from images.",
+      "expected_claims": [
+        "A convolutional neural network uses convolutional layers to extract spatial features from images."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Technical ML definition, single claim",
+      "id": 31
+    },
+    {
+      "response": "HTTP status code 404 indicates that the requested resource was not found, while status code 500 indicates an internal server error.",
+      "expected_claims": [
+        "HTTP status code 404 indicates that the requested resource was not found.",
+        "HTTP status code 500 indicates an internal server error."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Two technical definitions joined by 'while'",
+      "id": 32
+    },
+    {
+      "response": "In chemistry, sodium chloride has the chemical formula NaCl and dissolves readily in water.",
+      "expected_claims": [
+        "Sodium chloride has the chemical formula NaCl.",
+        "Sodium chloride dissolves readily in water."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Chemistry formula + property fact",
+      "id": 33
+    },
+    {
+      "response": "The TCP protocol guarantees ordered delivery of data packets, whereas UDP does not guarantee delivery order.",
+      "expected_claims": [
+        "The TCP protocol guarantees ordered delivery of data packets.",
+        "UDP does not guarantee delivery order."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Networking comparison via 'whereas'",
+      "id": 34
+    },
+    {
+      "response": "Big-O notation describes the upper bound of an algorithm's time complexity, and O(n log n) is the complexity of efficient sorting algorithms like mergesort.",
+      "expected_claims": [
+        "Big-O notation describes the upper bound of an algorithm's time complexity.",
+        "O(n log n) is the complexity of efficient sorting algorithms like mergesort."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "CS theory definition + concrete example",
+      "id": 35
+    },
+    {
+      "response": "DNA consists of four nucleotide bases: adenine, thymine, guanine, and cytosine.",
+      "expected_claims": [
+        "DNA consists of four nucleotide bases.",
+        "DNA's nucleotide bases include adenine, thymine, guanine, and cytosine."
+      ],
+      "min_claims": 1,
+      "max_claims": 3,
+      "notes": "List enumeration within a biology fact \u2014 list items may or may not be split",
+      "id": 36
+    },
+    {
+      "response": "REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations.",
+      "expected_claims": [
+        "REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations."
+      ],
+      "min_claims": 1,
+      "max_claims": 2,
+      "notes": "Technical enumeration, likely kept as one claim due to list cohesion",
+      "id": 37
+    },
+    {
+      "response": "In statistics, a p-value below 0.05 is commonly used as a threshold for statistical significance.",
+      "expected_claims": [
+        "In statistics, a p-value below 0.05 is commonly used as a threshold for statistical significance."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Statistical convention, single claim",
+      "id": 38
+    },
+    {
+      "response": "The CPU's clock speed is measured in gigahertz, and a higher clock speed generally allows for more instructions per second.",
+      "expected_claims": [
+        "The CPU's clock speed is measured in gigahertz.",
+        "A higher clock speed generally allows for more instructions per second."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Hardware fact + causal relationship, joined by 'and'",
+      "id": 39
+    },
+    {
+      "response": "Blockchain technology uses cryptographic hashing to link blocks of data, and each block contains a hash of the previous block.",
+      "expected_claims": [
+        "Blockchain technology uses cryptographic hashing to link blocks of data.",
+        "Each block contains a hash of the previous block."
+      ],
+      "min_claims": 2,
+      "max_claims": 2,
+      "notes": "Blockchain technical definition compound",
+      "id": 40
+    },
+    {
+      "response": "",
+      "expected_claims": [],
+      "min_claims": 0,
+      "max_claims": 0,
+      "notes": "Empty string edge case \u2014 must return empty list, not raise",
+      "id": 41
+    },
+    {
+      "response": "   ",
+      "expected_claims": [],
+      "min_claims": 0,
+      "max_claims": 0,
+      "notes": "Whitespace-only edge case",
+      "id": 42
+    },
+    {
+      "response": "Yes.",
+      "expected_claims": [],
+      "min_claims": 0,
+      "max_claims": 1,
+      "notes": "Single-word non-factual response \u2014 likely filtered as too short/non-factual",
+      "id": 43
+    },
+    {
+      "response": "Here are the top 3 programming languages: 1) Python, 2) JavaScript, 3) Java.",
+      "expected_claims": [
+        "Python is one of the top 3 programming languages.",
+        "JavaScript is one of the top 3 programming languages.",
+        "Java is one of the top 3 programming languages."
+      ],
+      "min_claims": 1,
+      "max_claims": 4,
+      "notes": "Numbered list embedded in prose \u2014 list header may be filtered as meta-commentary",
+      "id": 44
+    },
+    {
+      "response": "def add(a, b):\n    return a + b",
+      "expected_claims": [],
+      "min_claims": 0,
+      "max_claims": 1,
+      "notes": "Code block \u2014 should not be treated as natural language claims",
+      "id": 45
+    },
+    {
+      "response": "The result is 42.",
+      "expected_claims": [
+        "The result is 42."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Pure numeric statement with minimal context",
+      "id": 46
+    },
+    {
+      "response": "3.14159 is an approximation of pi.",
+      "expected_claims": [
+        "3.14159 is an approximation of pi."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Numeric value as sentence subject",
+      "id": 47
+    },
+    {
+      "response": "The temperature ranged from -10\u00b0C to 35\u00b0C throughout the year.",
+      "expected_claims": [
+        "The temperature ranged from -10 degrees Celsius to 35 degrees Celsius throughout the year."
+      ],
+      "min_claims": 1,
+      "max_claims": 1,
+      "notes": "Special characters (degree symbol, negative number) must be preserved",
+      "id": 48
+    },
+    {
+      "response": "What time is it?",
+      "expected_claims": [],
+      "min_claims": 0,
+      "max_claims": 0,
+      "notes": "Pure question with no factual content \u2014 must be fully filtered",
+      "id": 49
+    },
+    {
+      "response": "Company revenue: Q1 $2M, Q2 $3.5M, Q3 $4.1M, Q4 $5.8M.",
+      "expected_claims": [
+        "Company revenue in Q1 was $2 million.",
+        "Company revenue in Q2 was $3.5 million.",
+        "Company revenue in Q3 was $4.1 million.",
+        "Company revenue in Q4 was $5.8 million."
+      ],
+      "min_claims": 1,
+      "max_claims": 5,
+      "notes": "Table-like colon-separated data \u2014 tests numeric/structured data parsing",
+      "id": 50
+    }
+  ]
+}
