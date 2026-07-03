@@ -315,11 +315,6 @@ def _split_inline_numbered_list(
     return [sent]
 
 
-# Sentinel set to track spans produced by inline list splitting
-# so they bypass the min-length factual filter
-_INLINE_LIST_BYPASS: set[int] = set()
-
-
 def _split_country_or_item_list(
     sent: SentenceSpan,
 ) -> list[SentenceSpan]:
@@ -508,12 +503,24 @@ class RuleDecomposer(BaseDecomposer):
 
             # Step 2: Attempt compound sentence splitting
             atomic_parts: list[SentenceSpan] = []
+            inline_list_ids: set[int] = set()
             for sent in sentences:
-                splits = _split_compound_sentence(sent)
-                atomic_parts.extend(splits)
+                # Check if this sentence has an inline numbered list
+                inline_result = _split_inline_numbered_list(sent)
+                if len(inline_result) > 1:
+                    for part in inline_result:
+                        inline_list_ids.add(id(part))
+                    atomic_parts.extend(inline_result)
+                else:
+                    splits = _split_compound_sentence(sent)
+                    atomic_parts.extend(splits)
 
             # Step 3: Filter non-factual sentences
-            factual_parts = [p for p in atomic_parts if _is_factual(p.text)]
+            # Inline list items bypass the filter (they may be short)
+            factual_parts = [
+                p for p in atomic_parts
+                if id(p) in inline_list_ids or _is_factual(p.text)
+            ]
 
             # Step 4: Produce Claim objects
             claims: list[Claim] = []
