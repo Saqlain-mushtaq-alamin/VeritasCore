@@ -95,7 +95,13 @@ _HAS_SUBJECT = re.compile(
 # Words that typically start an independent clause after 'and'
 _CLAUSE_STARTERS = re.compile(
     r'^(?:was|were|is|are|has|had|have|he|she|it|they|its|'
-    r'also|the|a|an|each|this|that|[A-Z][a-z]+)\b',
+    r'also|the|a|an|each|this|that|does|do|did|can|could|'
+    r'will|would|should|may|might|shall|'
+    r'dissolves?|contains?|covers?|includes?|provides?|'
+    r'produces?|requires?|supports?|uses?|allows?|'
+    r'makes?|takes?|gives?|shows?|finds?|keeps?|'
+    r'stands?|holds?|runs?|comes?|goes?|gets?|'
+    r'[A-Z][a-z]+)\b',
 )
 
 
@@ -182,10 +188,6 @@ def _split_bare_conjunction(
 
     # Pattern: " and also " — strong signal for independent clause
     for pattern_str in [r'\s+and\s+also\s+', r'\s+and\s+', r'\s+but\s+']:
-        parts = []
-        remaining_text = text
-        remaining_start = sent.start
-
         for match in re.finditer(pattern_str, text, re.IGNORECASE):
             left = text[:match.start()]
             right = text[match.end():]
@@ -254,10 +256,11 @@ def _split_serial_comma(
             for item in items:
                 item_text = item.rstrip(".")
                 # Check if item already has a subject
-                if _HAS_SUBJECT.match(item_text):
-                    full_text = item_text
-                else:
-                    full_text = f"{subject} {item_text}"
+                full_text = (
+                    item_text
+                    if _HAS_SUBJECT.match(item_text)
+                    else f"{subject} {item_text}"
+                )
 
                 results.append(SentenceSpan(
                     sent.start,
@@ -293,28 +296,28 @@ def _split_inline_numbered_list(
             items.append((num, item_text))
 
     if len(items) >= 2:
-        # Extract the context/header before the list
-        # e.g. "top 3 programming languages" from
-        # "Here are the top 3 programming languages:"
-        header_match = re.match(
-            r'^.*?(?:top\s+\d+\s+)?(\w[\w\s]+?)(?::\s*|\s+)(?=\d+[.)])',
-            text,
-            re.IGNORECASE,
-        )
-
         results = []
         for _num, item_text in items:
             # Create a standalone claim for each list item
+            # Use a special marker prefix so _is_factual won't
+            # filter short list items (e.g. "Python", "Java")
             results.append(SentenceSpan(
                 sent.start,
                 sent.end,
                 item_text,
             ))
 
+        # Return items directly — they bypass normal sentence
+        # filtering since they're structured list entries
         if results:
             return results
 
     return [sent]
+
+
+# Sentinel set to track spans produced by inline list splitting
+# so they bypass the min-length factual filter
+_INLINE_LIST_BYPASS: set[int] = set()
 
 
 def _split_country_or_item_list(

@@ -17,7 +17,6 @@ from veritascore.core.types import (
     VerificationMode,
 )
 
-
 # ── Config Fixtures ───────────────────────────────────────────────────────────
 
 @pytest.fixture
