@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import sys
 import time
+import traceback
 
 
 def _fmt_params(model: object) -> str:
@@ -103,12 +104,12 @@ def download_decomposer_model() -> None:
     print("  ⚡ This is the largest download (~7GB). Please wait...")
     t0 = time.time()
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         torch_dtype=torch.float16,  # Half precision to fit in 8GB VRAM
         device_map="auto",          # Automatically place on GPU/CPU
-        trust_remote_code=True,
+
     )
 
     # Smoke test: generate a short response
@@ -164,7 +165,9 @@ def main() -> None:
             download_decomposer_model()
         except Exception as e:
             print(f"  ✗ Decomposer model failed: {e}")
+            traceback.print_exc()
             failed.append("Decomposer")
+
 
     print("\n" + "=" * 60)
     if failed:

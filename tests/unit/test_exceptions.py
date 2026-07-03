@@ -14,7 +14,6 @@ from veritascore.core.exceptions import (
     VeritasCoreError,
 )
 
-
 EXCEPTION_CLASSES = [
     ModelLoadError,
     DecompositionError,

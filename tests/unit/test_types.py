@@ -16,9 +16,9 @@ from pydantic import ValidationError
 from veritascore.core.types import (
     Claim,
     ClaimVerdict,
+    Verdict,
     VerificationMode,
     VerificationReport,
-    Verdict,
 )
 
 

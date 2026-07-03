@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -114,16 +114,16 @@ class ClaimVerdict(BaseModel):
     claim: Claim
     verdict: Verdict
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence in verdict [0, 1]")
-    nli_score: Optional[float] = Field(
+    nli_score: float | None = Field(
         default=None, description="NLI entailment score from grounded verifier"
     )
-    retrieval_score: Optional[float] = Field(
+    retrieval_score: float | None = Field(
         default=None, description="Score from retrieval-based ungrounded verifier"
     )
-    consistency_score: Optional[float] = Field(
+    consistency_score: float | None = Field(
         default=None, description="Self-consistency score across multiple generations"
     )
-    evidence: Optional[str] = Field(
+    evidence: str | None = Field(
         default=None, description="Evidence snippet supporting or contradicting the claim"
     )
     reason: str = Field(..., description="Human-readable explanation of the verdict")
@@ -149,7 +149,7 @@ class VerificationReport(BaseModel):
         metadata: Arbitrary additional metadata (model names, versions, etc.).
     """
 
-    query: Optional[str] = Field(
+    query: str | None = Field(
         default=None, description="Original user query"
     )
     response_text: str = Field(..., description="Full LLM response text that was verified")

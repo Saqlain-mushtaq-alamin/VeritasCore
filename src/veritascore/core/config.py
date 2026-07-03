@@ -12,7 +12,7 @@ Example:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import yaml
 from pydantic import Field, model_validator
@@ -50,7 +50,7 @@ class ModelConfig(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def validate_device(self) -> "ModelConfig":
+    def validate_device(self) -> ModelConfig:
         valid_devices = {"auto", "cuda", "cpu"}
         if self.device not in valid_devices and not self.device.startswith("cuda:"):
             raise ValueError(f"device must be one of {valid_devices} or 'cuda:N', got '{self.device}'")
@@ -70,12 +70,12 @@ class SearchConfig(BaseSettings):
         default="tavily",
         description="Search provider: 'tavily', 'brave', 'none'",
     )
-    tavily_api_key: Optional[str] = Field(
+    tavily_api_key: str | None = Field(
         default=None,
         alias="TAVILY_API_KEY",
         description="Tavily Search API key",
     )
-    brave_api_key: Optional[str] = Field(
+    brave_api_key: str | None = Field(
         default=None,
         alias="BRAVE_API_KEY",
         description="Brave Search API key",
@@ -135,7 +135,7 @@ class EngineConfig(BaseSettings):
     )
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "EngineConfig":
+    def from_yaml(cls, path: str | Path) -> EngineConfig:
         """Load configuration from a YAML file.
 
         Args:
@@ -164,7 +164,7 @@ class EngineConfig(BaseSettings):
         return cls(**data)
 
     @classmethod
-    def default(cls) -> "EngineConfig":
+    def default(cls) -> EngineConfig:
         """Return default configuration with sensible defaults.
 
         Returns:
