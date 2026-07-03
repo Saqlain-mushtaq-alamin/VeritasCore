@@ -167,11 +167,25 @@ def main() -> None:
     print(f"\n{'=' * 70}")
     print("Quality Gate G1 — Target Checklist")
     print(f"{'=' * 70}")
+    all_gates_passed = True
     for r in all_results:
+        acc_pass = r['in_range_pct'] >= 90
+        span_pass = r['span_validity_pct'] >= 85
+        ratio_pass = 1.0 <= r['claims_per_sentence_ratio'] <= 3.5
+        if not (acc_pass and span_pass):
+            all_gates_passed = False
         print(f"\n  {r['name']}:")
-        print(f"    [{'PASS' if r['in_range_pct'] >= 90 else 'FAIL'}] Atomic accuracy >90%   : {r['in_range_pct']}%")
-        print(f"    [{'PASS' if r['span_validity_pct'] >= 85 else 'FAIL'}] Span validity >85%     : {r['span_validity_pct']}%")
-        print(f"    [{'PASS' if 1.0 <= r['claims_per_sentence_ratio'] <= 3.5 else 'WARN'}] Claims/sentence 1.5-3.0: {r['claims_per_sentence_ratio']}")
+        print(f"    [{'PASS' if acc_pass else 'FAIL'}] Atomic accuracy >90%      : {r['in_range_pct']}%")
+        print(f"    [{'PASS' if span_pass else 'FAIL'}] Span validity >85%        : {r['span_validity_pct']}%")
+        print(f"    [{'PASS' if ratio_pass else 'WARN'}] Claims/sentence >=1.0-3.5 : {r['claims_per_sentence_ratio']}")
+
+    print()
+    if all_gates_passed:
+        print("  [ALL GATES PASSED] G1 quality gate met.")
+        sys.exit(0)
+    else:
+        print("  [GATE FAILED] One or more G1 gates did not meet the target.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

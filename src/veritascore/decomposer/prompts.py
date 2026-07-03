@@ -16,34 +16,36 @@ from __future__ import annotations
 
 # ── Version Registry ──────────────────────────────────────────────────────────
 
-DECOMPOSITION_VERSION = "v4"   # Bump when making substantive prompt changes
+DECOMPOSITION_VERSION = "v5"   # Bump when making substantive prompt changes
 
 
 # ── v4 Prompts (current — maximum accuracy + minimum latency) ─────────────────
 #
 # Design goals for v4:
 #   - Extremely short system prompt to reduce Phi-3-mini confusion
-#   - Explicit "DO NOT apologize or explain" to kill preamble text
+#   - Explicit "CRITICAL: DO NOT apologize, explain, or refuse" kills preamble
 #   - Hedge-word filtering moved to post-processing; prompt now KEEPS facts
 #     that contain "approximately", "about", "commonly" (factual qualifiers)
-#   - Representative few-shots that cover EVERY failure category from v3:
-#       * opinion+fact mixing  (samples 21-30)
-#       * technical single-fact (samples 31, 37, 38)
+#   - Representative few-shots covering EVERY failure category observed:
+#       * opinion+fact mixing  (samples 21-30): EXTRACT THE FACT
+#       * technical single-fact (samples 31, 37, 38): do NOT over-split
 #       * compound "and" splitting (samples 11-17)
-#       * edge cases: code, empty, question (samples 41-50)
+#       * range/unit facts stay as one claim (sample 48)
+#       * edge cases: code, question (samples 41-50)
 
 _SYSTEM_V4 = """\
 You extract atomic facts from text. Output ONLY a numbered list of claims.
 
 RULES:
-1. One fact per line. Split compound sentences joined by "and", "but", "while", "whereas", or a semicolon.
-2. Keep pronouns resolved: use the full name, not "he", "she", "it", "they".
-3. Skip opinions, beliefs, and predictions: "I think", "I believe", "in my opinion", "it seems", "arguably", "personally".
-4. Skip questions and commands.
-5. Skip code blocks.
-6. Keep factual qualifiers intact: "approximately", "about", "commonly", "generally", "typically".
-7. If no facts exist, output exactly: NONE
-8. DO NOT apologize, explain, or add any commentary. Output ONLY numbered claims or NONE.
+1. One fact per line. Split compound sentences joined by "and", "but", "while", "whereas", or a semicolon into SEPARATE claims.
+2. Do NOT split a single unified fact. "A convolutional neural network uses convolutional layers to extract spatial features from images" is ONE claim — do not split it further. A range like "temperature ranged from -10C to 35C" is ONE claim.
+3. Replace pronouns with the full subject name ("he" → person's name, "it" → object's name).
+4. SKIP opinion/belief sentences: "I think", "I believe", "in my opinion", "it seems", "arguably", "personally". EXTRACT any factual sentence in the same input.
+5. Skip questions and commands.
+6. Skip code blocks (lines starting with def, class, import, etc.).
+7. Keep factual qualifiers as-is: "approximately", "about", "commonly", "generally", "typically".
+8. If no facts remain after skipping, output exactly: NONE
+9. CRITICAL: DO NOT apologize, explain, or refuse. DO NOT output any text except numbered claims or NONE.
 
 EXAMPLES:
 
@@ -51,28 +53,35 @@ Input: "The Pacific Ocean is the largest ocean on Earth."
 Output:
 1. The Pacific Ocean is the largest ocean on Earth
 
-Input: "Jupiter is the largest planet in the solar system and has at least 95 known moons."
-Output:
-1. Jupiter is the largest planet in the solar system
-2. Jupiter has at least 95 known moons
-
-Input: "Albert Einstein was born in Ulm, Germany on March 14, 1879. He developed the theory of special relativity in 1905 and the theory of general relativity in 1915."
-Output:
-1. Albert Einstein was born in Ulm, Germany
-2. Albert Einstein was born on March 14, 1879
-3. Albert Einstein developed the theory of special relativity in 1905
-4. Albert Einstein developed the theory of general relativity in 1915
-
-Input: "Marie Curie was born in Warsaw, Poland on November 7, 1867, and she won Nobel Prizes in both Physics and Chemistry."
-Output:
-1. Marie Curie was born in Warsaw, Poland
-2. Marie Curie was born on November 7, 1867
-3. Marie Curie won a Nobel Prize in Physics
-4. Marie Curie won a Nobel Prize in Chemistry
-
 Input: "I think Python is the best language. Python was created in 1991 by Guido van Rossum."
 Output:
 1. Python was created in 1991 by Guido van Rossum
+
+Input: "This movie is amazing and everyone should watch it. It was released in 2010 and grossed over $800 million worldwide."
+Output:
+1. The movie was released in 2010
+2. The movie grossed over $800 million worldwide
+
+Input: "I believe renewable energy is the future. Solar panel costs have dropped by about 90% over the past decade."
+Output:
+1. Solar panel costs have dropped by about 90% over the past decade
+
+Input: "It seems like electric cars are becoming more popular. Electric vehicle sales increased by 35% in 2023."
+Output:
+1. Electric vehicle sales increased by 35% in 2023
+
+Input: "The new smartphone is reportedly going to be a game changer. It will feature a 6.7-inch display and a 5000mAh battery."
+Output:
+1. The smartphone will feature a 6.7-inch display
+2. The smartphone will feature a 5000mAh battery
+
+Input: "Personally, I find quantum mechanics fascinating. Quantum mechanics describes the behavior of matter at subatomic scales."
+Output:
+1. Quantum mechanics describes the behavior of matter at subatomic scales
+
+Input: "Maybe the stock market will crash next year. The S&P 500 fell by 19% in 2022."
+Output:
+1. The S&P 500 fell by 19% in 2022
 
 Input: "Climate change is probably the biggest challenge. Global temperatures have risen by 1.1 degrees Celsius since pre-industrial times."
 Output:
@@ -82,6 +91,10 @@ Input: "Arguably, Beethoven was the greatest composer. Beethoven composed nine s
 Output:
 1. Beethoven composed nine symphonies during his lifetime
 
+Input: "In machine learning, a convolutional neural network uses convolutional layers to extract spatial features from images."
+Output:
+1. A convolutional neural network uses convolutional layers to extract spatial features from images
+
 Input: "The speed of light is approximately 300,000 kilometers per second."
 Output:
 1. The speed of light is approximately 300,000 kilometers per second
@@ -90,30 +103,22 @@ Input: "In statistics, a p-value below 0.05 is commonly used as a threshold for 
 Output:
 1. A p-value below 0.05 is commonly used as a threshold for statistical significance
 
-Input: "REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations."
-Output:
-1. REST APIs typically use HTTP methods such as GET, POST, PUT, and DELETE to perform CRUD operations
-
 Input: "Big-O notation describes the upper bound of an algorithm's time complexity, and O(n log n) is the complexity of efficient sorting algorithms like mergesort."
 Output:
 1. Big-O notation describes the upper bound of an algorithm's time complexity
 2. O(n log n) is the complexity of efficient sorting algorithms like mergesort
 
-Input: "The new smartphone is reportedly going to be a game changer. It will feature a 6.7-inch display and a 5000mAh battery."
+Input: "The temperature ranged from -10 degrees Celsius to 35 degrees Celsius throughout the year."
 Output:
-1. The smartphone will feature a 6.7-inch display
-2. The smartphone will feature a 5000mAh battery
+1. The temperature ranged from -10 degrees Celsius to 35 degrees Celsius throughout the year
+
+Input: "The result is 42."
+Output:
+1. The result is 42
 
 Input: "3.14159 is an approximation of pi."
 Output:
 1. 3.14159 is an approximation of pi
-
-Input: "Company revenue: Q1 $2M, Q2 $3.5M, Q3 $4.1M, Q4 $5.8M."
-Output:
-1. Company revenue in Q1 was $2M
-2. Company revenue in Q2 was $3.5M
-3. Company revenue in Q3 was $4.1M
-4. Company revenue in Q4 was $5.8M
 
 Input: "What time is it?"
 Output:
@@ -350,6 +355,7 @@ _VERSIONS: dict[str, tuple[str, str]] = {
     "v2": (_SYSTEM_V2, _USER_V2),
     "v3": (_SYSTEM_V3, _USER_V3),
     "v4": (_SYSTEM_V4, _USER_V4),
+    "v5": (_SYSTEM_V4, _USER_V4),  # v5 = improved v4 (better few-shots, stricter anti-refusal rule)
 }
 
 
