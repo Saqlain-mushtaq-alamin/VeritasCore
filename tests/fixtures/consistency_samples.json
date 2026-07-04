@@ -1,0 +1,176 @@
+{
+  "version": "1.0",
+  "description": "Curated on-topic/off-topic evaluation dataset for semantic consistency checking (Phase 4, Quality Gate G4)",
+  "samples": [
+    {
+      "query": "What year was the Eiffel Tower built?",
+      "on_topic_claims": [
+        "The Eiffel Tower was built in 1889.",
+        "Construction of the Eiffel Tower began in 1887.",
+        "The tower was completed for the 1889 World's Fair."
+      ],
+      "off_topic_claims": [
+        "Python is a programming language created by Guido van Rossum.",
+        "The Great Wall of China is over 13,000 miles long.",
+        "Water boils at 100 degrees Celsius at sea level."
+      ],
+      "partially_relevant_claims": [
+        "Paris is the capital city of France."
+      ],
+      "id": 1
+    },
+    {
+      "query": "What is the capital of Japan?",
+      "on_topic_claims": [
+        "Tokyo is the capital of Japan.",
+        "Tokyo became the capital of Japan in 1868.",
+        "Tokyo is the most populous metropolitan area in the world."
+      ],
+      "off_topic_claims": [
+        "The mitochondria is the powerhouse of the cell.",
+        "Shakespeare wrote Romeo and Juliet in the 1590s.",
+        "The speed of light is about 300,000 km per second."
+      ],
+      "partially_relevant_claims": [
+        "Japan is an island nation in East Asia."
+      ],
+      "id": 2
+    },
+    {
+      "query": "How does photosynthesis work?",
+      "on_topic_claims": [
+        "Photosynthesis converts sunlight into chemical energy.",
+        "Plants use chlorophyll to absorb light during photosynthesis.",
+        "Photosynthesis produces oxygen as a byproduct."
+      ],
+      "off_topic_claims": [
+        "The stock market closed higher on Tuesday.",
+        "Mount Everest is the tallest mountain in the world.",
+        "The Roman Empire fell in 476 AD."
+      ],
+      "partially_relevant_claims": [
+        "Plants are living organisms that grow in soil."
+      ],
+      "id": 3
+    },
+    {
+      "query": "Who wrote the novel 1984?",
+      "on_topic_claims": [
+        "George Orwell wrote the novel 1984.",
+        "1984 was published in 1949.",
+        "George Orwell's real name was Eric Arthur Blair."
+      ],
+      "off_topic_claims": [
+        "The human heart has four chambers.",
+        "Mount Kilimanjaro is located in Tanzania.",
+        "HTML stands for HyperText Markup Language."
+      ],
+      "partially_relevant_claims": [
+        "Dystopian fiction became popular in the 20th century."
+      ],
+      "id": 4
+    },
+    {
+      "query": "What causes earthquakes?",
+      "on_topic_claims": [
+        "Earthquakes are caused by the movement of tectonic plates.",
+        "Stress builds up along fault lines before an earthquake.",
+        "The Richter scale measures earthquake magnitude."
+      ],
+      "off_topic_claims": [
+        "The Mona Lisa was painted by Leonardo da Vinci.",
+        "Basketball was invented by James Naismith.",
+        "Sodium chloride is table salt."
+      ],
+      "partially_relevant_claims": [
+        "The Earth's crust is divided into several tectonic plates."
+      ],
+      "id": 5
+    },
+    {
+      "query": "What is the boiling point of water?",
+      "on_topic_claims": [
+        "Water boils at 100 degrees Celsius at sea level.",
+        "The boiling point of water decreases at higher altitudes.",
+        "Water boils at 212 degrees Fahrenheit."
+      ],
+      "off_topic_claims": [
+        "The French Revolution began in 1789.",
+        "Albert Einstein developed the theory of relativity.",
+        "The Amazon rainforest is the largest rainforest in the world."
+      ],
+      "partially_relevant_claims": [
+        "Water is a chemical compound made of hydrogen and oxygen."
+      ],
+      "id": 6
+    },
+    {
+      "query": "When did World War II end?",
+      "on_topic_claims": [
+        "World War II ended in 1945.",
+        "Japan formally surrendered on September 2, 1945.",
+        "Germany surrendered in May 1945, ending the war in Europe."
+      ],
+      "off_topic_claims": [
+        "The human genome contains about 20,000 genes.",
+        "Mount Fuji is the tallest mountain in Japan.",
+        "The Pacific Ocean is the largest ocean on Earth."
+      ],
+      "partially_relevant_claims": [
+        "World War II involved many countries across multiple continents."
+      ],
+      "id": 7
+    },
+    {
+      "query": "What is the largest planet in the solar system?",
+      "on_topic_claims": [
+        "Jupiter is the largest planet in the solar system.",
+        "Jupiter has a mass greater than all other planets combined.",
+        "Jupiter has at least 95 known moons."
+      ],
+      "off_topic_claims": [
+        "The Eiffel Tower is located in Paris, France.",
+        "Vincent van Gogh painted Starry Night.",
+        "The currency of Japan is the yen."
+      ],
+      "partially_relevant_claims": [
+        "The solar system has eight planets."
+      ],
+      "id": 8
+    },
+    {
+      "query": "How do vaccines work?",
+      "on_topic_claims": [
+        "Vaccines stimulate the immune system to produce antibodies.",
+        "Vaccines often contain a weakened or inactive form of a pathogen.",
+        "Vaccines help the body recognize and fight specific diseases."
+      ],
+      "off_topic_claims": [
+        "The Great Barrier Reef is located off the coast of Australia.",
+        "Beethoven composed nine symphonies.",
+        "The Sahara is the largest hot desert in the world."
+      ],
+      "partially_relevant_claims": [
+        "The immune system protects the body against infections."
+      ],
+      "id": 9
+    },
+    {
+      "query": "What is machine learning?",
+      "on_topic_claims": [
+        "Machine learning is a subset of artificial intelligence.",
+        "Machine learning algorithms learn patterns from data.",
+        "Supervised learning uses labeled training data."
+      ],
+      "off_topic_claims": [
+        "The Nile is the longest river in Africa.",
+        "The Renaissance began in Italy in the 14th century.",
+        "Penguins are flightless birds found mainly in Antarctica."
+      ],
+      "partially_relevant_claims": [
+        "Computers can process large amounts of data quickly."
+      ],
+      "id": 10
+    }
+  ]
+}
