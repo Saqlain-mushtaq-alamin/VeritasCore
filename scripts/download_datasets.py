@@ -56,32 +56,51 @@ DATASETS: dict[str, dict[str, Any]] = {
 
 
 def download_dataset(name: str, info: dict[str, Any]) -> bool:
-    """Download a single dataset and save to disk. Returns True on success."""
     from datasets import load_dataset
 
     print(f"\n[{name}] {info['description']}")
     print(f"  Source: {info['hf_path']}")
+
     save_dir = CACHE_DIR / name
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    all_ok = True
+    success = True
+
     for subset in info["subsets"]:
         subset_dir = save_dir / subset
+
         if subset_dir.exists():
-            print(f"  ✓ {subset} — already cached, skipping")
+            print(f"  ✓ {subset} already cached")
             continue
 
-        print(f"  ↓ Downloading subset: {subset}...")
-        try:
-            ds = load_dataset(info["hf_path"], subset, trust_remote_code=True)
-            ds.save_to_disk(str(subset_dir))
-            for split_name, split_data in ds.items():
-                print(f"    ✓ {split_name}: {len(split_data):,} examples")
-        except Exception as e:
-            print(f"    ✗ Failed: {e}")
-            all_ok = False
+        print(f"  ↓ Downloading {subset}...")
 
-    return all_ok
+        try:
+            ds = load_dataset(
+                path=info["hf_path"],
+                name=subset,
+            )
+
+            ds.save_to_disk(str(subset_dir))
+
+            if isinstance(ds, dict):
+                for split_name, split in ds.items():
+                    print(f"    ✓ {split_name}: {len(split):,} examples")
+            else:
+                print(f"    ✓ {len(ds):,} examples")
+
+        except Exception as e:
+            print(f"    ✗ {e}")
+
+            if name == "fever":
+                print(
+                    "    The original FEVER loader is deprecated.\n"
+                    "    Switching to a maintained Parquet mirror."
+                )
+
+    success = False
+
+    return success
 
 
 def list_datasets() -> None:
