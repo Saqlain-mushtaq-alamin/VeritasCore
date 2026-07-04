@@ -30,7 +30,14 @@ DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
 
 
 def load_halueval_qa(n: int) -> list[dict[str, Any]]:
-    """Load HaluEval QA samples: (question, knowledge, right_answer, hallucinated_answer)."""
+    """Load HaluEval QA samples (new dataset format).
+
+    Current schema:
+        knowledge
+        question
+        answer
+        hallucination ("yes"/"no")
+    """
     from datasets import load_from_disk
 
     path = DATA_DIR / "halueval" / "qa_samples"
@@ -39,25 +46,36 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
             f"HaluEval QA samples not found at {path}. "
             "Run: python scripts/download_datasets.py --only halueval"
         )
+
     ds = load_from_disk(str(path))
     split = ds["data"] if "data" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
+
     for i, row in enumerate(split):
         if i >= n:
             break
-        samples.append({
-            "context": row.get("knowledge", ""),
-            "claim_text": row.get("right_answer", ""),
-            "label": "supported",
-        })
-        samples.append({
-            "context": row.get("knowledge", ""),
-            "claim_text": row.get("hallucinated_answer", ""),
-            "label": "hallucinated",
-        })
-    return samples
 
+        context = row.get("knowledge", "")
+        claim = row.get("answer", "")
+        hallucination = str(row.get("hallucination", "")).strip().lower()
+
+        if not context or not claim:
+            continue
+
+        samples.append(
+            {
+                "context": context,
+                "claim_text": claim,
+                "label": (
+                    "hallucinated"
+                    if hallucination == "yes"
+                    else "supported"
+                ),
+            }
+        )
+
+    return samples
 
 def load_fever(n: int) -> list[dict[str, Any]]:
     """Load FEVER labelled_dev samples: (claim, evidence, label)."""
