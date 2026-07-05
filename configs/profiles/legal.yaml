@@ -1,0 +1,41 @@
+name: legal
+display_name: "Legal / Compliance"
+description: >
+  High-precision profile for legal and compliance content. Legal claims
+  must be verifiable against authoritative primary sources; secondary
+  sources are acceptable only when citing primary law. Thresholds are
+  raised to reduce hallucinated case citations and statute numbers —
+  the most common failure mode in LLM legal output.
+
+thresholds:
+  entailment_threshold: 0.80
+  contradiction_threshold: 0.55
+  consistency_threshold: 0.35
+  overall_trust_warning: 0.70
+  overall_trust_critical: 0.45
+
+constraints:
+  allowed_sources: ["context", "legal_databases", "official_government"]
+  blocked_domains:
+    - "reddit.com"
+    - "quora.com"
+    - "legaladvice.com"   # non-authoritative legal forums
+  required_source_count: 1
+  max_search_results: 6
+
+severity:
+  contradicted_weight: 3.0    # contradicted legal claims carry compliance risk
+  unsupported_weight: 1.5     # unsupported statute references are dangerous
+  supported_weight: 1.0
+  off_topic_penalty: 0.4
+
+claim_decomposition_hints:
+  - "Treat each cited statute, regulation, or case as a separate claim"
+  - "Separate claims about what the law says from claims about consequences"
+  - "Flag jurisdiction-specific claims explicitly"
+  - "Resolve all legal abbreviations in claims"
+
+metadata:
+  version: "1.0"
+  jurisdiction_note: "Configure jurisdiction in EngineConfig.metadata"
+  suitable_for: ["contract review", "regulatory compliance", "legal research"]

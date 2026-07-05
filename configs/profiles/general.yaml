@@ -1,0 +1,30 @@
+name: general
+display_name: "General"
+description: "Default profile — balanced thresholds suitable for most everyday queries."
+
+thresholds:
+  entailment_threshold: 0.70
+  contradiction_threshold: 0.50
+  consistency_threshold: 0.30
+  overall_trust_warning: 0.60
+  overall_trust_critical: 0.30
+
+constraints:
+  allowed_sources: ["web", "context"]
+  blocked_domains: []
+  required_source_count: 1
+  max_search_results: 5
+
+severity:
+  contradicted_weight: 2.0
+  unsupported_weight: 1.0
+  supported_weight: 1.0
+  off_topic_penalty: 0.3
+
+claim_decomposition_hints:
+  - "Extract all distinct factual claims"
+  - "Resolve all pronouns to their referents"
+
+metadata:
+  version: "1.0"
+  suitable_for: ["general knowledge", "everyday queries", "news summaries"]

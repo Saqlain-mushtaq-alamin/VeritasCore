@@ -1,0 +1,42 @@
+name: medical
+display_name: "Medical / Clinical"
+description: >
+  High-confidence profile for medical and clinical content. Raises NLI
+  thresholds to reduce false positives (incorrectly labeling a correct
+  medical claim as SUPPORTED on weak evidence). Excludes low-quality
+  sources like forums and social media. Higher contradiction weight
+  reflects that incorrect medical information carries real patient risk.
+
+thresholds:
+  entailment_threshold: 0.85   # stricter: need strong evidence to call SUPPORTED
+  contradiction_threshold: 0.60 # stricter: need clear evidence to call CONTRADICTED
+  consistency_threshold: 0.40  # on-topic threshold raised: medical queries are specific
+  overall_trust_warning: 0.75  # warn at higher trust scores than general
+  overall_trust_critical: 0.50
+
+constraints:
+  allowed_sources: ["context", "pubmed", "clinical_guidelines"]
+  blocked_domains:
+    - "reddit.com"
+    - "quora.com"
+    - "yahoo.com"
+    - "wikipedia.org"   # Wikipedia not peer-reviewed; use PubMed instead
+  required_source_count: 2    # require at least 2 independent sources
+  max_search_results: 8
+
+severity:
+  contradicted_weight: 4.0    # medical misinformation is high-stakes
+  unsupported_weight: 2.0     # unverifiable medical claims are also risky
+  supported_weight: 1.0
+  off_topic_penalty: 0.5
+
+claim_decomposition_hints:
+  - "Identify drug names, dosages, and contraindications as separate claims"
+  - "Separate diagnostic criteria from treatment recommendations"
+  - "Flag any numerical values (dosages, lab values) as individual claims"
+  - "Do not conflate correlation with causation in claims"
+
+metadata:
+  version: "1.0"
+  regulatory_note: "Not a replacement for professional clinical judgment"
+  suitable_for: ["drug information", "clinical summaries", "patient education"]

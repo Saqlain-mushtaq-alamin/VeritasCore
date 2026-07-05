@@ -1,0 +1,41 @@
+name: finance
+display_name: "Finance / Investment"
+description: >
+  Profile for financial content, investment research, and market data.
+  Numerical claims (prices, percentages, dates) are individually high-risk;
+  the consistency threshold is raised because financial queries are very
+  specific and off-topic drift is particularly detrimental here.
+
+thresholds:
+  entailment_threshold: 0.75
+  contradiction_threshold: 0.52
+  consistency_threshold: 0.38
+  overall_trust_warning: 0.65
+  overall_trust_critical: 0.40
+
+constraints:
+  allowed_sources: ["context", "sec_filings", "financial_data_providers"]
+  blocked_domains:
+    - "reddit.com"
+    - "twitter.com"
+    - "x.com"
+    - "stocktwits.com"
+  required_source_count: 1
+  max_search_results: 5
+
+severity:
+  contradicted_weight: 3.0
+  unsupported_weight: 1.5
+  supported_weight: 1.0
+  off_topic_penalty: 0.5
+
+claim_decomposition_hints:
+  - "Treat each numerical value (price, percentage, ratio) as a separate claim"
+  - "Separate historical facts from forward-looking projections"
+  - "Forward-looking statements should always be flagged as projections, not facts"
+  - "Include the time period for all financial metrics"
+
+metadata:
+  version: "1.0"
+  disclaimer: "Not investment advice. For informational purposes only."
+  suitable_for: ["earnings summaries", "market analysis", "financial research"]
