@@ -12,13 +12,16 @@ dev:
 # ── Quality ───────────────────────────────────────────────────────────────────
 
 test:
-	pytest tests/ -v --cov=veritascore --cov-report=term-missing
+	pytest tests/ -v -m "not integration" --cov=veritascore --cov-report=term-missing
 
 test-unit:
 	pytest tests/unit/ -v
 
 test-integration:
-	pytest tests/integration/ -v
+	pytest tests/integration/ -v -m integration
+
+test-all:
+	pytest tests/ -v --cov=veritascore --cov-report=term-missing
 
 lint:
 	ruff check src/ tests/
@@ -41,6 +44,36 @@ download-models:
 
 download-data:
 	python scripts/download_datasets.py
+
+benchmark-decomposer:
+	python scripts/evaluate_decomposer.py --decomposer both --verbose
+
+benchmark-nli:
+	python scripts/benchmark_nli_verifier.py --dataset both --n 200
+
+benchmark-retrieval:
+	python scripts/benchmark_retrieval_verifier.py --dataset halueval --n 50
+
+benchmark-consistency:
+	python scripts/evaluate_consistency.py --verbose
+
+train-fusion:
+	python scripts/train_fusion.py --n 300 --model logistic_regression
+
+serve:
+	uvicorn veritascore.api.app:app --host 0.0.0.0 --port 8000 --reload
+
+serve-prod:
+	uvicorn veritascore.api.app:app --host 0.0.0.0 --port 8000 --workers 2
+
+docker-build:
+	docker build -f docker/Dockerfile -t veritascore:latest .
+
+docker-run:
+	docker run -p 8000:8000 --env-file .env veritascore:latest
+
+clear-search-cache:
+	python -c "from veritascore.retriever.cache import SearchCache; n = SearchCache().clear(); print(f'Cleared {n} cached search results')"
 
 setup: dev validate-hw download-models download-data
 	@echo "✓ Full setup complete"
@@ -72,4 +105,3 @@ help:
 	@echo "  make download-data   Download benchmark datasets"
 	@echo "  make setup           Full first-time setup"
 	@echo "  make clean           Remove cache and build artifacts"
- 
