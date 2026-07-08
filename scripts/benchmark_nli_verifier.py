@@ -78,17 +78,22 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
     return samples
 
 def load_fever(n: int) -> list[dict[str, Any]]:
-    """Load FEVER labelled_dev samples: (claim, evidence, label)."""
+    """Load FEVER validation samples: (claim, evidence, label).
+
+    Uses copenlu/fever_gold_evidence (Parquet, no loading script required).
+    Evidence schema: list of [page, sentence_id, sentence_text] triples.
+    """
     from datasets import load_from_disk
 
-    path = DATA_DIR / "fever" / "labelled_dev"
+    path = DATA_DIR / "fever" / "v1.0"
     if not path.exists():
         raise FileNotFoundError(
             f"FEVER samples not found at {path}. "
             "Run: python scripts/download_datasets.py --only fever"
         )
     ds = load_from_disk(str(path))
-    split = ds["labelled_dev"] if "labelled_dev" in ds else next(iter(ds.values()))
+    # Use validation split (15935 rows) for benchmarking
+    split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
     for i, row in enumerate(split):
@@ -97,8 +102,20 @@ def load_fever(n: int) -> list[dict[str, Any]]:
         label = row.get("label", "")
         if label == "NOT ENOUGH INFO":
             continue  # NLIVerifier doesn't have a direct analogue; skip for binary AUROC
+        # Flatten evidence triples [[page, sent_id, text], ...] -> joined sentence text
+        raw_evidence = row.get("evidence", [])
+        if isinstance(raw_evidence, list) and raw_evidence:
+            # Each entry is [page, sent_id, text]; extract text (index 2)
+            context = " ".join(
+                triple[2] for triple in raw_evidence
+                if isinstance(triple, (list, tuple)) and len(triple) >= 3 and triple[2]
+            )
+        else:
+            context = str(raw_evidence) if raw_evidence else ""
+        if not context:
+            continue
         samples.append({
-            "context": row.get("evidence", ""),
+            "context": context,
             "claim_text": row.get("claim", ""),
             "label": "supported" if label == "SUPPORTS" else "hallucinated",
         })

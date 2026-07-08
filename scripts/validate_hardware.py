@@ -10,9 +10,16 @@ Exit codes:
 
 from __future__ import annotations
 
+import io
 import shutil
 import sys
 import platform
+
+# Force UTF-8 output on Windows so Unicode symbols don't crash CP1252 consoles.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+else:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 
 REQUIREMENTS = {

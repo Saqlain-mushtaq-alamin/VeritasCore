@@ -15,9 +15,16 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import io
 import sys
 import time
 import traceback
+
+# Force UTF-8 output on Windows so Unicode symbols don't crash CP1252 consoles.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+else:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 
 def _fmt_params(model: object) -> str:

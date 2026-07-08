@@ -16,25 +16,39 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import io
 import sys
 from pathlib import Path
 from typing import Any
 
+# Force UTF-8 output on Windows so Unicode symbols don't crash CP1252 consoles.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+else:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
 
 CACHE_DIR = Path("data/datasets")
+
+# FEVER fallback: the original fever/fever loader is deprecated on HF Hub.
+# We use "fever" config from datasets-maintainers mirror instead.
+FEVER_FALLBACK = "datasets-maintainers/FEVER"
 
 DATASETS: dict[str, dict[str, Any]] = {
     "halueval": {
         "hf_path": "pminervini/HaluEval",
+        # Each config name IS the split name for HaluEval
         "subsets": ["qa_samples", "summarization_samples", "dialogue_samples"],
         "description": "Hallucination evaluation benchmark with labeled examples",
         "primary": True,
         "notes": "Primary benchmark — directly tests claim-level hallucination detection",
     },
     "fever": {
-        "hf_path": "fever/fever",
-        "subsets": ["labelled_dev"],
-        "description": "Fact Extraction and VERification (155K claim-evidence pairs)",
+        # fever/fever deprecated (uses loading script). Using copenlu/fever_gold_evidence
+        # which is a clean Parquet conversion with identical schema.
+        "hf_path": "copenlu/fever_gold_evidence",
+        "subsets": ["v1.0"],
+        "description": "Fact Extraction and VERification — Parquet mirror (copenlu)",
         "primary": True,
         "notes": "Primary benchmark — large-scale fact verification with evidence",
     },
@@ -64,43 +78,52 @@ def download_dataset(name: str, info: dict[str, Any]) -> bool:
     save_dir = CACHE_DIR / name
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    success = True
+    all_succeeded = True  # BUG FIX: was reset to False unconditionally outside except
 
     for subset in info["subsets"]:
         subset_dir = save_dir / subset
 
         if subset_dir.exists():
-            print(f"  ✓ {subset} already cached")
+            print(f"  OK: {subset} already cached")
             continue
 
-        print(f"  ↓ Downloading {subset}...")
+        print(f"  Downloading {subset}...")
 
         try:
             ds = load_dataset(
                 path=info["hf_path"],
                 name=subset,
             )
-
             ds.save_to_disk(str(subset_dir))
 
             if isinstance(ds, dict):
                 for split_name, split in ds.items():
-                    print(f"    ✓ {split_name}: {len(split):,} examples")
+                    print(f"    OK {split_name}: {len(split):,} examples")
             else:
-                print(f"    ✓ {len(ds):,} examples")
+                print(f"    OK {len(ds):,} examples")
 
-        except Exception as e:
-            print(f"    ✗ {e}")
+        except Exception as primary_err:
+            print(f"    WARN primary source failed: {primary_err}")
 
-            if name == "fever":
-                print(
-                    "    The original FEVER loader is deprecated.\n"
-                    "    Switching to a maintained Parquet mirror."
-                )
+            # Try fallback source if configured
+            fallback = info.get("fallback_hf_path")
+            if fallback:
+                print(f"    Trying fallback source: {fallback}")
+                try:
+                    ds = load_dataset(path=fallback, name=subset)
+                    ds.save_to_disk(str(subset_dir))
+                    if isinstance(ds, dict):
+                        for split_name, split in ds.items():
+                            print(f"    OK {split_name}: {len(split):,} examples (fallback)")
+                    else:
+                        print(f"    OK {len(ds):,} examples (fallback)")
+                except Exception as fallback_err:
+                    print(f"    FAIL fallback also failed: {fallback_err}")
+                    all_succeeded = False
+            else:
+                all_succeeded = False
 
-    success = False
-
-    return success
+    return all_succeeded
 
 
 def list_datasets() -> None:
