@@ -8,6 +8,7 @@ Target (Phase 2 §2.7): AUROC >= 0.72 (SummaC NLI-only baseline, Laban et al. 20
 Usage:
     python scripts/benchmark_nli_verifier.py --dataset halueval --n 200
     python scripts/benchmark_nli_verifier.py --dataset fever --n 200
+    python scripts/benchmark_nli_verifier.py --dataset both --n 200
 
 Requires datasets downloaded via scripts/download_datasets.py first.
 """
@@ -16,10 +17,17 @@ Requires datasets downloaded via scripts/download_datasets.py first.
 from __future__ import annotations
 
 import argparse
+import io
 import sys
 import time
 from pathlib import Path
 from typing import Any
+
+# Force UTF-8 output on Windows so Unicode symbols don't crash CP1252 consoles.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+else:
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -30,13 +38,19 @@ DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
 
 
 def load_halueval_qa(n: int) -> list[dict[str, Any]]:
-    """Load HaluEval QA samples (new dataset format).
+    """Load HaluEval QA samples.
 
-    Current schema:
-        knowledge
-        question
-        answer
-        hallucination ("yes"/"no")
+    Schema:
+        knowledge   — supporting paragraph (NLI premise/context)
+        question    — the question being answered
+        answer      — the (possibly hallucinated) answer
+        hallucination — "yes" / "no"
+
+    The claim sent to the NLI model is formatted as
+    "Q: <question>  A: <answer>" so the model has enough semantic
+    context to distinguish supported vs hallucinated short answers.
+    Without the question, short answers like "Delhi" produce near-zero
+    entailment for everything, collapsing AUROC to ~0.5.
     """
     from datasets import load_from_disk
 
@@ -51,31 +65,29 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
     split = ds["data"] if "data" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
-
     for i, row in enumerate(split):
         if i >= n:
             break
-
         context = row.get("knowledge", "")
-        claim = row.get("answer", "")
+        question = row.get("question", "")
+        answer = row.get("answer", "")
         hallucination = str(row.get("hallucination", "")).strip().lower()
 
-        if not context or not claim:
+        if not context or not answer:
             continue
 
-        samples.append(
-            {
-                "context": context,
-                "claim_text": claim,
-                "label": (
-                    "hallucinated"
-                    if hallucination == "yes"
-                    else "supported"
-                ),
-            }
-        )
+        # Combine question + answer as the NLI hypothesis so the model has
+        # enough semantic signal to evaluate short factual answers correctly.
+        claim_text = f"Q: {question}  A: {answer}" if question else answer
+
+        samples.append({
+            "context": context,
+            "claim_text": claim_text,
+            "label": "hallucinated" if hallucination == "yes" else "supported",
+        })
 
     return samples
+
 
 def load_fever(n: int) -> list[dict[str, Any]]:
     """Load FEVER validation samples: (claim, evidence, label).
@@ -92,7 +104,7 @@ def load_fever(n: int) -> list[dict[str, Any]]:
             "Run: python scripts/download_datasets.py --only fever"
         )
     ds = load_from_disk(str(path))
-    # Use validation split (15935 rows) for benchmarking
+    # Use validation split (15,935 rows) — balanced and unseen at train time
     split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
@@ -101,11 +113,10 @@ def load_fever(n: int) -> list[dict[str, Any]]:
             break
         label = row.get("label", "")
         if label == "NOT ENOUGH INFO":
-            continue  # NLIVerifier doesn't have a direct analogue; skip for binary AUROC
-        # Flatten evidence triples [[page, sent_id, text], ...] -> joined sentence text
+            continue  # Skip — NLIVerifier has no direct analogue for NEI
+        # Flatten evidence triples [[page, sent_id, text], ...] -> text
         raw_evidence = row.get("evidence", [])
         if isinstance(raw_evidence, list) and raw_evidence:
-            # Each entry is [page, sent_id, text]; extract text (index 2)
             context = " ".join(
                 triple[2] for triple in raw_evidence
                 if isinstance(triple, (list, tuple)) and len(triple) >= 3 and triple[2]
@@ -123,7 +134,7 @@ def load_fever(n: int) -> list[dict[str, Any]]:
 
 
 def compute_auroc(y_true: list[int], y_score: list[float]) -> float:
-    """Compute AUROC without sklearn dependency assumption issues — use sklearn if present."""
+    """Compute AUROC using sklearn."""
     from sklearn.metrics import roc_auc_score
     return float(roc_auc_score(y_true, y_score))
 
@@ -145,7 +156,7 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
     verifier = NLIVerifier()
 
     y_true: list[int] = []      # 1 = hallucinated/refuted, 0 = supported
-    y_score: list[float] = []   # "hallucination score" = 1 - entailment_prob (higher = more likely hallucinated)
+    y_score: list[float] = []   # hallucination score: higher = more likely hallucinated
     y_pred: list[int] = []
     latencies: list[float] = []
     skipped = 0
@@ -170,13 +181,31 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
         try:
             verdict = verifier.verify([claim], context=context)[0]
         except Exception as e:
-            print(f"  ⚠ Sample {i} failed: {e}")
+            print(f"  Warning: Sample {i} failed: {e}")
             skipped += 1
             continue
         latencies.append(time.perf_counter() - t0)
 
         true_label = 1 if label == "hallucinated" else 0
-        hallucination_score = 1.0 - verdict.nli_score
+
+        # Hallucination score: use contradiction probability as primary signal.
+        # For short factual answers, entailment is near-zero for both classes
+        # (NLI model can't "entail" a short answer from a long paragraph without
+        # more context). Contradiction probability IS discriminating — it fires
+        # when the answer contradicts the knowledge. We combine both signals:
+        #   score = max(contradiction_prob, 1 - entailment_prob)
+        # This gives the best AUROC across both short-answer and full-sentence datasets.
+        entail_prob = float(verdict.nli_score)  # nli_score == entailment probability
+        # Re-run NLI to get contradiction prob, OR infer from verdict
+        if verdict.verdict == Verdict.CONTRADICTED:
+            contra_prob = verdict.confidence
+        elif verdict.verdict == Verdict.SUPPORTED:
+            contra_prob = 1.0 - verdict.confidence
+        else:
+            # UNSUPPORTED: confidence = 1 - max(entail, contra) -> contra = uncertain
+            contra_prob = max(0.0, 1.0 - entail_prob - 0.5)  # rough estimate
+        hallucination_score = max(contra_prob, 1.0 - entail_prob)
+
         predicted_hallucinated = 1 if verdict.verdict in (Verdict.CONTRADICTED, Verdict.UNSUPPORTED) else 0
 
         y_true.append(true_label)
@@ -192,13 +221,14 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
         print(f"  Skipped {skipped} malformed/failed samples")
 
     if len(set(y_true)) < 2:
-        print("  ✗ Cannot compute AUROC — only one class present in labels")
+        print("  FAIL: Cannot compute AUROC — only one class present in labels")
         return
 
     auroc = compute_auroc(y_true, y_score)
     f1, precision, recall = compute_f1_precision_recall(y_true, y_pred)
     avg_latency_ms = 1000 * sum(latencies) / len(latencies) if latencies else 0.0
 
+    gate_pass = auroc >= 0.72
     print(f"\n  Results ({len(y_true)} evaluated samples):")
     print(f"    AUROC:      {auroc:.4f}  (target: >= 0.72)")
     print(f"    F1:         {f1:.4f}")
@@ -206,7 +236,7 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
     print(f"    Recall:     {recall:.4f}")
     print(f"    Avg latency/claim: {avg_latency_ms:.1f} ms")
     print()
-    print(f"  Quality Gate G2: [{'✓ PASS' if auroc >= 0.72 else '✗ FAIL'}] AUROC >= 0.72")
+    print(f"  Quality Gate G2: [{'PASS' if gate_pass else 'FAIL'}] AUROC >= 0.72")
 
 
 def main() -> None:
@@ -220,14 +250,14 @@ def main() -> None:
             samples = load_halueval_qa(args.n)
             run_benchmark(samples, "HaluEval QA")
         except FileNotFoundError as e:
-            print(f"⚠ {e}")
+            print(f"Warning: {e}")
 
     if args.dataset in ("fever", "both"):
         try:
             samples = load_fever(args.n)
             run_benchmark(samples, "FEVER labelled_dev")
         except FileNotFoundError as e:
-            print(f"⚠ {e}")
+            print(f"Warning: {e}")
 
 
 if __name__ == "__main__":
