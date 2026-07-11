@@ -99,11 +99,17 @@ _OPINION_CLAIM_PREFIXES: tuple[str, ...] = (
 
 # Preamble / apology / meta-commentary patterns the model sometimes outputs.
 # We strip lines matching these before attempting to parse numbered items.
+# Phi-3 commonly generates explanations like:
+#   "Since this instruction requires us only to provide..."
+#   "Since we need to extract only factual claims..."
+#   "Based on the instruction, I will only extract..."
 _APOLOGY_LINE = re.compile(
-    r'^\s*(?:i apologize|i\'m sorry|since i am|since we need|'
-    r'based upon your|here (?:is|are) the|to address your|'
+    r'^\s*(?:i apologize|i\'m sorry|since i am|since we need|since this |since the |'
+    r'based upon your|based on (the|your|this)|here (?:is|are) the|to address your|'
     r'since your instruction|please note|note that|'
-    r'unfortunately|as per your|i cannot provide)',
+    r'unfortunately|as per your|i cannot provide|'
+    r'the following (?:are|is)|as instructed|per (the|your)|'
+    r'following (the|your)|in accordance|as per (the|your))',
     re.IGNORECASE,
 )
 
