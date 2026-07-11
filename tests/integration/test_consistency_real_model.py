@@ -112,7 +112,7 @@ class TestCuratedFixtureFullEvaluation:
                     passed += 1
 
         pass_rate = passed / total
-        assert pass_rate > 0.90, f"On-topic pass rate {pass_rate:.1%} below 90% target"
+        assert pass_rate >= 0.90, f"On-topic pass rate {pass_rate:.1%} below 90% target"
 
     def test_off_topic_claims_score_below_threshold_80pct(
         self, checker: SemanticConsistencyChecker

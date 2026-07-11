@@ -51,8 +51,13 @@ class TestRetrievalVerifierWithRealNLIOfflineRetriever:
 
         config = EngineConfig(search=SearchConfig(cache_dir=str(tmp_path)))
         retriever = OfflineRetriever(config=config)
+
+        # The claim text is used verbatim as the search query by
+        # RetrievalVerifier._formulate_query (no prefix stripping applies
+        # here), so the cache key must match the claim text exactly.
+        claim_text = "Eiffel Tower height is 330 metres."
         retriever.cache.set(
-            "Eiffel Tower height",
+            claim_text,
             [SearchResult(
                 title="Eiffel Tower",
                 url="https://en.wikipedia.org/wiki/Eiffel_Tower",
@@ -68,8 +73,8 @@ class TestRetrievalVerifierWithRealNLIOfflineRetriever:
         )
 
         claim = Claim(
-            text="Eiffel Tower height is 330 metres.",
-            source_span=(0, 35), source_text="x",
+            text=claim_text,
+            source_span=(0, len(claim_text)), source_text="x",
         )
         verdicts = verifier.verify([claim])
         assert verdicts[0].verdict == Verdict.SUPPORTED
