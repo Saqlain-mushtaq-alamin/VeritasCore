@@ -356,8 +356,17 @@ class LLMDecomposer(BaseDecomposer):
         attention_mask = encoded.attention_mask
 
         if self._device != "cpu":
-            input_ids = input_ids.to(self._device)
-            attention_mask = attention_mask.to(self._device)
+            # When device_map='auto' (accelerate splits layers across CPU+GPU),
+            # self._device may be 'cuda' but the embedding layer may live on
+            # 'cpu'. Move inputs to the device of the first model parameter
+            # (the embedding layer) to avoid the "tensors on two devices" error.
+            try:
+                first_param = next(self._model.parameters())
+                input_device = first_param.device
+            except StopIteration:
+                input_device = torch.device(self._device)
+            input_ids = input_ids.to(input_device)
+            attention_mask = attention_mask.to(input_device)
 
         prompt_len = input_ids.shape[1]
 

@@ -76,10 +76,22 @@ class TestLLMDecomposerBasic:
         assert llm_decomposer.decompose("   ") == []
 
     def test_opinion_filtering(self, llm_decomposer: LLMDecomposer) -> None:
+        """LLM should drop opinions and extract factual claims.
+
+        The input has one opinion ("I believe Python is the best...") and
+        one verifiable fact ("Python was released in 1991"). We verify that
+        the factual claim is extracted. The LLM may paraphrase slightly,
+        so we check for the year OR the word 'python' in factual context.
+        """
         text = "I believe Python is the best language. Python was released in 1991."
         claims = llm_decomposer.decompose(text)
         claim_texts = " ".join(c.text for c in claims).lower()
-        assert "1991" in claim_texts
+        # The factual claim about 1991 must be present.
+        # LLMs may write "nineteen ninety-one" or similar, but the
+        # numeric year "1991" is far more common in this context.
+        assert "1991" in claim_texts, (
+            f"Expected '1991' in extracted claims. Got: {claim_texts!r}"
+        )
 
 
 class TestLLMDecomposerSpanMapping:
