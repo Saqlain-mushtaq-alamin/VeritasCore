@@ -36,7 +36,7 @@ from veritascore.verifier.nli_verifier import NLIVerifier  # noqa: E402
 from veritascore.verifier.retrieval_verifier import RetrievalVerifier  # noqa: E402
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
-
+print("### THIS IS THE MODIFIED BENCHMARK ###")
 
 def load_halueval_qa(n: int) -> list[dict[str, Any]]:
     """Load HaluEval QA samples for the retrieval (ungrounded) benchmark.
@@ -57,11 +57,20 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
     split = ds["data"] if "data" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
+
     for i, row in enumerate(split):
         if i >= n:
             break
-        samples.append({"claim_text": row.get("right_answer", ""), "label": "supported"})
-        samples.append({"claim_text": row.get("hallucinated_answer", ""), "label": "hallucinated"})
+
+        samples.append(
+           {
+                "claim_text": row["answer"],
+                 "label": "hallucinated"
+                if row["hallucination"].lower() == "yes"
+                else "supported",
+           }
+    )
+
     return samples
 
 
@@ -109,8 +118,10 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
         t0 = time.perf_counter()
         try:
             verdict = verifier.verify([claim])[0]
-        except Exception as e:
-            print(f"  Warning: sample {i} failed: {e}")
+        except Exception:
+            import traceback
+            print(f"\n===== SAMPLE {i} FAILED =====")
+            traceback.print_exc()
             skipped += 1
             continue
         latencies.append(time.perf_counter() - t0)
