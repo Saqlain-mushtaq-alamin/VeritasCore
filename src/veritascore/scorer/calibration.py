@@ -78,9 +78,7 @@ class CalibrationModule:
         if len(raw_scores) < 2:
             raise ValueError("Need at least 2 samples to fit a calibrator")
         if len(set(labels.tolist())) < 2:
-            raise ValueError(
-                "Platt scaling requires both classes (0 and 1) present in labels"
-            )
+            raise ValueError("Platt scaling requires both classes (0 and 1) present in labels")
 
         from sklearn.linear_model import LogisticRegression
 
@@ -102,9 +100,7 @@ class CalibrationModule:
             RuntimeError: If fit() or load() has not been called yet.
         """
         if self._calibrator is None:
-            raise RuntimeError(
-                "Calibrator has not been fit or loaded. Call fit() or load() first."
-            )
+            raise RuntimeError("Calibrator has not been fit or loaded. Call fit() or load() first.")
 
         raw_scores = np.asarray(raw_scores, dtype=float)
         original_shape = raw_scores.shape

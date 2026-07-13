@@ -81,15 +81,18 @@ def sample_claim() -> Claim:
 
 # ── Query-Claim Relevance ──────────────────────────────────────────────────────
 
+
 class TestQueryClaimRelevance:
     def test_on_topic_claim_high_score(self, sample_claim: Claim) -> None:
         """Claim directly answering the query -> high relevance score."""
         query = "What is the capital of France?"
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            sample_claim.text: FRANCE_TOPIC,
-            "irrelevant response text": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                sample_claim.text: FRANCE_TOPIC,
+                "irrelevant response text": FRANCE_TOPIC,
+            }
+        )
         result = checker.check_consistency([sample_claim], query, "irrelevant response text")
         assert result.claim_scores[sample_claim.id] > 0.5
 
@@ -97,14 +100,18 @@ class TestQueryClaimRelevance:
         """Claim irrelevant to query -> low relevance score."""
         query = "What is the capital of France?"
         claim = Claim(
-            id="c2", text="Python was created by Guido van Rossum.",
-            source_span=(0, 39), source_text="x",
+            id="c2",
+            text="Python was created by Guido van Rossum.",
+            source_span=(0, 39),
+            source_text="x",
         )
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            claim.text: PYTHON_TOPIC,
-            "response": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                claim.text: PYTHON_TOPIC,
+                "response": FRANCE_TOPIC,
+            }
+        )
         result = checker.check_consistency([claim], query, "response")
         assert result.claim_scores[claim.id] < 0.3
 
@@ -112,30 +119,41 @@ class TestQueryClaimRelevance:
         """Claim somewhat related but not directly answering -> medium score."""
         query = "What is the capital of France?"
         claim = Claim(
-            id="c3", text="France has a population of 67 million.",
-            source_span=(0, 38), source_text="x",
+            id="c3",
+            text="France has a population of 67 million.",
+            source_span=(0, 38),
+            source_text="x",
         )
         # A vector at ~45 degrees from FRANCE_TOPIC gives a mid-range cosine sim
         mid_vector = np.array([0.6, 0.6])
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            claim.text: mid_vector,
-            "response": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                claim.text: mid_vector,
+                "response": FRANCE_TOPIC,
+            }
+        )
         result = checker.check_consistency([claim], query, "response")
         assert 0.3 < result.claim_scores[claim.id] < 0.95
 
     def test_off_topic_detection(self) -> None:
         """Off-topic claims should be flagged in off_topic_claims list."""
         query = "What is the capital of France?"
-        on_topic = Claim(id="on", text="Paris is the capital.", source_span=(0, 21), source_text="x")
-        off_topic = Claim(id="off", text="Python is a language.", source_span=(0, 21), source_text="x")
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            on_topic.text: FRANCE_TOPIC,
-            off_topic.text: PYTHON_TOPIC,
-            "response": FRANCE_TOPIC,
-        }, relevance_threshold=0.3)
+        on_topic = Claim(
+            id="on", text="Paris is the capital.", source_span=(0, 21), source_text="x"
+        )
+        off_topic = Claim(
+            id="off", text="Python is a language.", source_span=(0, 21), source_text="x"
+        )
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                on_topic.text: FRANCE_TOPIC,
+                off_topic.text: PYTHON_TOPIC,
+                "response": FRANCE_TOPIC,
+            },
+            relevance_threshold=0.3,
+        )
         result = checker.check_consistency([on_topic, off_topic], query, "response")
         assert off_topic.id in result.off_topic_claims
         assert on_topic.id not in result.off_topic_claims
@@ -148,17 +166,21 @@ class TestQueryClaimRelevance:
         could be misread as 'right at the boundary'."""
         query = "q"
         claim = Claim(id="c", text="opposite", source_span=(0, 8), source_text="x")
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            claim.text: OPPOSITE_OF_FRANCE,
-            "response": FRANCE_TOPIC,
-        }, relevance_threshold=0.3)
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                claim.text: OPPOSITE_OF_FRANCE,
+                "response": FRANCE_TOPIC,
+            },
+            relevance_threshold=0.3,
+        )
         result = checker.check_consistency([claim], query, "response")
         assert claim.id in result.off_topic_claims
         assert result.claim_scores[claim.id] == 0.0  # clamped, but still flagged
 
 
 # ── Coherence ──────────────────────────────────────────────────────────────────
+
 
 class TestCoherence:
     def test_coherence_consistent_claims(self) -> None:
@@ -168,13 +190,15 @@ class TestCoherence:
             Claim(id="b", text="claim b", source_span=(0, 7), source_text="x"),
             Claim(id="c", text="claim c", source_span=(0, 7), source_text="x"),
         ]
-        checker = make_checker({
-            "query": FRANCE_TOPIC,
-            "claim a": FRANCE_TOPIC,
-            "claim b": FRANCE_TOPIC,
-            "claim c": FRANCE_TOPIC,
-            "response": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                "query": FRANCE_TOPIC,
+                "claim a": FRANCE_TOPIC,
+                "claim b": FRANCE_TOPIC,
+                "claim c": FRANCE_TOPIC,
+                "response": FRANCE_TOPIC,
+            }
+        )
         result = checker.check_consistency(claims, "query", "response")
         assert result.coherence_score > 0.8
 
@@ -184,19 +208,25 @@ class TestCoherence:
             Claim(id="a", text="claim a", source_span=(0, 7), source_text="x"),
             Claim(id="b", text="claim b", source_span=(0, 7), source_text="x"),
         ]
-        checker = make_checker({
-            "query": FRANCE_TOPIC,
-            "claim a": FRANCE_TOPIC,
-            "claim b": OPPOSITE_OF_FRANCE,
-            "response": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                "query": FRANCE_TOPIC,
+                "claim a": FRANCE_TOPIC,
+                "claim b": OPPOSITE_OF_FRANCE,
+                "response": FRANCE_TOPIC,
+            }
+        )
         result = checker.check_consistency(claims, "query", "response")
         assert result.coherence_score < 0.0
 
     def test_single_claim_is_vacuously_coherent(self, sample_claim: Claim) -> None:
-        checker = make_checker({
-            "query": FRANCE_TOPIC, sample_claim.text: PYTHON_TOPIC, "response": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                "query": FRANCE_TOPIC,
+                sample_claim.text: PYTHON_TOPIC,
+                "response": FRANCE_TOPIC,
+            }
+        )
         result = checker.check_consistency([sample_claim], "query", "response")
         assert result.coherence_score == 1.0
 
@@ -210,18 +240,23 @@ class TestCoherence:
             Claim(id="c", text="claim c", source_span=(0, 7), source_text="x"),
             Claim(id="d", text="claim d", source_span=(0, 7), source_text="x"),
         ]
-        checker = make_checker({
-            "query": FRANCE_TOPIC,
-            "claim a": FRANCE_TOPIC, "claim b": FRANCE_TOPIC,
-            "claim c": FRANCE_TOPIC, "claim d": OPPOSITE_OF_FRANCE,
-            "response": FRANCE_TOPIC,
-        })
+        checker = make_checker(
+            {
+                "query": FRANCE_TOPIC,
+                "claim a": FRANCE_TOPIC,
+                "claim b": FRANCE_TOPIC,
+                "claim c": FRANCE_TOPIC,
+                "claim d": OPPOSITE_OF_FRANCE,
+                "response": FRANCE_TOPIC,
+            }
+        )
         consistent_result = checker.check_consistency(consistent, "query", "response")
         inconsistent_result = checker.check_consistency(inconsistent, "query", "response")
         assert consistent_result.coherence_score > inconsistent_result.coherence_score
 
 
 # ── Empty / Edge Cases ──────────────────────────────────────────────────────────
+
 
 class TestEmptyAndEdgeCases:
     def test_empty_claims(self) -> None:
@@ -255,27 +290,30 @@ class TestEmptyAndEdgeCases:
 
 # ── Response Relevance ──────────────────────────────────────────────────────────
 
+
 class TestResponseRelevance:
     def test_response_relevance_computed(self, sample_claim: Claim) -> None:
         """Overall response relevance should be computed and present."""
         query = "What is the capital of France?"
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            sample_claim.text: FRANCE_TOPIC,
-            "Paris is the capital of France.": FRANCE_TOPIC,
-        })
-        result = checker.check_consistency(
-            [sample_claim], query, "Paris is the capital of France."
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                sample_claim.text: FRANCE_TOPIC,
+                "Paris is the capital of France.": FRANCE_TOPIC,
+            }
         )
+        result = checker.check_consistency([sample_claim], query, "Paris is the capital of France.")
         assert result.response_relevance > 0.5
 
     def test_off_topic_response_has_low_relevance(self, sample_claim: Claim) -> None:
         query = "What is the capital of France?"
-        checker = make_checker({
-            query: FRANCE_TOPIC,
-            sample_claim.text: FRANCE_TOPIC,
-            "Python is a programming language.": PYTHON_TOPIC,
-        })
+        checker = make_checker(
+            {
+                query: FRANCE_TOPIC,
+                sample_claim.text: FRANCE_TOPIC,
+                "Python is a programming language.": PYTHON_TOPIC,
+            }
+        )
         result = checker.check_consistency(
             [sample_claim], query, "Python is a programming language."
         )
@@ -283,6 +321,7 @@ class TestResponseRelevance:
 
 
 # ── score_claim ──────────────────────────────────────────────────────────────────
+
 
 class TestScoreClaim:
     def test_score_claim_matches_check_consistency(self, sample_claim: Claim) -> None:
@@ -301,6 +340,7 @@ class TestScoreClaim:
 
 # ── Init / Validation ────────────────────────────────────────────────────────────
 
+
 class TestInit:
     def test_invalid_threshold_raises(self) -> None:
         with pytest.raises(ValueError):
@@ -314,8 +354,10 @@ class TestInit:
 
     def test_consistency_result_to_dict(self) -> None:
         result = ConsistencyResult(
-            claim_scores={"a": 0.8}, coherence_score=0.5,
-            response_relevance=0.6, off_topic_claims=[],
+            claim_scores={"a": 0.8},
+            coherence_score=0.5,
+            response_relevance=0.6,
+            off_topic_claims=[],
         )
         d = result.to_dict()
         assert d == {
@@ -327,14 +369,17 @@ class TestInit:
 
     def test_consistency_result_repr(self) -> None:
         result = ConsistencyResult(
-            claim_scores={"a": 0.8}, coherence_score=0.5,
-            response_relevance=0.6, off_topic_claims=["a"],
+            claim_scores={"a": 0.8},
+            coherence_score=0.5,
+            response_relevance=0.6,
+            off_topic_claims=["a"],
         )
         assert "n_claims=1" in repr(result)
         assert "n_off_topic=1" in repr(result)
 
 
 # ── Lifecycle ──────────────────────────────────────────────────────────────────
+
 
 class TestLifecycle:
     def test_not_loaded_initially(self) -> None:
@@ -357,6 +402,7 @@ class TestLifecycle:
 
         def fail_load() -> None:
             from veritascore.core.exceptions import ModelLoadError
+
             raise ModelLoadError("simulated failure")
 
         monkeypatch.setattr(checker, "_load_model", fail_load)
@@ -391,6 +437,7 @@ class TestLifecycle:
 
 # ── Curated Fixture Evaluation (Quality Gate G4) ────────────────────────────────
 
+
 class TestCuratedFixtureSpotCheck:
     """A lightweight structural spot-check on the fixture file itself —
     the full embedding-based evaluation runs via scripts/evaluate_consistency.py
@@ -415,7 +462,8 @@ class TestCuratedFixtureSpotCheck:
         with open(FIXTURES_PATH) as f:
             data = json.load(f)
         total = sum(
-            len(s["on_topic_claims"]) + len(s["off_topic_claims"])
+            len(s["on_topic_claims"])
+            + len(s["off_topic_claims"])
             + len(s.get("partially_relevant_claims", []))
             for s in data["samples"]
         )

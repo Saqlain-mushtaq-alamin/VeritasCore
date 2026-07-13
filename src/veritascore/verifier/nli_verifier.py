@@ -99,6 +99,7 @@ class NLIVerifier(BaseVerifier):
 
     def _resolve_device(self) -> str:
         import torch
+
         device = self.config.models.device
         if device == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
@@ -130,9 +131,9 @@ class NLIVerifier(BaseVerifier):
             logger.info("NLI label order discovered from model config: %s", discovered)
         else:
             logger.warning(
-                "Could not fully resolve NLI label order from id2label=%s; "
-                "using default %s",
-                id2label, EXPECTED_NLI_LABEL_ORDER,
+                "Could not fully resolve NLI label order from id2label=%s; using default %s",
+                id2label,
+                EXPECTED_NLI_LABEL_ORDER,
             )
 
     def _load_model(self) -> None:
@@ -193,17 +194,17 @@ class NLIVerifier(BaseVerifier):
 
     def _reorder_probs(self, raw_probs: Any, np_module: Any) -> Any:
         """Reorder raw model probs into [contradiction, neutral, entailment]."""
-        return np_module.array([
-            raw_probs[self._label_index["contradiction"]],
-            raw_probs[self._label_index["neutral"]],
-            raw_probs[self._label_index["entailment"]],
-        ])
+        return np_module.array(
+            [
+                raw_probs[self._label_index["contradiction"]],
+                raw_probs[self._label_index["neutral"]],
+                raw_probs[self._label_index["entailment"]],
+            ]
+        )
 
     # ── Verdict Logic ─────────────────────────────────────────────────────────
 
-    def _probs_to_verdict(
-        self, probs: Any
-    ) -> tuple[Verdict, float, float, str]:
+    def _probs_to_verdict(self, probs: Any) -> tuple[Verdict, float, float, str]:
         """Convert a [contradiction, neutral, entailment] vector to a verdict.
 
         Args:
@@ -274,9 +275,7 @@ class NLIVerifier(BaseVerifier):
 
         return [self._verify_single_claim(claim, context_chunks) for claim in claims]
 
-    def _verify_single_claim(
-        self, claim: Claim, context_chunks: list[str]
-    ) -> ClaimVerdict:
+    def _verify_single_claim(self, claim: Claim, context_chunks: list[str]) -> ClaimVerdict:
         """Verify a single claim against all context chunks.
 
         Selects the chunk with the strongest signal — whichever of
@@ -419,15 +418,17 @@ class NLIVerifier(BaseVerifier):
             verdict, confidence, entail_prob, reason = self._probs_to_verdict(best_probs)
             evidence = extract_evidence_snippet(best_chunk, claim.text)
 
-            verdicts.append(ClaimVerdict(
-                claim=claim,
-                verdict=verdict,
-                confidence=confidence,
-                nli_score=entail_prob,
-                evidence=evidence,
-                reason=reason,
-                verification_mode=VerificationMode.GROUNDED,
-            ))
+            verdicts.append(
+                ClaimVerdict(
+                    claim=claim,
+                    verdict=verdict,
+                    confidence=confidence,
+                    nli_score=entail_prob,
+                    evidence=evidence,
+                    reason=reason,
+                    verification_mode=VerificationMode.GROUNDED,
+                )
+            )
 
         return verdicts
 
@@ -477,6 +478,7 @@ class NLIVerifier(BaseVerifier):
 
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 logger.info(

@@ -121,7 +121,10 @@ async def retry_with_backoff(
             sleep_for = delay + jitter
             logger.warning(
                 "Attempt %d/%d failed (%s); retrying in %.2fs",
-                attempt + 1, max_attempts, e, sleep_for,
+                attempt + 1,
+                max_attempts,
+                e,
+                sleep_for,
             )
             await asyncio.sleep(sleep_for)
 

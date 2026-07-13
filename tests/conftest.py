@@ -19,6 +19,7 @@ from veritascore.core.types import (
 
 # ── Config Fixtures ───────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def default_config() -> EngineConfig:
     """Default engine configuration for testing (no GPU assumed)."""
@@ -40,6 +41,7 @@ def offline_config() -> EngineConfig:
 
 
 # ── Sample Text Fixtures ──────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def sample_response() -> str:
@@ -69,6 +71,7 @@ def sample_query() -> str:
 
 
 # ── Claim Fixtures ────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def claim_supported() -> Claim:
@@ -114,6 +117,7 @@ def sample_claims(
 
 
 # ── ClaimVerdict Fixtures ─────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def verdict_supported(claim_supported: Claim) -> ClaimVerdict:

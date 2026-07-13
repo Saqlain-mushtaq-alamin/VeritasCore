@@ -9,10 +9,7 @@ from veritascore.profiles.base import DomainProfile
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PROFILES_DIR = (
-    Path(__file__).parent.parent.parent.parent.parent
-    / "configs" / "profiles"
-)
+DEFAULT_PROFILES_DIR = Path(__file__).parent.parent.parent.parent.parent / "configs" / "profiles"
 
 
 class ProfileRegistry:
@@ -54,9 +51,7 @@ class ProfileRegistry:
         """
         self._scan()
         if name not in self._cache:
-            raise KeyError(
-                f"Profile '{name}' not found. Available: {sorted(self._cache.keys())}"
-            )
+            raise KeyError(f"Profile '{name}' not found. Available: {sorted(self._cache.keys())}")
         return self._cache[name]
 
     def get_or_default(self, name: str) -> DomainProfile:

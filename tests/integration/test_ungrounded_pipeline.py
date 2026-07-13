@@ -58,12 +58,14 @@ class TestRetrievalVerifierWithRealNLIOfflineRetriever:
         claim_text = "Eiffel Tower height is 330 metres."
         retriever.cache.set(
             claim_text,
-            [SearchResult(
-                title="Eiffel Tower",
-                url="https://en.wikipedia.org/wiki/Eiffel_Tower",
-                snippet="The Eiffel Tower is 330 metres tall, located in Paris.",
-                relevance_score=0.9,
-            )],
+            [
+                SearchResult(
+                    title="Eiffel Tower",
+                    url="https://en.wikipedia.org/wiki/Eiffel_Tower",
+                    snippet="The Eiffel Tower is 330 metres tall, located in Paris.",
+                    relevance_score=0.9,
+                )
+            ],
         )
 
         verifier = RetrievalVerifier(
@@ -74,7 +76,8 @@ class TestRetrievalVerifierWithRealNLIOfflineRetriever:
 
         claim = Claim(
             text=claim_text,
-            source_span=(0, len(claim_text)), source_text="x",
+            source_span=(0, len(claim_text)),
+            source_text="x",
         )
         verdicts = verifier.verify([claim])
         assert verdicts[0].verdict == Verdict.SUPPORTED
@@ -87,7 +90,9 @@ class TestRetrievalVerifierWithRealNLIOfflineRetriever:
         config = EngineConfig(search=SearchConfig(cache_dir=str(tmp_path)))
         retriever = OfflineRetriever(config=config)
         verifier = RetrievalVerifier(
-            config=config, retriever=retriever, nli_verifier=real_nli_verifier,
+            config=config,
+            retriever=retriever,
+            nli_verifier=real_nli_verifier,
         )
         claim = Claim(text="Some obscure unverifiable claim.", source_span=(0, 30), source_text="x")
         verdicts = verifier.verify([claim])
@@ -104,17 +109,21 @@ class TestEndToEndUngroundedPipeline:
         retriever = OfflineRetriever(config=config)
         retriever.cache.set(
             "The Eiffel Tower stands 330 meters tall.",
-            [SearchResult(
-                title="Eiffel Tower facts",
-                url="https://example.com/eiffel",
-                snippet="The tower stands 330 metres tall in Paris, France.",
-                relevance_score=0.9,
-            )],
+            [
+                SearchResult(
+                    title="Eiffel Tower facts",
+                    url="https://example.com/eiffel",
+                    snippet="The tower stands 330 metres tall in Paris, France.",
+                    relevance_score=0.9,
+                )
+            ],
         )
 
         decomposer = RuleDecomposer()
         verifier = RetrievalVerifier(
-            config=config, retriever=retriever, nli_verifier=real_nli_verifier,
+            config=config,
+            retriever=retriever,
+            nli_verifier=real_nli_verifier,
         )
 
         response = "The Eiffel Tower stands 330 meters tall."
@@ -136,7 +145,8 @@ class TestLiveTavilySearch:
         verifier = RetrievalVerifier(nli_verifier=real_nli_verifier)
         claim = Claim(
             text="The Eiffel Tower is located in Paris, France.",
-            source_span=(0, 46), source_text="x",
+            source_span=(0, 46),
+            source_text="x",
         )
         verdicts = verifier.verify([claim])
         assert verdicts[0].verdict in (Verdict.SUPPORTED, Verdict.UNSUPPORTED)
@@ -155,7 +165,8 @@ class TestLiveBraveSearch:
         verifier = RetrievalVerifier(config=config, nli_verifier=real_nli_verifier)
         claim = Claim(
             text="The Eiffel Tower is located in Paris, France.",
-            source_span=(0, 46), source_text="x",
+            source_span=(0, 46),
+            source_text="x",
         )
         verdicts = verifier.verify([claim])
         assert verdicts[0].verdict in (Verdict.SUPPORTED, Verdict.UNSUPPORTED)

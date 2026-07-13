@@ -34,15 +34,38 @@ class SentenceSpan:
 
 
 # Abbreviations that should not trigger sentence splits
-_ABBREVS = frozenset([
-    "dr", "mr", "mrs", "ms", "prof", "sr", "jr",
-    "vs", "etc", "e.g", "i.e", "u.s", "u.k", "u.n",
-    "jan", "feb", "mar", "apr", "jun", "jul", "aug",
-    "sep", "oct", "nov", "dec",
-])
+_ABBREVS = frozenset(
+    [
+        "dr",
+        "mr",
+        "mrs",
+        "ms",
+        "prof",
+        "sr",
+        "jr",
+        "vs",
+        "etc",
+        "e.g",
+        "i.e",
+        "u.s",
+        "u.k",
+        "u.n",
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ]
+)
 
 _SENTENCE_SPLIT = re.compile(
-    r'(?<=[.!?])\s+(?=[A-Z])',
+    r"(?<=[.!?])\s+(?=[A-Z])",
 )
 
 
@@ -101,11 +124,13 @@ def split_into_sentences(text: str) -> list[SentenceSpan]:
         true_end = true_start + len(sent_original)
 
         if sent_original.strip():
-            sentences.append(SentenceSpan(
-                start=true_start,
-                end=min(true_end, len(text)),
-                text=sent_original.strip(),
-            ))
+            sentences.append(
+                SentenceSpan(
+                    start=true_start,
+                    end=min(true_end, len(text)),
+                    text=sent_original.strip(),
+                )
+            )
 
     # Fallback: treat whole text as one sentence
     if not sentences:
@@ -124,8 +149,8 @@ def _token_overlap(a: str, b: str) -> float:
     Returns:
         Overlap ratio in [0.0, 1.0].
     """
-    tokens_a = set(re.findall(r'\b\w+\b', a.lower()))
-    tokens_b = set(re.findall(r'\b\w+\b', b.lower()))
+    tokens_a = set(re.findall(r"\b\w+\b", a.lower()))
+    tokens_b = set(re.findall(r"\b\w+\b", b.lower()))
     if not tokens_a or not tokens_b:
         return 0.0
     intersection = len(tokens_a & tokens_b)
@@ -156,7 +181,7 @@ def _sliding_window_match(
     # Try decreasing window sizes
     for size in range(min(window_size, len(claim_words)), 2, -1):
         for i in range(len(claim_words) - size + 1):
-            phrase = " ".join(claim_words[i: i + size]).lower()
+            phrase = " ".join(claim_words[i : i + size]).lower()
             idx = text_lower.find(phrase)
             if idx != -1:
                 return (idx, idx + len(phrase))
@@ -252,7 +277,4 @@ def map_claims_to_spans(
         ... )
     """
     sentences = split_into_sentences(response_text)
-    return [
-        find_best_span(claim, response_text, sentences)
-        for claim in claim_texts
-    ]
+    return [find_best_span(claim, response_text, sentences) for claim in claim_texts]

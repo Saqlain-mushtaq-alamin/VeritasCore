@@ -32,6 +32,7 @@ from veritascore.decomposer.span_mapper import (
 
 # ── BaseDecomposer Contract ───────────────────────────────────────────────────
 
+
 class TestBaseDecomposer:
     def test_is_abstract(self) -> None:
         with pytest.raises(TypeError):
@@ -70,6 +71,7 @@ class TestBaseDecomposer:
 
 # ── RuleDecomposer ────────────────────────────────────────────────────────────
 
+
 class TestRuleDecomposer:
     """Tests for the rule-based fallback decomposer."""
 
@@ -105,10 +107,7 @@ class TestRuleDecomposer:
         assert any("paris" in t for t in claim_texts)
 
     def test_filters_opinions(self, decomposer: RuleDecomposer) -> None:
-        text = (
-            "I think Python is a great language. "
-            "Python was created by Guido van Rossum in 1991."
-        )
+        text = "I think Python is a great language. Python was created by Guido van Rossum in 1991."
         claims = decomposer.decompose(text)
         claim_texts = [c.text.lower() for c in claims]
         assert not any("i think" in t for t in claim_texts)
@@ -196,6 +195,7 @@ class TestRuleDecomposer:
 
 # ── Span Mapper ───────────────────────────────────────────────────────────────
 
+
 class TestSplitIntoSentences:
     def test_empty_text(self) -> None:
         assert split_into_sentences("") == []
@@ -235,7 +235,7 @@ class TestFindBestSpan:
         response = "The Eiffel Tower is 330 meters tall and located in Paris."
         claim = "The Eiffel Tower is 330 meters tall"
         span, text = find_best_span(claim, response)
-        assert response[span[0]:span[1]].lower() == claim.lower()
+        assert response[span[0] : span[1]].lower() == claim.lower()
 
     def test_case_insensitive_match(self) -> None:
         response = "the eiffel tower is in paris."
@@ -268,7 +268,7 @@ class TestMapClaimsToSpans:
         claims = ["Paris is in France.", "Rome is in Italy."]
         results = map_claims_to_spans(claims, response)
         assert len(results) == 2
-        for (span, _text) in results:
+        for span, _text in results:
             assert span[0] >= 0
             assert span[1] <= len(response)
 
@@ -278,6 +278,7 @@ class TestMapClaimsToSpans:
 
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
+
 
 class TestPrompts:
     def test_prompt_without_query(self) -> None:

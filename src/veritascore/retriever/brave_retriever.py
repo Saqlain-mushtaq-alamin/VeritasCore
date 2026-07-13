@@ -106,9 +106,7 @@ class BraveRetriever(BaseRetriever):
             )
             data = response.json()
         except httpx.HTTPStatusError as e:
-            raise RetrievalError(
-                f"Brave API error: {e.response.status_code}"
-            ) from e
+            raise RetrievalError(f"Brave API error: {e.response.status_code}") from e
         except Exception as e:
             raise RetrievalError(f"Brave search failed: {e}") from e
 

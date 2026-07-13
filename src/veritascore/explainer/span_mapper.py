@@ -62,19 +62,19 @@ class SpanMapper:
 
         spans: list[HighlightedSpan] = []
         for v in verdicts:
-            start, end = self._refine_span(
-                response_text, v.claim.source_span, v.claim.source_text
-            )
+            start, end = self._refine_span(response_text, v.claim.source_span, v.claim.source_text)
             if start >= end:
                 continue
-            spans.append(HighlightedSpan(
-                start=start,
-                end=end,
-                text=response_text[start:end],
-                claim_id=v.claim.id,
-                verdict=v.verdict,
-                confidence=v.confidence,
-            ))
+            spans.append(
+                HighlightedSpan(
+                    start=start,
+                    end=end,
+                    text=response_text[start:end],
+                    claim_id=v.claim.id,
+                    verdict=v.verdict,
+                    confidence=v.confidence,
+                )
+            )
 
         spans = self._resolve_overlaps(spans)
         return sorted(spans, key=lambda s: s.start)
@@ -107,9 +107,7 @@ class SpanMapper:
 
         return start, end
 
-    def _resolve_overlaps(
-        self, spans: list[HighlightedSpan]
-    ) -> list[HighlightedSpan]:
+    def _resolve_overlaps(self, spans: list[HighlightedSpan]) -> list[HighlightedSpan]:
         """Remove overlapping spans, keeping the higher-severity verdict.
 
         When two spans overlap, the one with the higher severity (CONTRADICTED
@@ -165,10 +163,7 @@ class SpanMapper:
         if not spans:
             return response_text
 
-        to_annotate = [
-            s for s in spans
-            if include_supported or s.verdict != Verdict.SUPPORTED
-        ]
+        to_annotate = [s for s in spans if include_supported or s.verdict != Verdict.SUPPORTED]
         to_annotate_sorted = sorted(to_annotate, key=lambda s: s.start, reverse=True)
 
         result = response_text

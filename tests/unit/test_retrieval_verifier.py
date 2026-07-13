@@ -74,6 +74,7 @@ def make_verifier(
 
 # ── Query Formulation ──────────────────────────────────────────────────────────
 
+
 class TestQueryFormulation:
     def test_simple_claim(self) -> None:
         verifier = make_verifier()
@@ -83,13 +84,17 @@ class TestQueryFormulation:
 
     def test_removes_hedge_prefixes(self) -> None:
         verifier = make_verifier()
-        claim = Claim(text="It is the case that water boils at 100C.", source_span=(0, 41), source_text="x")
+        claim = Claim(
+            text="It is the case that water boils at 100C.", source_span=(0, 41), source_text="x"
+        )
         query = verifier._formulate_query(claim, None)
         assert not query.lower().startswith("it is")
 
     def test_removes_there_is_prefix(self) -> None:
         verifier = make_verifier()
-        claim = Claim(text="There is a large desert in Africa.", source_span=(0, 35), source_text="x")
+        claim = Claim(
+            text="There is a large desert in Africa.", source_span=(0, 35), source_text="x"
+        )
         query = verifier._formulate_query(claim, None)
         assert not query.lower().startswith("there is")
 
@@ -102,16 +107,26 @@ class TestQueryFormulation:
 
     def test_no_prefix_match_unchanged(self) -> None:
         verifier = make_verifier()
-        claim = Claim(text="Mount Everest is the tallest mountain.", source_span=(0, 39), source_text="x")
+        claim = Claim(
+            text="Mount Everest is the tallest mountain.", source_span=(0, 39), source_text="x"
+        )
         query = verifier._formulate_query(claim, None)
         assert query == "Mount Everest is the tallest mountain."
 
 
 # ── Evidence Aggregation ────────────────────────────────────────────────────────
 
+
 class TestEvidenceAggregation:
     def test_strong_single_source_support(self, sample_claim: Claim) -> None:
-        results = [SearchResult(title="T", url="http://x.com", snippet="The tower was completed in 1889.", relevance_score=0.9)]
+        results = [
+            SearchResult(
+                title="T",
+                url="http://x.com",
+                snippet="The tower was completed in 1889.",
+                relevance_score=0.9,
+            )
+        ]
         probs = {"The tower was completed in 1889.": np.array([0.05, 0.10, 0.90])}
         verifier = make_verifier(results, probs)
         verdicts = verifier.verify([sample_claim])
@@ -172,14 +187,20 @@ class TestEvidenceAggregation:
         assert verdicts[0].verdict == Verdict.UNSUPPORTED
 
     def test_evidence_includes_source_url(self, sample_claim: Claim) -> None:
-        results = [SearchResult(title="T", url="http://example.com/page", snippet="snippet", relevance_score=0.9)]
+        results = [
+            SearchResult(
+                title="T", url="http://example.com/page", snippet="snippet", relevance_score=0.9
+            )
+        ]
         probs = {"snippet": np.array([0.05, 0.10, 0.85])}
         verifier = make_verifier(results, probs)
         verdicts = verifier.verify([sample_claim])
         assert "http://example.com/page" in verdicts[0].evidence
 
     def test_verification_mode_is_ungrounded(self, sample_claim: Claim) -> None:
-        results = [SearchResult(title="T", url="http://x.com", snippet="snippet", relevance_score=0.9)]
+        results = [
+            SearchResult(title="T", url="http://x.com", snippet="snippet", relevance_score=0.9)
+        ]
         probs = {"snippet": np.array([0.05, 0.10, 0.85])}
         verifier = make_verifier(results, probs)
         verdicts = verifier.verify([sample_claim])
@@ -189,7 +210,9 @@ class TestEvidenceAggregation:
         """A high-entailment but low-relevance source should contribute less
         than the relevance weighting implies; verify weighting is applied."""
         results = [
-            SearchResult(title="Low relevance", url="http://low.com", snippet="low rel", relevance_score=0.1),
+            SearchResult(
+                title="Low relevance", url="http://low.com", snippet="low rel", relevance_score=0.1
+            ),
         ]
         probs = {"low rel": np.array([0.05, 0.10, 0.95])}
         verifier = make_verifier(results, probs, agreement_threshold=0.5)
@@ -202,7 +225,9 @@ class TestEvidenceAggregation:
             Claim(id="c1", text="Claim one.", source_span=(0, 10), source_text="Claim one."),
             Claim(id="c2", text="Claim two.", source_span=(11, 21), source_text="Claim two."),
         ]
-        results = [SearchResult(title="T", url="http://x.com", snippet="snippet", relevance_score=0.9)]
+        results = [
+            SearchResult(title="T", url="http://x.com", snippet="snippet", relevance_score=0.9)
+        ]
         probs = {"snippet": np.array([0.05, 0.10, 0.85])}
         verifier = make_verifier(results, probs)
         verdicts = verifier.verify(claims)
@@ -215,8 +240,15 @@ class TestEvidenceAggregation:
         reported evidence (regression test for the chunk-consistency
         bug class fixed in Phase 2)."""
         results = [
-            SearchResult(title="Weak", url="http://weak.com", snippet="weak evidence", relevance_score=0.9),
-            SearchResult(title="Strong", url="http://strong.com", snippet="strong evidence", relevance_score=0.9),
+            SearchResult(
+                title="Weak", url="http://weak.com", snippet="weak evidence", relevance_score=0.9
+            ),
+            SearchResult(
+                title="Strong",
+                url="http://strong.com",
+                snippet="strong evidence",
+                relevance_score=0.9,
+            ),
         ]
         probs = {
             "weak evidence": np.array([0.1, 0.7, 0.2]),
@@ -229,6 +261,7 @@ class TestEvidenceAggregation:
 
 
 # ── Init / Validation ──────────────────────────────────────────────────────────
+
 
 class TestRetrievalVerifierInit:
     def test_invalid_agreement_threshold_raises(self) -> None:

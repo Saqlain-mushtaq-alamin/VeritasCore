@@ -37,7 +37,9 @@ class TestDomainProfileDefaults:
 
         with pytest.raises(ValidationError):
             DomainProfile(
-                name="bad", display_name="Bad", description="Bad",
+                name="bad",
+                display_name="Bad",
+                description="Bad",
                 thresholds=ThresholdConfig(entailment_threshold=1.5),
             )
 
@@ -115,7 +117,9 @@ class TestApplyToVerifier:
 
         verifier = FakeNLI()
         p = DomainProfile(
-            name="m", display_name="M", description="",
+            name="m",
+            display_name="M",
+            description="",
             thresholds=ThresholdConfig(entailment_threshold=0.85, contradiction_threshold=0.60),
         )
         p.apply_to_nli_verifier(verifier)
@@ -128,7 +132,9 @@ class TestApplyToVerifier:
 
         checker = FakeChecker()
         p = DomainProfile(
-            name="m", display_name="M", description="",
+            name="m",
+            display_name="M",
+            description="",
             thresholds=ThresholdConfig(consistency_threshold=0.45),
         )
         p.apply_to_consistency_checker(checker)
@@ -137,7 +143,9 @@ class TestApplyToVerifier:
     def test_general_and_medical_thresholds_differ(self) -> None:
         general = DomainProfile(name="g", display_name="G", description="")
         medical = DomainProfile(
-            name="m", display_name="M", description="",
+            name="m",
+            display_name="M",
+            description="",
             thresholds=ThresholdConfig(entailment_threshold=0.85),
         )
         assert general.thresholds.entailment_threshold != medical.thresholds.entailment_threshold
@@ -161,7 +169,9 @@ class TestGetTrustLevel:
 
     def test_boundary_warning_is_ok(self) -> None:
         p = DomainProfile(
-            name="g", display_name="G", description="",
+            name="g",
+            display_name="G",
+            description="",
             thresholds=ThresholdConfig(overall_trust_warning=0.60, overall_trust_critical=0.30),
         )
         assert p.get_trust_level(0.60) == "ok"
@@ -169,7 +179,9 @@ class TestGetTrustLevel:
 
     def test_medical_higher_thresholds(self) -> None:
         p = DomainProfile(
-            name="m", display_name="M", description="",
+            name="m",
+            display_name="M",
+            description="",
             thresholds=ThresholdConfig(overall_trust_warning=0.75, overall_trust_critical=0.50),
         )
         assert p.get_trust_level(0.7) == "warning"
@@ -182,7 +194,9 @@ class TestProfileRegistry:
         return ProfileRegistry(profiles_dir=profiles_dir), profiles_dir
 
     def _write_profile(self, profiles_dir: Path, name: str) -> None:
-        content = f"name: {name}\ndisplay_name: {name.capitalize()}\ndescription: A {name} profile.\n"
+        content = (
+            f"name: {name}\ndisplay_name: {name.capitalize()}\ndescription: A {name} profile.\n"
+        )
         (profiles_dir / f"{name}.yaml").write_text(content)
 
     def test_empty_registry(self, tmp_path: Path) -> None:
@@ -261,6 +275,7 @@ class TestProfileRegistry:
 class TestModuleLevelConvenience:
     def test_get_registry_returns_registry_instance(self) -> None:
         from veritascore.profiles.registry import get_registry
+
         r = get_registry()
         assert isinstance(r, ProfileRegistry)
 
@@ -278,7 +293,6 @@ class TestModuleLevelConvenience:
             reg_module._default_registry = old
 
 
-
 def test_get_or_default_when_name_exists(tmp_path: Path) -> None:
     profiles_dir = tmp_path / "profiles"
     profiles_dir.mkdir()
@@ -292,12 +306,14 @@ def test_get_or_default_when_name_exists(tmp_path: Path) -> None:
 
 def test_get_profile_module_level(tmp_path: Path) -> None:
     import veritascore.profiles.registry as reg_module
+
     old = reg_module._default_registry
     (tmp_path / "empty").mkdir()
     reg_module._default_registry = ProfileRegistry(profiles_dir=tmp_path / "empty")
     p = DomainProfile(name="x", display_name="X", description="X")
     reg_module._default_registry.register(p)
     from veritascore.profiles.registry import get_profile
+
     result = get_profile("x")
     assert result.name == "x"
     reg_module._default_registry = old

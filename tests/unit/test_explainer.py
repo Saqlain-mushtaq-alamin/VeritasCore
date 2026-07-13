@@ -69,8 +69,11 @@ class TestSpanMapper:
         src = "1889"
         claim = Claim(id="c1", text="year", source_span=(0, 5), source_text=src)
         v = ClaimVerdict(
-            claim=claim, verdict=Verdict.SUPPORTED, confidence=0.9,
-            reason="test", verification_mode=VerificationMode.GROUNDED,
+            claim=claim,
+            verdict=Verdict.SUPPORTED,
+            confidence=0.9,
+            reason="test",
+            verification_mode=VerificationMode.GROUNDED,
         )
         spans = mapper.map_spans(RESPONSE, [v])
         assert any(s.text == src for s in spans)
@@ -90,8 +93,11 @@ class TestSpanMapper:
     def test_zero_length_span_skipped(self, mapper: SpanMapper) -> None:
         claim = Claim(id="c1", text="", source_span=(5, 5), source_text="")
         v = ClaimVerdict(
-            claim=claim, verdict=Verdict.SUPPORTED, confidence=0.8,
-            reason="test", verification_mode=VerificationMode.GROUNDED,
+            claim=claim,
+            verdict=Verdict.SUPPORTED,
+            confidence=0.8,
+            reason="test",
+            verification_mode=VerificationMode.GROUNDED,
         )
         assert mapper.map_spans(RESPONSE, [v]) == []
 
@@ -155,7 +161,9 @@ class TestRenderAnnotatedText:
 
     def test_supported_annotated_when_flag_set(self, mapper: SpanMapper) -> None:
         spans = [HighlightedSpan(0, 36, RESPONSE[:36], "c1", Verdict.SUPPORTED, 0.9)]
-        assert "[SUPPORTED:" in mapper.render_annotated_text(RESPONSE, spans, include_supported=True)
+        assert "[SUPPORTED:" in mapper.render_annotated_text(
+            RESPONSE, spans, include_supported=True
+        )
 
     def test_multiple_spans_all_annotated(self, mapper: SpanMapper) -> None:
         spans = [
@@ -215,7 +223,9 @@ class TestEvidenceLinker:
         assert chain.evidence_source == "https://example.com/page"
 
     def test_source_ungrounded_no_url(self, linker: EvidenceLinker) -> None:
-        v = make_verdict("c1", "Claim.", evidence="evidence without url", mode=VerificationMode.UNGROUNDED)
+        v = make_verdict(
+            "c1", "Claim.", evidence="evidence without url", mode=VerificationMode.UNGROUNDED
+        )
         assert linker.build_chains([v])[0].evidence_source == "web search"
 
     def test_source_no_evidence(self, linker: EvidenceLinker) -> None:
@@ -227,8 +237,11 @@ class TestEvidenceLinker:
 
     def test_validate_traceability_passes(self, linker: EvidenceLinker) -> None:
         v = make_verdict(
-            "c1", "Claim.", verdict=Verdict.CONTRADICTED,
-            evidence="Contradicting text.", reason="Context contradicts claim.",
+            "c1",
+            "Claim.",
+            verdict=Verdict.CONTRADICTED,
+            evidence="Contradicting text.",
+            reason="Context contradicts claim.",
         )
         assert linker.validate_traceability([v]) == []
 
@@ -238,16 +251,29 @@ class TestEvidenceLinker:
         assert any("missing reason" in i for i in issues)
 
     def test_validate_contradicted_no_evidence_flagged(self, linker: EvidenceLinker) -> None:
-        v = make_verdict("c1", "Claim.", verdict=Verdict.CONTRADICTED, evidence=None, reason="Context says otherwise.")
+        v = make_verdict(
+            "c1",
+            "Claim.",
+            verdict=Verdict.CONTRADICTED,
+            evidence=None,
+            reason="Context says otherwise.",
+        )
         issues = linker.validate_traceability([v])
         assert any("CONTRADICTED" in i and "evidence is missing" in i for i in issues)
 
     def test_validate_supported_no_evidence_ok(self, linker: EvidenceLinker) -> None:
-        v = make_verdict("c1", "Claim.", verdict=Verdict.SUPPORTED, evidence=None, reason="Context confirms.")
+        v = make_verdict(
+            "c1", "Claim.", verdict=Verdict.SUPPORTED, evidence=None, reason="Context confirms."
+        )
         assert linker.validate_traceability([v]) == []
 
     def test_format_chain_text(self, linker: EvidenceLinker) -> None:
-        v = make_verdict("c1", "Paris is in France.", verdict=Verdict.SUPPORTED, evidence="Paris is the capital of France.")
+        v = make_verdict(
+            "c1",
+            "Paris is in France.",
+            verdict=Verdict.SUPPORTED,
+            evidence="Paris is the capital of France.",
+        )
         chain = linker.build_chains([v])[0]
         text = linker.format_chain_text(chain)
         assert "c1" in text
@@ -255,7 +281,9 @@ class TestEvidenceLinker:
         assert "Signals:" in text
 
     def test_format_chain_no_evidence(self, linker: EvidenceLinker) -> None:
-        v = make_verdict("c1", "Claim.", verdict=Verdict.UNSUPPORTED, evidence=None, reason="No evidence found.")
+        v = make_verdict(
+            "c1", "Claim.", verdict=Verdict.UNSUPPORTED, evidence=None, reason="No evidence found."
+        )
         chain = linker.build_chains([v])[0]
         assert "Evidence: None" in linker.format_chain_text(chain)
 

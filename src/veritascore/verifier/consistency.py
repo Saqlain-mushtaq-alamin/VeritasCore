@@ -274,9 +274,7 @@ class SemanticConsistencyChecker:
             VerificationError: If query is None or empty/whitespace-only.
         """
         if query is None or not query.strip():
-            raise VerificationError(
-                "SemanticConsistencyChecker requires a non-empty query."
-            )
+            raise VerificationError("SemanticConsistencyChecker requires a non-empty query.")
 
         self._load_model()
         embs = self._model.encode([query, claim.text], normalize_embeddings=True)
@@ -325,6 +323,7 @@ class SemanticConsistencyChecker:
 
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except ImportError:

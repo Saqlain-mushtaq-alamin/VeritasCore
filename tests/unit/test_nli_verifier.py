@@ -24,6 +24,7 @@ from veritascore.verifier.utils import (
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def verifier() -> NLIVerifier:
     """NLIVerifier with model loading short-circuited (mark as loaded)."""
@@ -57,6 +58,7 @@ class _FakeTokenizer:
 
 # ── BaseVerifier Contract ───────────────────────────────────────────────────
 
+
 class TestBaseVerifier:
     def test_is_abstract(self) -> None:
         with pytest.raises(TypeError):
@@ -80,6 +82,7 @@ class TestBaseVerifier:
 
 
 # ── NLIVerifier — Verdict Logic ──────────────────────────────────────────────
+
 
 class TestNLIVerifierVerdicts:
     def test_supported_verdict(self, verifier: NLIVerifier, sample_claim: Claim) -> None:
@@ -120,7 +123,9 @@ class TestNLIVerifierVerdicts:
         assert verdicts[0].evidence is not None
         assert len(verdicts[0].evidence) > 0
 
-    def test_verification_mode_is_grounded(self, verifier: NLIVerifier, sample_claim: Claim) -> None:
+    def test_verification_mode_is_grounded(
+        self, verifier: NLIVerifier, sample_claim: Claim
+    ) -> None:
         verifier._run_nli = lambda premise, hypothesis: np.array([0.05, 0.10, 0.85])
         verdicts = verifier.verify([sample_claim], context="Some context.")
         assert all(v.verification_mode == VerificationMode.GROUNDED for v in verdicts)
@@ -136,14 +141,18 @@ class TestNLIVerifierVerdicts:
         assert verdicts[0].claim.id == "c1"
         assert verdicts[1].claim.id == "c2"
 
-    def test_threshold_boundary_entailment(self, verifier: NLIVerifier, sample_claim: Claim) -> None:
+    def test_threshold_boundary_entailment(
+        self, verifier: NLIVerifier, sample_claim: Claim
+    ) -> None:
         """Exactly at threshold should count as SUPPORTED (>=)."""
         verifier.entailment_threshold = 0.7
         verifier._run_nli = lambda premise, hypothesis: np.array([0.1, 0.2, 0.7])
         verdicts = verifier.verify([sample_claim], context="Context.")
         assert verdicts[0].verdict == Verdict.SUPPORTED
 
-    def test_threshold_boundary_contradiction(self, verifier: NLIVerifier, sample_claim: Claim) -> None:
+    def test_threshold_boundary_contradiction(
+        self, verifier: NLIVerifier, sample_claim: Claim
+    ) -> None:
         verifier.contradiction_threshold = 0.5
         verifier._run_nli = lambda premise, hypothesis: np.array([0.5, 0.3, 0.2])
         verdicts = verifier.verify([sample_claim], context="Context.")
@@ -165,6 +174,7 @@ class TestNLIVerifierVerdicts:
 
 
 # ── Consistency: best-chunk selection picks matching probs/evidence ─────────
+
 
 class TestNLIVerifierChunkConsistency:
     """Regression tests for the chunk/probs consistency bug present in
@@ -211,6 +221,7 @@ class TestNLIVerifierChunkConsistency:
 
 # ── verify_batch Equivalence ──────────────────────────────────────────────────
 
+
 class TestVerifyBatchEquivalence:
     def test_batch_matches_sequential(self, verifier: NLIVerifier) -> None:
         """verify_batch() must produce identical verdicts to verify()."""
@@ -233,10 +244,12 @@ class TestVerifyBatchEquivalence:
         # mock above produced (claim "one" -> high entailment, claim "two"
         # -> high contradiction), one chunk per claim (since _chunk_context
         # is mocked to return a single chunk).
-        expected_rows = np.array([
-            [0.05, 0.10, 0.85],
-            [0.70, 0.20, 0.10],
-        ])
+        expected_rows = np.array(
+            [
+                [0.05, 0.10, 0.85],
+                [0.70, 0.20, 0.10],
+            ]
+        )
 
         fake_tokenizer = mock.MagicMock(
             return_value={"input_ids": _FakeTensor(), "attention_mask": _FakeTensor()}
@@ -269,6 +282,7 @@ class _FakeTensor:
 
 
 # ── Context Chunking ──────────────────────────────────────────────────────────
+
 
 class TestChunkContext:
     def test_short_context_not_chunked(self) -> None:
@@ -307,6 +321,7 @@ class TestChunkContext:
 
 # ── Evidence Extraction ────────────────────────────────────────────────────────
 
+
 class TestExtractEvidenceSnippet:
     def test_finds_best_matching_sentence(self) -> None:
         chunk = "Paris is in France. It has many museums. The Louvre is famous."
@@ -328,6 +343,7 @@ class TestExtractEvidenceSnippet:
 
 
 # ── Text Utilities ────────────────────────────────────────────────────────────
+
 
 class TestPreprocessText:
     def test_collapses_whitespace(self) -> None:
@@ -353,6 +369,7 @@ class TestSplitIntoSentencesUtil:
 
 
 # ── Lifecycle: load / unload ──────────────────────────────────────────────────
+
 
 class TestNLIVerifierLifecycle:
     def test_not_loaded_initially(self) -> None:

@@ -90,12 +90,8 @@ def extract_features(verdict: ClaimVerdict) -> dict[str, float]:
     nli_entailment: float = verdict.nli_score if verdict.nli_score is not None else 0.0
     nli_contradiction: float = (1.0 - nli_entailment) if not nli_missing else 0.0
 
-    retrieval_score: float = (
-        verdict.retrieval_score if verdict.retrieval_score is not None else 0.0
-    )
-    retrieval_agreement: float = (
-        abs(retrieval_score - 0.5) * 2.0 if not retrieval_missing else 0.0
-    )
+    retrieval_score: float = verdict.retrieval_score if verdict.retrieval_score is not None else 0.0
+    retrieval_agreement: float = abs(retrieval_score - 0.5) * 2.0 if not retrieval_missing else 0.0
 
     consistency_score: float = (
         verdict.consistency_score if verdict.consistency_score is not None else 0.0

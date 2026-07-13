@@ -31,6 +31,7 @@ from veritascore.router.mode_router import ModeRouter
 
 # ── Shared fixtures ───────────────────────────────────────────────────────────
 
+
 def make_claim(cid: str = "c1", text: str = "Paris is the capital of France.") -> Claim:
     return Claim(id=cid, text=text, source_span=(0, len(text)), source_text=text)
 
@@ -66,6 +67,7 @@ def make_report(verdicts: list[ClaimVerdict] | None = None) -> VerificationRepor
 
 
 # ── ModeRouter ────────────────────────────────────────────────────────────────
+
 
 class TestModeRouter:
     def test_explicit_grounded_mode(self) -> None:
@@ -133,6 +135,7 @@ class TestModeRouter:
 
 # ── API Models ────────────────────────────────────────────────────────────────
 
+
 class TestVerifyRequest:
     def test_defaults(self) -> None:
         req = VerifyRequest(response="Some text.")
@@ -143,13 +146,17 @@ class TestVerifyRequest:
 
     def test_empty_response_raises(self) -> None:
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             VerifyRequest(response="")
 
     def test_all_fields(self) -> None:
         req = VerifyRequest(
-            response="Text.", query="Query?", context="Context.",
-            mode="grounded", domain="medical",
+            response="Text.",
+            query="Query?",
+            context="Context.",
+            mode="grounded",
+            domain="medical",
         )
         assert req.mode == "grounded"
         assert req.domain == "medical"
@@ -207,11 +214,13 @@ class TestOtherModels:
 
 # ── VeritasCoreEngine (heavily mocked) ────────────────────────────────────────
 
+
 class TestVeritasCoreEngineAggregation:
     """Test the pure-logic methods of the engine without loading any models."""
 
     def _make_engine(self) -> Any:
         from veritascore.core.engine import VeritasCoreEngine
+
         return VeritasCoreEngine()
 
     def test_aggregate_verdict_all_supported(self) -> None:
@@ -226,7 +235,10 @@ class TestVeritasCoreEngineAggregation:
 
     def test_aggregate_verdict_all_unsupported(self) -> None:
         engine = self._make_engine()
-        verdicts = [make_verdict("c1", Verdict.UNSUPPORTED), make_verdict("c2", Verdict.UNSUPPORTED)]
+        verdicts = [
+            make_verdict("c1", Verdict.UNSUPPORTED),
+            make_verdict("c2", Verdict.UNSUPPORTED),
+        ]
         assert engine._aggregate_verdict(verdicts) == Verdict.UNSUPPORTED
 
     def test_aggregate_verdict_mixed_supported_unsupported(self) -> None:
@@ -240,8 +252,11 @@ class TestVeritasCoreEngineAggregation:
 
     def test_empty_report_returns_unsupported(self) -> None:
         import time
+
         engine = self._make_engine()
-        report = engine._empty_report("text", "query", VerificationMode.OFFLINE, "general", time.perf_counter())
+        report = engine._empty_report(
+            "text", "query", VerificationMode.OFFLINE, "general", time.perf_counter()
+        )
         assert report.overall_verdict == Verdict.UNSUPPORTED
         assert report.n_claims == 0
         assert report.overall_trust_score == pytest.approx(0.5)
@@ -268,9 +283,13 @@ class TestVeritasCoreEngineVerify:
         mock_scorer.score_response.return_value = 0.87
 
         from veritascore.verifier.consistency import ConsistencyResult
+
         mock_checker = MagicMock()
         mock_checker.check_consistency.return_value = ConsistencyResult(
-            claim_scores={"c1": 0.88}, coherence_score=0.9, response_relevance=0.9, off_topic_claims=[]
+            claim_scores={"c1": 0.88},
+            coherence_score=0.9,
+            response_relevance=0.9,
+            off_topic_claims=[],
         )
         engine._decomposer = mock_decomposer
         engine._nli_verifier = mock_nli
@@ -329,17 +348,18 @@ class TestVeritasCoreEngineVerify:
         # Register a custom medical profile so the registry can find it
         from veritascore.profiles import DomainProfile, ThresholdConfig
         from veritascore.profiles.registry import ProfileRegistry
+
         medical = DomainProfile(
-            name="medical", display_name="Medical", description="Test",
+            name="medical",
+            display_name="Medical",
+            description="Test",
             thresholds=ThresholdConfig(entailment_threshold=0.85),
         )
         registry = ProfileRegistry()
         registry.register(medical)
         engine._profile_registry = registry
 
-        engine.verify(
-            response="Some claim.", context="Some context.", domain="medical"
-        )
+        engine.verify(response="Some claim.", context="Some context.", domain="medical")
 
         # After verification, the NLI verifier should have received the medical threshold
         assert mock_nli.entailment_threshold == pytest.approx(0.85)
@@ -404,6 +424,7 @@ class TestVeritasCoreEngineVerify:
 
 # ── FastAPI App (mocked engine) ────────────────────────────────────────────────
 
+
 class TestFastAPIApp:
     """Test the FastAPI endpoints using create_app with a mocked engine injected
     directly via the _engine module global, bypassing lifespan."""
@@ -459,11 +480,14 @@ class TestFastAPIApp:
         assert "grounded" in data["modes"]
 
     def test_verify_post(self, client: Any) -> None:
-        resp = client.post("/verify", json={
-            "response": "Paris is the capital of France.",
-            "query": "What is the capital of France?",
-            "context": "Paris is the capital of France.",
-        })
+        resp = client.post(
+            "/verify",
+            json={
+                "response": "Paris is the capital of France.",
+                "query": "What is the capital of France?",
+                "context": "Paris is the capital of France.",
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert "overall_trust_score" in data
@@ -475,24 +499,33 @@ class TestFastAPIApp:
         assert resp.status_code == 422
 
     def test_verify_stream_endpoint_returns_sse(self, client: Any) -> None:
-        resp = client.get("/verify/stream", params={
-            "response": "Paris is the capital of France.",
-        })
+        resp = client.get(
+            "/verify/stream",
+            params={
+                "response": "Paris is the capital of France.",
+            },
+        )
         assert resp.status_code == 200
         content = resp.text
         assert "data:" in content
 
     def test_verify_stream_contains_complete_event(self, client: Any) -> None:
-        resp = client.get("/verify/stream", params={
-            "response": "The Eiffel Tower is in Paris.",
-            "query": "Where is the Eiffel Tower?",
-        })
+        resp = client.get(
+            "/verify/stream",
+            params={
+                "response": "The Eiffel Tower is in Paris.",
+                "query": "Where is the Eiffel Tower?",
+            },
+        )
         assert "complete" in resp.text
 
     def test_verify_stream_progress_events_for_each_claim(self, client: Any) -> None:
-        resp = client.get("/verify/stream", params={
-            "response": "Paris is in France.",
-        })
+        resp = client.get(
+            "/verify/stream",
+            params={
+                "response": "Paris is in France.",
+            },
+        )
         events = [
             json.loads(line[6:])
             for line in resp.text.strip().split("\n\n")

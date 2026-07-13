@@ -42,8 +42,12 @@ class _EvidenceNLIResult(NamedTuple):
 
 # Prefixes that make a claim a worse search query than its bare assertion
 _REMOVE_PREFIXES = (
-    "it is ", "there is ", "there are ", "this is ",
-    "the fact that ", "according to ",
+    "it is ",
+    "there is ",
+    "there are ",
+    "this is ",
+    "the fact that ",
+    "according to ",
 )
 _MAX_QUERY_LENGTH = 200
 
@@ -216,7 +220,7 @@ class RetrievalVerifier(BaseVerifier):
 
         for prefix in _REMOVE_PREFIXES:
             if lower.startswith(prefix):
-                text = text[len(prefix):]
+                text = text[len(prefix) :]
                 break
 
         if len(text) > _MAX_QUERY_LENGTH:
@@ -226,9 +230,7 @@ class RetrievalVerifier(BaseVerifier):
 
     # ── Evidence Aggregation ──────────────────────────────────────────────────
 
-    def _verify_against_evidence(
-        self, claim: Claim, results: list[SearchResult]
-    ) -> ClaimVerdict:
+    def _verify_against_evidence(self, claim: Claim, results: list[SearchResult]) -> ClaimVerdict:
         """Run NLI between the claim and each evidence snippet, then aggregate.
 
         Aggregation strategy: relevance-weighted average entailment/
@@ -265,13 +267,15 @@ class RetrievalVerifier(BaseVerifier):
                 continue
 
             probs = self.nli_verifier._run_nli(premise=evidence_text, hypothesis=claim.text)
-            nli_results.append(_EvidenceNLIResult(
-                probs=probs,
-                evidence=evidence_text,
-                url=result.url,
-                title=result.title,
-                relevance=result.relevance_score,
-            ))
+            nli_results.append(
+                _EvidenceNLIResult(
+                    probs=probs,
+                    evidence=evidence_text,
+                    url=result.url,
+                    title=result.title,
+                    relevance=result.relevance_score,
+                )
+            )
 
         if not nli_results:
             return ClaimVerdict(
@@ -309,10 +313,7 @@ class RetrievalVerifier(BaseVerifier):
         if max_entail >= self.agreement_threshold and avg_entail > avg_contra:
             verdict = Verdict.SUPPORTED
             confidence = max_entail
-            reason = (
-                f"Supported by {n_support}/{len(nli_results)} sources "
-                f"(best: {max_entail:.2f})"
-            )
+            reason = f"Supported by {n_support}/{len(nli_results)} sources (best: {max_entail:.2f})"
         elif max_contra >= self.agreement_threshold and avg_contra > avg_entail:
             verdict = Verdict.CONTRADICTED
             confidence = max_contra

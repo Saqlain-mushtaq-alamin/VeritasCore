@@ -93,6 +93,4 @@ class ModeRouter:
 
     def _has_search_api(self) -> bool:
         """Return True if at least one search API key is configured."""
-        return bool(
-            self.config.search.tavily_api_key or self.config.search.brave_api_key
-        )
+        return bool(self.config.search.tavily_api_key or self.config.search.brave_api_key)

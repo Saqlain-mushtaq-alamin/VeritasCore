@@ -28,6 +28,7 @@ from veritascore.scorer.base import BaseScorer
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
+
 def make_claim(text: str = "Paris is the capital of France.") -> Claim:
     return Claim(id="c1", text=text, source_span=(0, len(text)), source_text=text)
 
@@ -61,42 +62,48 @@ def make_synthetic_data(n: int = 60, seed: int = 42) -> tuple[np.ndarray, np.nda
     n_neg = n - n_pos
     n_feats = len(FEATURE_NAMES)
 
-    positive = np.column_stack([
-        rng.uniform(0.6, 1.0, n_pos),   # nli_entailment high
-        rng.uniform(0.0, 0.4, n_pos),   # nli_contradiction low
-        np.zeros(n_pos),                 # nli_score_is_missing
-        rng.uniform(0.5, 1.0, n_pos),   # retrieval_score high
-        rng.uniform(0.5, 1.0, n_pos),   # retrieval_agreement high
-        np.zeros(n_pos),                 # retrieval_score_is_missing
-        rng.uniform(0.5, 1.0, n_pos),   # consistency_score high
-        np.zeros(n_pos),                 # consistency_score_is_missing
-        rng.uniform(20, 60, n_pos),     # claim_length
-        rng.uniform(4, 12, n_pos),      # claim_word_count
-        rng.integers(0, 2, n_pos).astype(float),  # has_numbers
-        rng.integers(0, 2, n_pos).astype(float),  # has_proper_nouns
-        rng.uniform(0, 3, n_pos),       # num_entities
-        rng.uniform(0.4, 1.0, n_pos),   # nli_confidence_gap
-        np.ones(n_pos),                 # has_evidence
-    ])
-    negative = np.column_stack([
-        rng.uniform(0.0, 0.4, n_neg),
-        rng.uniform(0.6, 1.0, n_neg),
-        np.zeros(n_neg),
-        rng.uniform(0.0, 0.4, n_neg),
-        rng.uniform(0.5, 1.0, n_neg),
-        np.zeros(n_neg),
-        rng.uniform(0.0, 0.4, n_neg),
-        np.zeros(n_neg),
-        rng.uniform(20, 60, n_neg),
-        rng.uniform(4, 12, n_neg),
-        rng.integers(0, 2, n_neg).astype(float),
-        rng.integers(0, 2, n_neg).astype(float),
-        rng.uniform(0, 3, n_neg),
-        rng.uniform(0.4, 1.0, n_neg),
-        np.zeros(n_neg),
-    ])
+    positive = np.column_stack(
+        [
+            rng.uniform(0.6, 1.0, n_pos),  # nli_entailment high
+            rng.uniform(0.0, 0.4, n_pos),  # nli_contradiction low
+            np.zeros(n_pos),  # nli_score_is_missing
+            rng.uniform(0.5, 1.0, n_pos),  # retrieval_score high
+            rng.uniform(0.5, 1.0, n_pos),  # retrieval_agreement high
+            np.zeros(n_pos),  # retrieval_score_is_missing
+            rng.uniform(0.5, 1.0, n_pos),  # consistency_score high
+            np.zeros(n_pos),  # consistency_score_is_missing
+            rng.uniform(20, 60, n_pos),  # claim_length
+            rng.uniform(4, 12, n_pos),  # claim_word_count
+            rng.integers(0, 2, n_pos).astype(float),  # has_numbers
+            rng.integers(0, 2, n_pos).astype(float),  # has_proper_nouns
+            rng.uniform(0, 3, n_pos),  # num_entities
+            rng.uniform(0.4, 1.0, n_pos),  # nli_confidence_gap
+            np.ones(n_pos),  # has_evidence
+        ]
+    )
+    negative = np.column_stack(
+        [
+            rng.uniform(0.0, 0.4, n_neg),
+            rng.uniform(0.6, 1.0, n_neg),
+            np.zeros(n_neg),
+            rng.uniform(0.0, 0.4, n_neg),
+            rng.uniform(0.5, 1.0, n_neg),
+            np.zeros(n_neg),
+            rng.uniform(0.0, 0.4, n_neg),
+            np.zeros(n_neg),
+            rng.uniform(20, 60, n_neg),
+            rng.uniform(4, 12, n_neg),
+            rng.integers(0, 2, n_neg).astype(float),
+            rng.integers(0, 2, n_neg).astype(float),
+            rng.uniform(0, 3, n_neg),
+            rng.uniform(0.4, 1.0, n_neg),
+            np.zeros(n_neg),
+        ]
+    )
 
-    assert positive.shape[1] == n_feats, f"positive has {positive.shape[1]} cols, expected {n_feats}"
+    assert positive.shape[1] == n_feats, (
+        f"positive has {positive.shape[1]} cols, expected {n_feats}"
+    )
     X = np.vstack([positive, negative])
     y = np.array([1] * n_pos + [0] * n_neg)
     shuffle = rng.permutation(len(y))
@@ -104,6 +111,7 @@ def make_synthetic_data(n: int = 60, seed: int = 42) -> tuple[np.ndarray, np.nda
 
 
 # ── BaseScorer Contract ────────────────────────────────────────────────────────
+
 
 class TestBaseScorer:
     def test_is_abstract(self) -> None:
@@ -123,6 +131,7 @@ class TestBaseScorer:
 
 
 # ── Feature Extraction ─────────────────────────────────────────────────────────
+
 
 class TestExtractFeatures:
     def test_all_signals_present(self) -> None:
@@ -191,10 +200,14 @@ class TestExtractFeatures:
         assert f["nli_confidence_gap"] == pytest.approx(abs(0.9 - 0.1))
 
     def test_retrieval_agreement_high(self) -> None:
-        assert extract_features(make_verdict(retrieval_score=1.0))["retrieval_agreement"] == pytest.approx(1.0)
+        assert extract_features(make_verdict(retrieval_score=1.0))[
+            "retrieval_agreement"
+        ] == pytest.approx(1.0)
 
     def test_retrieval_agreement_neutral(self) -> None:
-        assert extract_features(make_verdict(retrieval_score=0.5))["retrieval_agreement"] == pytest.approx(0.0)
+        assert extract_features(make_verdict(retrieval_score=0.5))[
+            "retrieval_agreement"
+        ] == pytest.approx(0.0)
 
     def test_retrieval_agreement_missing(self) -> None:
         assert extract_features(make_verdict(retrieval_score=None))["retrieval_agreement"] == 0.0
@@ -223,6 +236,7 @@ class TestExtractFeatures:
 
 
 # ── CalibrationModule ──────────────────────────────────────────────────────────
+
 
 class TestCalibrationModule:
     @staticmethod
@@ -286,6 +300,7 @@ class TestCalibrationModule:
 
 # ── FusionScorer — Heuristic Fallback ─────────────────────────────────────────
 
+
 class TestFusionScorerHeuristic:
     def test_is_available(self) -> None:
         assert FusionScorer().is_available() is True
@@ -321,6 +336,7 @@ class TestFusionScorerHeuristic:
 
 # ── FusionScorer — score_response ─────────────────────────────────────────────
 
+
 class TestScoreResponse:
     """G5 criterion 5: response-level scoring aggregates claim scores correctly."""
 
@@ -344,8 +360,18 @@ class TestScoreResponse:
         """Arithmetic: (1*s + 2*c) / 3."""
         scorer = FusionScorer()
         verdicts = [
-            make_verdict(nli_score=1.0, verdict=Verdict.SUPPORTED, retrieval_score=None, consistency_score=None),
-            make_verdict(nli_score=0.0, verdict=Verdict.CONTRADICTED, retrieval_score=None, consistency_score=None),
+            make_verdict(
+                nli_score=1.0,
+                verdict=Verdict.SUPPORTED,
+                retrieval_score=None,
+                consistency_score=None,
+            ),
+            make_verdict(
+                nli_score=0.0,
+                verdict=Verdict.CONTRADICTED,
+                retrieval_score=None,
+                consistency_score=None,
+            ),
         ]
         expected = (1.0 * 1.0 + 2.0 * 0.0) / 3.0
         assert scorer.score_response(verdicts) == pytest.approx(expected)
@@ -357,6 +383,7 @@ class TestScoreResponse:
 
 
 # ── FusionScorer — Trained Model ──────────────────────────────────────────────
+
 
 class TestFusionScorerTrained:
     def test_train_saves_artifacts(self, tmp_path: Path) -> None:
@@ -395,7 +422,9 @@ class TestFusionScorerTrained:
     def test_trained_scores_differ_from_heuristic(self, tmp_path: Path) -> None:
         X, y = make_synthetic_data()
         FusionScorer.train(X, y, save_dir=tmp_path)
-        trained = FusionScorer(model_path=tmp_path / "model.joblib", scaler_path=tmp_path / "scaler.joblib")
+        trained = FusionScorer(
+            model_path=tmp_path / "model.joblib", scaler_path=tmp_path / "scaler.joblib"
+        )
         trained.load()
         heuristic = FusionScorer()
         verdicts = [
@@ -406,7 +435,9 @@ class TestFusionScorerTrained:
         heuristic_scores = [heuristic.score_claim(v) for v in verdicts]
         for s in trained_scores:
             assert 0.0 <= s <= 1.0
-        assert any(abs(t - h) > 0.001 for t, h in zip(trained_scores, heuristic_scores, strict=True))
+        assert any(
+            abs(t - h) > 0.001 for t, h in zip(trained_scores, heuristic_scores, strict=True)
+        )
 
     def test_train_invalid_model_type_raises(self, tmp_path: Path) -> None:
         X, y = make_synthetic_data()
@@ -415,11 +446,15 @@ class TestFusionScorerTrained:
 
     def test_train_too_few_samples_raises(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError):
-            FusionScorer.train(np.zeros((5, len(FEATURE_NAMES))), np.array([1, 0, 1, 0, 1]), save_dir=tmp_path)
+            FusionScorer.train(
+                np.zeros((5, len(FEATURE_NAMES))), np.array([1, 0, 1, 0, 1]), save_dir=tmp_path
+            )
 
     def test_train_single_class_raises(self, tmp_path: Path) -> None:
         with pytest.raises(ValueError):
-            FusionScorer.train(np.zeros((20, len(FEATURE_NAMES))), np.ones(20, dtype=int), save_dir=tmp_path)
+            FusionScorer.train(
+                np.zeros((20, len(FEATURE_NAMES))), np.ones(20, dtype=int), save_dir=tmp_path
+            )
 
     def test_load_missing_model_uses_heuristic(self, tmp_path: Path) -> None:
         scorer = FusionScorer(

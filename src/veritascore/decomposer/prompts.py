@@ -16,7 +16,7 @@ from __future__ import annotations
 
 # ── Version Registry ──────────────────────────────────────────────────────────
 
-DECOMPOSITION_VERSION = "v5"   # Bump when making substantive prompt changes
+DECOMPOSITION_VERSION = "v5"  # Bump when making substantive prompt changes
 
 
 # ── v4 Prompts (current — maximum accuracy + minimum latency) ─────────────────
@@ -361,6 +361,7 @@ _VERSIONS: dict[str, tuple[str, str]] = {
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+
 def get_system_prompt(version: str = DECOMPOSITION_VERSION) -> str:
     """Return the system prompt for a given version.
 
@@ -409,9 +410,7 @@ def build_decomposition_prompt(
 
     context_block = ""
     if query:
-        context_block = (
-            f'Context — the text was generated in response to: "{query}"\n\n'
-        )
+        context_block = f'Context — the text was generated in response to: "{query}"\n\n'
 
     return user_template.format(
         context_block=context_block,

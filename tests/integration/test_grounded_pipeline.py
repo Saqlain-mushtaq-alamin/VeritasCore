@@ -137,8 +137,7 @@ class TestNLIVerifierBatchVsSequential:
             Claim(text="The Louvre is located in Rome.", source_span=(0, 31), source_text="x"),
         ]
         context = (
-            "Paris is the capital and largest city of France. "
-            "The Louvre is a museum in Paris."
+            "Paris is the capital and largest city of France. The Louvre is a museum in Paris."
         )
 
         sequential = nli_verifier.verify(claims, context=context)
@@ -159,7 +158,8 @@ class TestNLIVerifierPerformance:
 
         claim = Claim(
             text="The Great Wall of China is over 13,000 miles long.",
-            source_span=(0, 52), source_text="x",
+            source_span=(0, 52),
+            source_text="x",
         )
         context = "The Great Wall of China stretches more than 13,000 miles across northern China."
 

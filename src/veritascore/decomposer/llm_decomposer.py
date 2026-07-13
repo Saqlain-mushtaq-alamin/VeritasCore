@@ -42,10 +42,10 @@ from veritascore.decomposer.span_mapper import map_claims_to_spans
 logger = logging.getLogger(__name__)
 
 # Regex to parse numbered claim lines: "1. text" or "1) text"
-_NUMBERED_LINE = re.compile(r'^\s*\d+[.)]\s*(.+)$')
+_NUMBERED_LINE = re.compile(r"^\s*\d+[.)]\s*(.+)$")
 
 # Regex for dash/bullet list lines: "- text" or "* text"
-_BULLET_LINE = re.compile(r'^\s*[-•]\s*(.+)$')
+_BULLET_LINE = re.compile(r"^\s*[-•]\s*(.+)$")
 
 # Maximum tokens to generate for the claim list.
 # 384 tokens is sufficient for ~15 atomic claims with pronoun-resolved text.
@@ -65,16 +65,16 @@ _MIN_LLM_INPUT_LENGTH = 5
 
 # Pattern to detect code blocks
 _CODE_PATTERN = re.compile(
-    r'^\s*(?:def |class |import |from |if |for |while |return |'
-    r'print\(|console\.|var |let |const |function |public |private |'
-    r'#include|#define|package |using |namespace )',
+    r"^\s*(?:def |class |import |from |if |for |while |return |"
+    r"print\(|console\.|var |let |const |function |public |private |"
+    r"#include|#define|package |using |namespace )",
     re.MULTILINE,
 )
 
 # Pattern to detect if text is purely a question
 _PURE_QUESTION = re.compile(
-    r'^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did'
-    r'|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$',
+    r"^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did"
+    r"|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$",
     re.IGNORECASE,
 )
 
@@ -87,14 +87,25 @@ _PURE_QUESTION = re.compile(
 # We match these only at claim-start to avoid falsely dropping legitimate
 # claims like "Solar panel costs dropped by about 90%".
 _SENTENCE_HEDGE_STARTERS: tuple[str, ...] = (
-    "probably ", "perhaps ", "possibly ", "maybe ", "arguably ",
-    "supposedly ", "presumably ",
+    "probably ",
+    "perhaps ",
+    "possibly ",
+    "maybe ",
+    "arguably ",
+    "supposedly ",
+    "presumably ",
 )
 
 # Claim-level opinion prefixes (case-insensitive start-of-claim)
 _OPINION_CLAIM_PREFIXES: tuple[str, ...] = (
-    "i think", "i believe", "i feel", "in my opinion",
-    "in my view", "personally", "it seems", "it appears",
+    "i think",
+    "i believe",
+    "i feel",
+    "in my opinion",
+    "in my view",
+    "personally",
+    "it seems",
+    "it appears",
 )
 
 # Preamble / apology / meta-commentary patterns the model sometimes outputs.
@@ -104,19 +115,19 @@ _OPINION_CLAIM_PREFIXES: tuple[str, ...] = (
 #   "Since we need to extract only factual claims..."
 #   "Based on the instruction, I will only extract..."
 _APOLOGY_LINE = re.compile(
-    r'^\s*(?:i apologize|i\'m sorry|since i am|since we need|since this |since the |'
-    r'based upon your|based on (the|your|this)|here (?:is|are) the|to address your|'
-    r'since your instruction|please note|note that|'
-    r'unfortunately|as per your|i cannot provide|'
-    r'the following (?:are|is)|as instructed|per (the|your)|'
-    r'following (the|your)|in accordance|as per (the|your))',
+    r"^\s*(?:i apologize|i\'m sorry|since i am|since we need|since this |since the |"
+    r"based upon your|based on (the|your|this)|here (?:is|are) the|to address your|"
+    r"since your instruction|please note|note that|"
+    r"unfortunately|as per your|i cannot provide|"
+    r"the following (?:are|is)|as instructed|per (the|your)|"
+    r"following (the|your)|in accordance|as per (the|your))",
     re.IGNORECASE,
 )
 
 # Lines that look like model meta-commentary rather than facts:
 # e.g. "*Adjusted Response Based On Ruleset Constraints:**"
 _META_LINE = re.compile(
-    r'^\s*\*+\s*(?:adjusted|note|output|response|based|according|per rule)',
+    r"^\s*\*+\s*(?:adjusted|note|output|response|based|according|per rule)",
     re.IGNORECASE,
 )
 
@@ -169,6 +180,7 @@ class LLMDecomposer(BaseDecomposer):
     def _resolve_device(self) -> str:
         """Determine the inference device."""
         import torch
+
         device = self.config.models.device
         if device == "auto":
             return "cuda" if torch.cuda.is_available() else "cpu"
@@ -220,9 +232,7 @@ class LLMDecomposer(BaseDecomposer):
                 if free_vram_gb >= 4.0:
                     # All layers on GPU — fastest path, 100% GPU utilisation
                     load_kwargs["device_map"] = {"": 0}
-                    logger.info(
-                        "Forcing full GPU load (%.1f GB free VRAM)", free_vram_gb
-                    )
+                    logger.info("Forcing full GPU load (%.1f GB free VRAM)", free_vram_gb)
                 else:
                     # Fall back to auto-split if VRAM is tight
                     load_kwargs["device_map"] = "auto"
@@ -241,9 +251,7 @@ class LLMDecomposer(BaseDecomposer):
                 load_kwargs["device_map"] = None
                 load_kwargs["attn_implementation"] = "eager"
 
-            self._model = AutoModelForCausalLM.from_pretrained(
-                model_name, **load_kwargs
-            )
+            self._model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
 
             if self._device == "cpu":
                 self._model = self._model.to("cpu")
@@ -252,13 +260,13 @@ class LLMDecomposer(BaseDecomposer):
             n_params = sum(p.numel() for p in self._model.parameters()) / 1e6
             logger.info(
                 "Decomposer loaded: %.0fM params on %s in %.1fs (attn=%s)",
-                n_params, self._device, elapsed,
+                n_params,
+                self._device,
+                elapsed,
                 load_kwargs.get("attn_implementation", "?"),
             )
         except Exception as e:
-            raise ModelLoadError(
-                f"Failed to load decomposer model '{model_name}': {e}"
-            ) from e
+            raise ModelLoadError(f"Failed to load decomposer model '{model_name}': {e}") from e
 
     def _load_ollama(self) -> None:
         """Verify Ollama server is reachable and model is available."""
@@ -275,9 +283,7 @@ class LLMDecomposer(BaseDecomposer):
             # Pull model if not already downloaded
             ollama.pull(model_name)
         except Exception as e:
-            raise ModelLoadError(
-                f"Failed to pull Ollama model '{model_name}': {e}"
-            ) from e
+            raise ModelLoadError(f"Failed to pull Ollama model '{model_name}': {e}") from e
 
         self._device = "ollama"
 
@@ -317,7 +323,8 @@ class LLMDecomposer(BaseDecomposer):
 
         # Pure code block
         if _CODE_PATTERN.search(stripped) and not any(
-            c.isalpha() and c.isupper() for c in stripped[:50]
+            c.isalpha() and c.isupper()
+            for c in stripped[:50]
             if not stripped[:50].startswith(("def ", "class ", "import "))
         ):
             # Heuristic: if it looks like code throughout, skip
@@ -434,11 +441,9 @@ class LLMDecomposer(BaseDecomposer):
             List of clean claim strings.
         """
         # Strip markdown code fences (```plaintext, ```text, ``` etc.)
-        stripped = re.sub(
-            r'```(?:plaintext|text|markdown)?\s*\n?', '', text
-        ).strip()
+        stripped = re.sub(r"```(?:plaintext|text|markdown)?\s*\n?", "", text).strip()
         # Strip closing fence
-        stripped = re.sub(r'\n?```\s*$', '', stripped).strip()
+        stripped = re.sub(r"\n?```\s*$", "", stripped).strip()
 
         # Check for the "NONE" sentinel (no factual claims)
         if stripped.upper() in ("NONE", "NONE."):
@@ -538,7 +543,9 @@ class LLMDecomposer(BaseDecomposer):
         if len(filtered) < len(raw_claims):
             logger.info(
                 "Post-filter: %d → %d claims (removed %d)",
-                len(raw_claims), len(filtered), len(raw_claims) - len(filtered),
+                len(raw_claims),
+                len(filtered),
+                len(raw_claims) - len(filtered),
             )
 
         return filtered
@@ -601,23 +608,21 @@ class LLMDecomposer(BaseDecomposer):
 
             if not raw_claims:
                 logger.warning(
-                    "LLM produced no parseable claims (%.1fs). "
-                    "Raw output snippet: %s",
+                    "LLM produced no parseable claims (%.1fs). Raw output snippet: %s",
                     elapsed,
                     raw_output[:200],
                 )
                 if self.fallback_on_error:
                     logger.info("Falling back to RuleDecomposer")
                     return self._fallback.decompose(response_text, query)
-                raise DecompositionError(
-                    "LLM decomposer produced no parseable claims"
-                )
+                raise DecompositionError("LLM decomposer produced no parseable claims")
 
             # Truncate to max_claims
             if len(raw_claims) > max_claims:
                 logger.warning(
                     "Truncating %d claims to max_claims=%d",
-                    len(raw_claims), max_claims,
+                    len(raw_claims),
+                    max_claims,
                 )
                 raw_claims = raw_claims[:max_claims]
 
@@ -628,40 +633,43 @@ class LLMDecomposer(BaseDecomposer):
             for i, (claim_text, (span, source_text)) in enumerate(
                 zip(raw_claims, span_mappings, strict=True)
             ):
-                claims.append(Claim(
-                    id=f"c{i + 1:03d}",
-                    text=claim_text,
-                    source_span=span,
-                    source_text=source_text,
-                ))
+                claims.append(
+                    Claim(
+                        id=f"c{i + 1:03d}",
+                        text=claim_text,
+                        source_span=span,
+                        source_text=source_text,
+                    )
+                )
 
             logger.info(
                 "LLMDecomposer: %d claims in %.2fs (backend=%s)",
-                len(claims), elapsed, self.backend,
+                len(claims),
+                elapsed,
+                self.backend,
             )
             return claims
 
         except ModelLoadError:
             if self.fallback_on_error:
-                logger.info(
-                    "Model load failed, falling back to RuleDecomposer"
-                )
+                logger.info("Model load failed, falling back to RuleDecomposer")
                 return self._fallback.decompose(response_text, query)
             raise
         except DecompositionError:
             raise
         except Exception as e:
             logger.error(
-                "LLMDecomposer unexpected error: %s", e, exc_info=True,
+                "LLMDecomposer unexpected error: %s",
+                e,
+                exc_info=True,
             )
             if self.fallback_on_error:
                 logger.info(
-                    "Falling back to RuleDecomposer due to error: %s", e,
+                    "Falling back to RuleDecomposer due to error: %s",
+                    e,
                 )
                 return self._fallback.decompose(response_text, query)
-            raise DecompositionError(
-                f"LLM decomposition failed unexpectedly: {e}"
-            ) from e
+            raise DecompositionError(f"LLM decomposition failed unexpectedly: {e}") from e
 
     def is_available(self) -> bool:
         """Return True if the model can be loaded successfully."""
@@ -698,6 +706,7 @@ class LLMDecomposer(BaseDecomposer):
 
         try:
             import torch
+
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
                 logger.info(

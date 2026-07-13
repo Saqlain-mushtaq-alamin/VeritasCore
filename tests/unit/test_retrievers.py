@@ -25,6 +25,7 @@ from veritascore.retriever.tavily_retriever import TavilyRetriever
 
 # ── BaseRetriever Contract ───────────────────────────────────────────────────
 
+
 class TestBaseRetriever:
     def test_is_abstract(self) -> None:
         with pytest.raises(TypeError):
@@ -60,6 +61,7 @@ class TestSearchResult:
 
 # ── SearchCache ───────────────────────────────────────────────────────────────
 
+
 class TestSearchCache:
     @pytest.fixture
     def cache(self, tmp_path: Path) -> SearchCache:
@@ -82,12 +84,16 @@ class TestSearchCache:
         assert len(cached) == 2
         assert cached[0].title == "A"
 
-    def test_case_insensitive_key(self, cache: SearchCache, sample_results: list[SearchResult]) -> None:
+    def test_case_insensitive_key(
+        self, cache: SearchCache, sample_results: list[SearchResult]
+    ) -> None:
         cache.set("Eiffel Tower", sample_results)
         assert cache.get("eiffel tower") is not None
         assert cache.get("  EIFFEL TOWER  ") is not None
 
-    def test_disabled_cache_always_misses(self, tmp_path: Path, sample_results: list[SearchResult]) -> None:
+    def test_disabled_cache_always_misses(
+        self, tmp_path: Path, sample_results: list[SearchResult]
+    ) -> None:
         cache = SearchCache(cache_dir=str(tmp_path / "disabled"), enabled=False)
         cache.set("query", sample_results)
         assert cache.get("query") is None
@@ -110,7 +116,9 @@ class TestSearchCache:
         path.write_text("{not valid json")
         assert cache.get("broken query") is None
 
-    def test_overwrite_existing_entry(self, cache: SearchCache, sample_results: list[SearchResult]) -> None:
+    def test_overwrite_existing_entry(
+        self, cache: SearchCache, sample_results: list[SearchResult]
+    ) -> None:
         cache.set("q", sample_results)
         new_results = [SearchResult(title="C", url="http://c.com", snippet="c")]
         cache.set("q", new_results)
@@ -121,6 +129,7 @@ class TestSearchCache:
 
 
 # ── AsyncRateLimiter ──────────────────────────────────────────────────────────
+
 
 class TestAsyncRateLimiter:
     def test_invalid_max_calls_raises(self) -> None:
@@ -152,6 +161,7 @@ class TestAsyncRateLimiter:
 
 
 # ── retry_with_backoff ────────────────────────────────────────────────────────
+
 
 class TestRetryWithBackoff:
     @pytest.mark.asyncio
@@ -225,6 +235,7 @@ class TestRetryWithBackoff:
 
 # ── OfflineRetriever ──────────────────────────────────────────────────────────
 
+
 class TestOfflineRetriever:
     @pytest.mark.asyncio
     async def test_returns_empty_on_miss(self, tmp_path: Path) -> None:
@@ -237,9 +248,12 @@ class TestOfflineRetriever:
     async def test_returns_cached_results(self, tmp_path: Path) -> None:
         config = EngineConfig(search=SearchConfig(cache_dir=str(tmp_path / "cache")))
         retriever = OfflineRetriever(config=config)
-        retriever.cache.set("known query", [
-            SearchResult(title="T", url="http://x.com", snippet="snip"),
-        ])
+        retriever.cache.set(
+            "known query",
+            [
+                SearchResult(title="T", url="http://x.com", snippet="snip"),
+            ],
+        )
         results = await retriever.search("known query")
         assert len(results) == 1
 
@@ -247,9 +261,10 @@ class TestOfflineRetriever:
     async def test_respects_max_results(self, tmp_path: Path) -> None:
         config = EngineConfig(search=SearchConfig(cache_dir=str(tmp_path / "cache")))
         retriever = OfflineRetriever(config=config)
-        retriever.cache.set("q", [
-            SearchResult(title=f"T{i}", url=f"http://x{i}.com", snippet="s") for i in range(5)
-        ])
+        retriever.cache.set(
+            "q",
+            [SearchResult(title=f"T{i}", url=f"http://x{i}.com", snippet="s") for i in range(5)],
+        )
         results = await retriever.search("q", max_results=2)
         assert len(results) == 2
 
@@ -258,6 +273,7 @@ class TestOfflineRetriever:
 
 
 # ── TavilyRetriever (mocked HTTP) ────────────────────────────────────────────
+
 
 class _FakeResponse:
     def __init__(self, json_data: dict[str, Any], status_code: int = 200) -> None:
@@ -308,11 +324,18 @@ class TestTavilyRetriever:
         retriever = TavilyRetriever(config=config_with_key)
 
         async def fake_post(self: Any, url: str, **kwargs: Any) -> _FakeResponse:
-            return _FakeResponse({
-                "results": [
-                    {"title": "Eiffel Tower", "url": "http://wiki.org/eiffel", "content": "330m tall", "score": 0.9},
-                ]
-            })
+            return _FakeResponse(
+                {
+                    "results": [
+                        {
+                            "title": "Eiffel Tower",
+                            "url": "http://wiki.org/eiffel",
+                            "content": "330m tall",
+                            "score": 0.9,
+                        },
+                    ]
+                }
+            )
 
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
         results = await retriever.search("Eiffel Tower height")
@@ -325,9 +348,12 @@ class TestTavilyRetriever:
         self, config_with_key: EngineConfig, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         retriever = TavilyRetriever(config=config_with_key)
-        retriever.cache.set("cached query", [
-            SearchResult(title="Cached", url="http://x.com", snippet="s"),
-        ])
+        retriever.cache.set(
+            "cached query",
+            [
+                SearchResult(title="Cached", url="http://x.com", snippet="s"),
+            ],
+        )
 
         call_count = 0
 
@@ -352,9 +378,9 @@ class TestTavilyRetriever:
         async def fake_post(self: Any, url: str, **kwargs: Any) -> _FakeResponse:
             nonlocal call_count
             call_count += 1
-            return _FakeResponse({
-                "results": [{"title": "X", "url": "http://x.com", "content": "c", "score": 0.5}]
-            })
+            return _FakeResponse(
+                {"results": [{"title": "X", "url": "http://x.com", "content": "c", "score": 0.5}]}
+            )
 
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
         await retriever.search("repeated query")
@@ -388,7 +414,9 @@ class TestTavilyRetriever:
             attempt += 1
             if attempt < 3:
                 return _FakeResponse({}, status_code=503)
-            return _FakeResponse({"results": [{"title": "OK", "url": "http://x.com", "content": "c"}]})
+            return _FakeResponse(
+                {"results": [{"title": "OK", "url": "http://x.com", "content": "c"}]}
+            )
 
         monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
         results = await retriever.search("flaky query")
@@ -397,6 +425,7 @@ class TestTavilyRetriever:
 
 
 # ── BraveRetriever (mocked HTTP) ─────────────────────────────────────────────
+
 
 class TestBraveRetriever:
     @pytest.fixture
@@ -428,11 +457,19 @@ class TestBraveRetriever:
         retriever = BraveRetriever(config=config_with_key)
 
         async def fake_get(self: Any, url: str, **kwargs: Any) -> _FakeResponse:
-            return _FakeResponse({
-                "web": {"results": [
-                    {"title": "Brave Result", "url": "http://brave.com/x", "description": "desc"},
-                ]}
-            })
+            return _FakeResponse(
+                {
+                    "web": {
+                        "results": [
+                            {
+                                "title": "Brave Result",
+                                "url": "http://brave.com/x",
+                                "description": "desc",
+                            },
+                        ]
+                    }
+                }
+            )
 
         monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
         results = await retriever.search("test query")
@@ -460,6 +497,7 @@ class TestBraveRetriever:
 
 
 # ── Retriever Selection Logic (via RetrievalVerifier) ────────────────────────
+
 
 class _DummyNLI:
     """Minimal stand-in for NLIVerifier — avoids loading a real model
@@ -521,7 +559,9 @@ class TestRetrieverSelection:
         verifier = RetrievalVerifier(config=config, nli_verifier=_DummyNLI())  # type: ignore[arg-type]
         assert isinstance(verifier.retriever, BraveRetriever)
 
-    def test_brave_provider_falls_back_to_tavily_when_brave_key_missing(self, tmp_path: Path) -> None:
+    def test_brave_provider_falls_back_to_tavily_when_brave_key_missing(
+        self, tmp_path: Path
+    ) -> None:
         from veritascore.verifier.retrieval_verifier import RetrievalVerifier
 
         config = EngineConfig(
@@ -576,7 +616,9 @@ class TestRetrievalVerifierFailureHandling:
             retriever=_FailingRetriever(),
             nli_verifier=_DummyNLI(),  # type: ignore[arg-type]
         )
-        claim = Claim(text="A claim that cannot be retrieved.", source_span=(0, 33), source_text="x")
+        claim = Claim(
+            text="A claim that cannot be retrieved.", source_span=(0, 33), source_text="x"
+        )
         verdicts = await verifier.verify_async([claim])
         assert len(verdicts) == 1
         assert verdicts[0].verdict.value == "unsupported"

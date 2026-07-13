@@ -98,7 +98,4 @@ class BaseDecomposer(ABC):
         """
         if queries is None:
             queries = [None] * len(responses)
-        return [
-            self.decompose(resp, query)
-            for resp, query in zip(responses, queries, strict=True)
-        ]
+        return [self.decompose(resp, query) for resp, query in zip(responses, queries, strict=True)]

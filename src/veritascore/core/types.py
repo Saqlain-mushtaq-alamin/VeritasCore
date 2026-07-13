@@ -149,9 +149,7 @@ class VerificationReport(BaseModel):
         metadata: Arbitrary additional metadata (model names, versions, etc.).
     """
 
-    query: str | None = Field(
-        default=None, description="Original user query"
-    )
+    query: str | None = Field(default=None, description="Original user query")
     response_text: str = Field(..., description="Full LLM response text that was verified")
     claims: list[ClaimVerdict] = Field(
         default_factory=list, description="Individual claim verdicts"
@@ -163,9 +161,7 @@ class VerificationReport(BaseModel):
     verification_mode: VerificationMode
     domain_profile: str = Field(default="general", description="Domain profile applied")
     processing_time_ms: float = Field(description="Total processing time in milliseconds")
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
     @property
     def n_supported(self) -> int:

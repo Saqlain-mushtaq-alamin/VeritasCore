@@ -111,9 +111,7 @@ class TavilyRetriever(BaseRetriever):
             )
             data = response.json()
         except httpx.HTTPStatusError as e:
-            raise RetrievalError(
-                f"Tavily API error: {e.response.status_code}"
-            ) from e
+            raise RetrievalError(f"Tavily API error: {e.response.status_code}") from e
         except Exception as e:
             raise RetrievalError(f"Tavily search failed: {e}") from e
 

@@ -38,31 +38,48 @@ logger = logging.getLogger(__name__)
 # ── Non-factual Heuristics ────────────────────────────────────────────────────
 
 # Sentence-initial words/phrases that indicate non-factual content
-_OPINION_PREFIXES: frozenset[str] = frozenset([
-    "i think", "i believe", "i feel", "i suspect",
-    "in my opinion", "in my view", "personally,",
-    "it seems", "it appears", "it looks like",
-    "perhaps", "maybe", "possibly", "probably",
-    "reportedly", "allegedly", "supposedly",
-    "note that", "please note", "please remember",
-    "consider ", "remember that",
-])
+_OPINION_PREFIXES: frozenset[str] = frozenset(
+    [
+        "i think",
+        "i believe",
+        "i feel",
+        "i suspect",
+        "in my opinion",
+        "in my view",
+        "personally,",
+        "it seems",
+        "it appears",
+        "it looks like",
+        "perhaps",
+        "maybe",
+        "possibly",
+        "probably",
+        "reportedly",
+        "allegedly",
+        "supposedly",
+        "note that",
+        "please note",
+        "please remember",
+        "consider ",
+        "remember that",
+    ]
+)
 
 # Patterns for sentences that are questions
 _QUESTION_PATTERN = re.compile(
-    r'^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did'
-    r'|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$',
+    r"^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did"
+    r"|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$",
     re.IGNORECASE,
 )
 
 # Conjunctions used to join independent clauses (require comma before them)
 _CONJUNCTION_SPLITS = [
-    r',\s+and\s+',
-    r',\s+but\s+',
-    r',\s+while\s+',
-    r',\s+whereas\s+',
-    r',\s+yet\s+',
-    r';\s+',
+    r",\s+and\s+",
+    r",\s+but\s+",
+    r",\s+while\s+",
+    r",\s+whereas\s+",
+    r",\s+yet\s+",
+    r";\s+",
 ]
 
 # Minimum character length for a sentence to be considered a claim
@@ -76,32 +93,41 @@ _MIN_CLAUSE_LENGTH = 15
 
 # Hedge/opinion words that, when present, mark a sentence as non-factual
 # even if not at the very start (e.g. "X is probably the biggest...")
-_HEDGE_WORDS: frozenset[str] = frozenset([
-    "probably", "perhaps", "possibly", "maybe", "arguably",
-    "reportedly", "allegedly", "supposedly", "presumably",
-])
+_HEDGE_WORDS: frozenset[str] = frozenset(
+    [
+        "probably",
+        "perhaps",
+        "possibly",
+        "maybe",
+        "arguably",
+        "reportedly",
+        "allegedly",
+        "supposedly",
+        "presumably",
+    ]
+)
 
 # Inline numbered list pattern: "1) text" or "1. text" within a sentence
 _INLINE_NUMBERED = re.compile(
-    r'(?:^|\s)(\d+)[.)]\s+',
+    r"(?:^|\s)(\d+)[.)]\s+",
 )
 
 # Pattern to detect a subject (starts with a capital letter word or article)
 _HAS_SUBJECT = re.compile(
-    r'^(?:the\s+|a\s+|an\s+|[A-Z])',
+    r"^(?:the\s+|a\s+|an\s+|[A-Z])",
     re.IGNORECASE,
 )
 
 # Words that typically start an independent clause after 'and'
 _CLAUSE_STARTERS = re.compile(
-    r'^(?:was|were|is|are|has|had|have|he|she|it|they|its|'
-    r'also|the|a|an|each|this|that|does|do|did|can|could|'
-    r'will|would|should|may|might|shall|'
-    r'dissolves?|contains?|covers?|includes?|provides?|'
-    r'produces?|requires?|supports?|uses?|allows?|'
-    r'makes?|takes?|gives?|shows?|finds?|keeps?|'
-    r'stands?|holds?|runs?|comes?|goes?|gets?|'
-    r'[A-Z][a-z]+)\b',
+    r"^(?:was|were|is|are|has|had|have|he|she|it|they|its|"
+    r"also|the|a|an|each|this|that|does|do|did|can|could|"
+    r"will|would|should|may|might|shall|"
+    r"dissolves?|contains?|covers?|includes?|provides?|"
+    r"produces?|requires?|supports?|uses?|allows?|"
+    r"makes?|takes?|gives?|shows?|finds?|keeps?|"
+    r"stands?|holds?|runs?|comes?|goes?|gets?|"
+    r"[A-Z][a-z]+)\b",
 )
 
 
@@ -147,14 +173,14 @@ def _is_factual(text: str) -> bool:
 
     # Filter list headers / meta-commentary
     meta_patterns = [
-        r'^the following\b',
-        r'^here (is|are)\b',
-        r'^for example[,:]',
-        r'^such as[,:]',
-        r'^including\b',
-        r'^\(.*\)$',          # Pure parenthetical
-        r'^note:',
-        r'^important:',
+        r"^the following\b",
+        r"^here (is|are)\b",
+        r"^for example[,:]",
+        r"^such as[,:]",
+        r"^including\b",
+        r"^\(.*\)$",  # Pure parenthetical
+        r"^note:",
+        r"^important:",
     ]
     return all(not re.match(pat, lower) for pat in meta_patterns)
 
@@ -187,16 +213,18 @@ def _split_bare_conjunction(
     text = sent.text
 
     # Pattern: " and also " — strong signal for independent clause
-    for pattern_str in [r'\s+and\s+also\s+', r'\s+and\s+', r'\s+but\s+']:
+    for pattern_str in [r"\s+and\s+also\s+", r"\s+and\s+", r"\s+but\s+"]:
         for match in re.finditer(pattern_str, text, re.IGNORECASE):
-            left = text[:match.start()]
-            right = text[match.end():]
+            left = text[: match.start()]
+            right = text[match.end() :]
 
             # Only split if both sides are substantial
             # and right side looks like an independent clause
-            if (len(left.strip()) >= _MIN_CLAUSE_LENGTH
-                    and len(right.strip()) >= _MIN_CLAUSE_LENGTH
-                    and _looks_like_independent_clause(right)):
+            if (
+                len(left.strip()) >= _MIN_CLAUSE_LENGTH
+                and len(right.strip()) >= _MIN_CLAUSE_LENGTH
+                and _looks_like_independent_clause(right)
+            ):
                 left_part = SentenceSpan(
                     sent.start,
                     sent.start + match.start(),
@@ -230,13 +258,13 @@ def _split_serial_comma(
     # Look for pattern: "SUBJECT VERB1..., VERB2..., and VERB3..."
     # Serial comma: at least 2 commas with "and" before the last item
     serial_match = re.match(
-        r'^(.+?)\s+'  # Subject (greedy-minimal)
-        r'((?:was|were|is|are|has|had|have|made|won|'
-        r'designed|developed|wrote|created|painted|'
-        r'formulated|composed|achieved|discovered|'
-        r'invented|founded|built|stands|uses|'
-        r'consists|contains|guarantees|describes)\b.+?),'
-        r'\s+(.+?,)\s+and\s+(.+)$',
+        r"^(.+?)\s+"  # Subject (greedy-minimal)
+        r"((?:was|were|is|are|has|had|have|made|won|"
+        r"designed|developed|wrote|created|painted|"
+        r"formulated|composed|achieved|discovered|"
+        r"invented|founded|built|stands|uses|"
+        r"consists|contains|guarantees|describes)\b.+?),"
+        r"\s+(.+?,)\s+and\s+(.+)$",
         text,
         re.IGNORECASE,
     )
@@ -256,17 +284,15 @@ def _split_serial_comma(
             for item in items:
                 item_text = item.rstrip(".")
                 # Check if item already has a subject
-                full_text = (
-                    item_text
-                    if _HAS_SUBJECT.match(item_text)
-                    else f"{subject} {item_text}"
-                )
+                full_text = item_text if _HAS_SUBJECT.match(item_text) else f"{subject} {item_text}"
 
-                results.append(SentenceSpan(
-                    sent.start,
-                    sent.end,
-                    full_text,
-                ))
+                results.append(
+                    SentenceSpan(
+                        sent.start,
+                        sent.end,
+                        full_text,
+                    )
+                )
 
             if len(results) >= 2:
                 return results
@@ -287,7 +313,7 @@ def _split_inline_numbered_list(
     # Find all numbered items
     items: list[tuple[int, str]] = []
     for match in re.finditer(
-        r'(\d+)[.)]\s+([^,.)]+(?:\([^)]*\))?)',
+        r"(\d+)[.)]\s+([^,.)]+(?:\([^)]*\))?)",
         text,
     ):
         num = int(match.group(1))
@@ -301,11 +327,13 @@ def _split_inline_numbered_list(
             # Create a standalone claim for each list item
             # Use a special marker prefix so _is_factual won't
             # filter short list items (e.g. "Python", "Java")
-            results.append(SentenceSpan(
-                sent.start,
-                sent.end,
-                item_text,
-            ))
+            results.append(
+                SentenceSpan(
+                    sent.start,
+                    sent.end,
+                    item_text,
+                )
+            )
 
         # Return items directly — they bypass normal sentence
         # filtering since they're structured list entries
@@ -331,13 +359,13 @@ def _split_country_or_item_list(
 
     # Pattern: "SUBJECT VERB through/in/to X, Y, and Z"
     list_match = re.match(
-        r'^(.+?)\s+'
-        r'((?:flows?\s+through|is\s+(?:located\s+)?in|'
-        r'(?:made|has)\s+(?:significant\s+)?contributions?\s+to|'
-        r'designed\s+(?:early\s+)?concepts?\s+for|'
-        r'won\s+Nobel\s+Prizes?\s+in|'
-        r'(?:visits?|travels?\s+to|borders?))\s+)'
-        r'(.+)$',
+        r"^(.+?)\s+"
+        r"((?:flows?\s+through|is\s+(?:located\s+)?in|"
+        r"(?:made|has)\s+(?:significant\s+)?contributions?\s+to|"
+        r"designed\s+(?:early\s+)?concepts?\s+for|"
+        r"won\s+Nobel\s+Prizes?\s+in|"
+        r"(?:visits?|travels?\s+to|borders?))\s+)"
+        r"(.+)$",
         text,
         re.IGNORECASE,
     )
@@ -349,7 +377,7 @@ def _split_country_or_item_list(
 
         # Split on ", and " or ", " or " and "
         raw_items = re.split(
-            r',\s+and\s+|,\s+|\s+and\s+',
+            r",\s+and\s+|,\s+|\s+and\s+",
             items_str,
         )
 
@@ -360,11 +388,13 @@ def _split_country_or_item_list(
             results = []
             for item in items:
                 full = f"{subject} {verb_phrase}{item}"
-                results.append(SentenceSpan(
-                    sent.start,
-                    sent.end,
-                    full,
-                ))
+                results.append(
+                    SentenceSpan(
+                        sent.start,
+                        sent.end,
+                        full,
+                    )
+                )
             return results
 
     return [sent]
@@ -427,12 +457,8 @@ def _split_compound_sentence(
                     right_start = part.start + match.end()
                     right_end = part.end
 
-                    new_parts.append(
-                        SentenceSpan(left_start, left_end, left)
-                    )
-                    new_parts.append(
-                        SentenceSpan(right_start, right_end, right)
-                    )
+                    new_parts.append(SentenceSpan(left_start, left_end, left))
+                    new_parts.append(SentenceSpan(right_start, right_end, right))
                     did_split = True
                     continue
 
@@ -518,8 +544,7 @@ class RuleDecomposer(BaseDecomposer):
             # Step 3: Filter non-factual sentences
             # Inline list items bypass the filter (they may be short)
             factual_parts = [
-                p for p in atomic_parts
-                if id(p) in inline_list_ids or _is_factual(p.text)
+                p for p in atomic_parts if id(p) in inline_list_ids or _is_factual(p.text)
             ]
 
             # Step 4: Produce Claim objects
@@ -529,12 +554,14 @@ class RuleDecomposer(BaseDecomposer):
                 start = max(0, part.start)
                 end = min(len(response_text), part.end)
 
-                claims.append(Claim(
-                    id=f"r{i + 1:03d}",
-                    text=part.text.strip(),
-                    source_span=(start, end),
-                    source_text=response_text[start:end].strip(),
-                ))
+                claims.append(
+                    Claim(
+                        id=f"r{i + 1:03d}",
+                        text=part.text.strip(),
+                        source_span=(start, end),
+                        source_text=response_text[start:end].strip(),
+                    )
+                )
 
             logger.debug(
                 "RuleDecomposer: %d sentences → %d atomic parts → %d claims",
@@ -545,9 +572,7 @@ class RuleDecomposer(BaseDecomposer):
             return claims
 
         except Exception as e:
-            raise DecompositionError(
-                f"Rule-based decomposition failed: {e}"
-            ) from e
+            raise DecompositionError(f"Rule-based decomposition failed: {e}") from e
 
     def is_available(self) -> bool:
         """Always True — no model required."""

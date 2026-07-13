@@ -264,7 +264,8 @@ class FusionScorer(BaseScorer):
         # Hold out a calibration split BEFORE any fitting, so the
         # calibrator never sees predictions the model was trained on.
         X_train, X_calib, y_train, y_calib = train_test_split(
-            X, y,
+            X,
+            y,
             test_size=calibration_holdout_fraction,
             stratify=y,
             random_state=random_state,
@@ -333,7 +334,9 @@ class FusionScorer(BaseScorer):
 
         logger.info(
             "Fusion model (%s) trained: AUROC=%.3f±%.3f",
-            model_type, metrics["cv_auroc_mean"], metrics["cv_auroc_std"],
+            model_type,
+            metrics["cv_auroc_mean"],
+            metrics["cv_auroc_std"],
         )
         return metrics
 

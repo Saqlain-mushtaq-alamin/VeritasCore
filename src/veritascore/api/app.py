@@ -66,7 +66,7 @@ def _get_profile_registry() -> ProfileRegistry:
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan — pre-warm engine on startup."""
     logger.info("VeritasCore API starting up (version %s)", __version__)
-    _get_engine()          # ensures singleton exists before first request
+    _get_engine()  # ensures singleton exists before first request
     _get_profile_registry()
     yield
     # Shutdown: unload models to free GPU memory

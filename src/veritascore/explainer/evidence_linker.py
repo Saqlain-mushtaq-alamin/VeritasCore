@@ -117,9 +117,7 @@ class EvidenceLinker:
                 issues.append(f"Claim {cid}: missing reason")
 
             if v.verdict == Verdict.CONTRADICTED and (not v.evidence or not v.evidence.strip()):
-                issues.append(
-                    f"Claim {cid}: verdict is CONTRADICTED but evidence is missing"
-                )
+                issues.append(f"Claim {cid}: verdict is CONTRADICTED but evidence is missing")
 
         return issues
 

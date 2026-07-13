@@ -54,8 +54,7 @@ class ModelConfig(BaseSettings):
         valid_devices = {"auto", "cuda", "cpu"}
         if self.device not in valid_devices and not self.device.startswith("cuda:"):
             raise ValueError(
-                f"device must be one of {valid_devices}"
-                f" or 'cuda:N', got '{self.device}'"
+                f"device must be one of {valid_devices} or 'cuda:N', got '{self.device}'"
             )
         return self
 

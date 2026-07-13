@@ -47,10 +47,7 @@ class TestLLMDecomposerBasic:
 
     def test_pronoun_resolution(self, llm_decomposer: LLMDecomposer) -> None:
         """LLM decomposer should resolve pronouns (key advantage over RuleDecomposer)."""
-        text = (
-            "Albert Einstein was born in Germany in 1879. "
-            "He developed the theory of relativity."
-        )
+        text = "Albert Einstein was born in Germany in 1879. He developed the theory of relativity."
         claims = llm_decomposer.decompose(text)
         claim_texts = " ".join(c.text for c in claims).lower()
         # "He" should be resolved to "Einstein" or "Albert Einstein"
@@ -97,9 +94,7 @@ class TestLLMDecomposerBasic:
         claim_texts = " ".join(c.text for c in claims).lower()
 
         # Fact must be preserved (either by LLM or rule fallback).
-        assert "1991" in claim_texts, (
-            f"Expected '1991' in extracted claims. Got: {claim_texts!r}"
-        )
+        assert "1991" in claim_texts, f"Expected '1991' in extracted claims. Got: {claim_texts!r}"
         # Opinion must not leak into output.
         assert "best language" not in claim_texts, (
             f"Opinion 'best language' must be filtered. Got: {claim_texts!r}"
@@ -150,7 +145,8 @@ class TestLLMDecomposerMemoryManagement:
         # Create a dedicated instance to avoid interfering with other tests
         config = EngineConfig(models=ModelConfig(device="auto"))
         decomposer = LLMDecomposer(
-            config=config, fallback_on_error=True,
+            config=config,
+            fallback_on_error=True,
         )
 
         # Ensure model is loaded with a substantial prompt
@@ -168,16 +164,15 @@ class TestLLMDecomposerMemoryManagement:
         """Decomposer should be able to reload and work after unload()."""
         config = EngineConfig(models=ModelConfig(device="auto"))
         decomposer = LLMDecomposer(
-            config=config, fallback_on_error=True,
+            config=config,
+            fallback_on_error=True,
         )
 
         text = "The Great Wall of China is over 13,000 miles long."
         decomposer.decompose(text)
         decomposer.unload()
 
-        claims = decomposer.decompose(
-            "The ocean covers 71% of Earth's surface."
-        )
+        claims = decomposer.decompose("The ocean covers 71% of Earth's surface.")
         assert len(claims) > 0
         decomposer.unload()
 
@@ -185,9 +180,7 @@ class TestLLMDecomposerMemoryManagement:
 class TestLLMDecomposerFallback:
     def test_fallback_on_load_failure(self) -> None:
         """If the model fails to load and fallback_on_error=True, use RuleDecomposer."""
-        bad_config = EngineConfig(
-            models=ModelConfig(decomposer_model="nonexistent/fake-model-xyz")
-        )
+        bad_config = EngineConfig(models=ModelConfig(decomposer_model="nonexistent/fake-model-xyz"))
         decomposer = LLMDecomposer(config=bad_config, fallback_on_error=True)
         # Should not raise — falls back to rule-based decomposition
         claims = decomposer.decompose("The sky is blue. Water is wet.")
@@ -196,9 +189,7 @@ class TestLLMDecomposerFallback:
     def test_no_fallback_raises(self) -> None:
         from veritascore.core.exceptions import ModelLoadError
 
-        bad_config = EngineConfig(
-            models=ModelConfig(decomposer_model="nonexistent/fake-model-xyz")
-        )
+        bad_config = EngineConfig(models=ModelConfig(decomposer_model="nonexistent/fake-model-xyz"))
         decomposer = LLMDecomposer(config=bad_config, fallback_on_error=False)
         with pytest.raises((ModelLoadError, Exception)):
             decomposer.decompose("Some text.")

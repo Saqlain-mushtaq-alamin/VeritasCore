@@ -217,9 +217,7 @@ class VeritasCoreEngine:
     def _get_decomposer(self) -> BaseDecomposer:
         if self._decomposer is None:
             try:
-                self._decomposer = LLMDecomposer(
-                    config=self.config, fallback_on_error=True
-                )
+                self._decomposer = LLMDecomposer(config=self.config, fallback_on_error=True)
             except Exception:
                 logger.warning("LLMDecomposer failed; using RuleDecomposer fallback")
                 self._decomposer = RuleDecomposer()
