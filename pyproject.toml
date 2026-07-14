@@ -61,6 +61,7 @@ dev = [
 ]
 ollama = ["ollama>=0.1.0"]
 xgboost = ["xgboost>=2.0.0"]
+demo = ["gradio>=4.0.0"]
 
 [project.scripts]
 veritascore = "veritascore.cli:main"

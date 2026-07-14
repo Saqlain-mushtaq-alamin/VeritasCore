@@ -1,4 +1,4 @@
-.PHONY: install dev test lint format type-check validate-hw download-models download-data clean help
+.PHONY: install dev test lint format type-check validate-hw download-models download-data clean help benchmark demo generate-report tag-release
 
 # ── Installation ──────────────────────────────────────────────────────────────
 
@@ -78,6 +78,24 @@ clear-search-cache:
 setup: dev validate-hw download-models download-data
 	@echo "✓ Full setup complete"
 
+# ── Phase 8: Benchmarks, Demo, Release ────────────────────────────────────────
+
+benchmark:
+	python scripts/run_benchmarks.py --datasets halueval fever --n 200
+	python scripts/generate_report.py
+
+generate-report:
+	python scripts/generate_report.py
+
+demo:
+	pip install -e ".[demo]" -q
+	python demo/app.py
+
+tag-release:
+	@echo "Tagging v1.0.0 ..."
+	git tag -a v1.0.0 -m "Release v1.0.0 — Phase 8 complete: Documentation & Polish"
+	@echo "Push with: git push origin v1.0.0"
+
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 
 clean:
@@ -105,3 +123,9 @@ help:
 	@echo "  make download-data   Download benchmark datasets"
 	@echo "  make setup           Full first-time setup"
 	@echo "  make clean           Remove cache and build artifacts"
+	@echo ""
+	@echo "Phase 8:"
+	@echo "  make benchmark        Run HaluEval + FEVER benchmarks"
+	@echo "  make generate-report  Generate comparison table from results"
+	@echo "  make demo             Launch Gradio demo locally"
+	@echo "  make tag-release      Tag git commit as v1.0.0"
