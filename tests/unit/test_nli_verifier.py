@@ -186,6 +186,10 @@ class TestNLIVerifierChunkConsistency:
         self, verifier: NLIVerifier, sample_claim: Claim
     ) -> None:
         # Chunk 1: weak entailment. Chunk 2: strong entailment (the real evidence).
+        # use_bidirectional=False so _verify_single_claim is used; the reverse NLI
+        # pass in bidirectional mode would call _run_nli(premise=claim.text, ...)
+        # which is not in the chunk-keyed responses dict.
+        verifier.use_bidirectional = False
         responses = {
             "chunk one weak signal": np.array([0.1, 0.7, 0.2]),
             "chunk two strong signal": np.array([0.05, 0.05, 0.90]),
@@ -200,6 +204,8 @@ class TestNLIVerifierChunkConsistency:
     def test_strongest_signal_chunk_is_selected_contradiction(
         self, verifier: NLIVerifier, sample_claim: Claim
     ) -> None:
+        # use_bidirectional=False: same reasoning as the entailment test above.
+        verifier.use_bidirectional = False
         responses = {
             "chunk one mild contra": np.array([0.4, 0.3, 0.3]),
             "chunk two strong contra": np.array([0.85, 0.1, 0.05]),

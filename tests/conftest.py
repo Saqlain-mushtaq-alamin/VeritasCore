@@ -17,6 +17,40 @@ from veritascore.core.types import (
     VerificationMode,
 )
 
+# ── Environment Isolation ────────────────────────────────────────────────────
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_dotenv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prevent real .env API keys from leaking into tests.
+
+    pydantic-settings reads SearchConfig.model_config["env_file"] at
+    SearchConfig() instantiation time.  Replacing model_config with
+    env_file=None before each test means SearchConfig() constructed
+    without explicit keys correctly returns tavily_api_key=None and
+    brave_api_key=None, regardless of what is in the project .env file.
+
+    Tests that need a real key should pass it explicitly as a constructor
+    kwarg, e.g. SearchConfig(tavily_api_key="fake-key").
+    """
+    import veritascore.core.config as _cfg
+
+    monkeypatch.setattr(
+        _cfg.SearchConfig,
+        "model_config",
+        {
+            "env_file": None,
+            "env_file_encoding": "utf-8",
+            "populate_by_name": True,
+            "extra": "ignore",
+        },
+    )
+    # Also scrub from process environment in case keys were exported
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+    monkeypatch.delenv("BRAVE_API_KEY", raising=False)
+
+
+
 # ── Config Fixtures ───────────────────────────────────────────────────────────
 
 
