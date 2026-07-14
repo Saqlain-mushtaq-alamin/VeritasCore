@@ -115,7 +115,18 @@ class ClaimVerdict(BaseModel):
     verdict: Verdict
     confidence: float = Field(ge=0.0, le=1.0, description="Confidence in verdict [0, 1]")
     nli_score: float | None = Field(
-        default=None, description="NLI entailment score from grounded verifier"
+        default=None, description="NLI entailment score from grounded verifier (forward: context→claim)"
+    )
+    contradiction_score: float | None = Field(
+        default=None, description="NLI contradiction score from grounded verifier (max across chunks)"
+    )
+    reverse_entailment_score: float | None = Field(
+        default=None,
+        description=(
+            "NLI entailment score in the reverse direction (claim→context), "
+            "populated by bidirectional mode.  High reverse entailment means "
+            "the claim semantically implies the context (strong support signal)."
+        ),
     )
     retrieval_score: float | None = Field(
         default=None, description="Score from retrieval-based ungrounded verifier"
