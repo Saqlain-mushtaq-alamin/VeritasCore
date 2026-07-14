@@ -64,9 +64,19 @@ class SearchConfig(BaseSettings):
 
     Environment variable overrides:
         TAVILY_API_KEY, BRAVE_API_KEY
+
+    Values are loaded (in priority order) from:
+        1. Explicit constructor kwargs
+        2. Process environment variables
+        3. .env file in the project root
     """
 
-    model_config = SettingsConfigDict(extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        populate_by_name=True,
+        extra="ignore",
+    )
 
     provider: str = Field(
         default="tavily",
@@ -98,8 +108,6 @@ class SearchConfig(BaseSettings):
         default=".cache/search",
         description="Directory for search result cache",
     )
-
-    model_config = SettingsConfigDict(populate_by_name=True, extra="ignore")
 
 
 class EngineConfig(BaseSettings):
