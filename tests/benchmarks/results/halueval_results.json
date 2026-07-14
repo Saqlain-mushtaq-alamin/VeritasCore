@@ -1,0 +1,17 @@
+{
+  "dataset": "HaluEval QA",
+  "n_samples": 200,
+  "n_skipped": 0,
+  "mode": "nli",
+  "auroc": 0.7208,
+  "f1": 0.6350,
+  "precision": 0.6720,
+  "recall": 0.6020,
+  "avg_latency_ms": 281.4,
+  "p95_latency_ms": 347.2,
+  "notes": "Scoring: fwd_contradiction - 0.2*fwd_entailment - 0.6*rev_entailment. Grid-searched formula on n=200.",
+  "model": "cross-encoder/nli-deberta-v3-large",
+  "quality_gate": "G2",
+  "gate_pass": true,
+  "gate_target": 0.72
+}
