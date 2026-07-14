@@ -16,7 +16,7 @@ Example:
     >>> print(f"Verdict: {report.overall_verdict.value}")
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 
 from veritascore.core.engine import VeritasCoreEngine
 
