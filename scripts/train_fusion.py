@@ -34,7 +34,18 @@ MODEL_DIR = Path(__file__).parent.parent / "models" / "fusion"
 
 
 def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, np.ndarray]:
-    """Build training data from HaluEval QA via real NLI verification."""
+    """Build training data from HaluEval QA via real NLI verification.
+
+    HaluEval QA schema (actual fields):
+        knowledge     — supporting paragraph (NLI premise/context)
+        question      — the question being answered
+        answer        — the (possibly hallucinated) answer
+        hallucination — "yes" (hallucinated) / "no" (supported)
+
+    Each row is ONE training sample.  The claim is formatted as
+    "Q: <question>  A: <answer>" — the same format used by the benchmark
+    script to achieve AUROC 0.72+.
+    """
     print("Loading HaluEval dataset...")
     from datasets import load_from_disk
 
@@ -54,34 +65,40 @@ def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, n
 
     rows = [row for i, row in enumerate(split) if i < n_source_rows]
 
-    print(f"Extracting features from {len(rows)} rows ({len(rows) * 2} total samples)...")
+    print(f"Extracting features from {len(rows)} rows ...")
     features_list = []
     labels: list[int] = []
 
     for i, row in enumerate(rows):
         knowledge = row.get("knowledge", "")
-        for claim_text, label in [
-            (row.get("right_answer", ""), 1),
-            (row.get("hallucinated_answer", ""), 0),
-        ]:
-            if not claim_text or not knowledge:
-                continue
-            claim = Claim(
-                id=f"c{i}_{label}",
-                text=claim_text,
-                source_span=(0, len(claim_text)),
-                source_text=claim_text,
+        question = row.get("question", "")
+        answer = row.get("answer", "")
+        hallucination = str(row.get("hallucination", "")).strip().lower()
+
+        if not knowledge or not answer:
+            continue
+
+        # Format claim identically to the benchmark script so NLI signals
+        # match what was measured in the AUROC evaluation.
+        claim_text = f"Q: {question}  A: {answer}" if question else answer
+        label = 0 if hallucination == "yes" else 1   # 1 = supported, 0 = hallucinated
+
+        claim = Claim(
+            id=f"c{i}",
+            text=claim_text,
+            source_span=(0, len(claim_text)),
+            source_text=claim_text,
+        )
+        try:
+            verdict = nli.verify([claim], context=knowledge)[0]
+        except Exception:
+            from veritascore.core.types import ClaimVerdict
+            verdict = ClaimVerdict(
+                claim=claim, verdict=Verdict.UNSUPPORTED, confidence=0.5,
+                reason="extraction failed", verification_mode=VerificationMode.GROUNDED,
             )
-            try:
-                verdict = nli.verify([claim], context=knowledge)[0]
-            except Exception:
-                from veritascore.core.types import ClaimVerdict
-                verdict = ClaimVerdict(
-                    claim=claim, verdict=Verdict.UNSUPPORTED, confidence=0.5,
-                    reason="extraction failed", verification_mode=VerificationMode.GROUNDED,
-                )
-            features_list.append(extract_features(verdict))
-            labels.append(label)
+        features_list.append(extract_features(verdict))
+        labels.append(label)
 
         if (i + 1) % 50 == 0:
             print(f"  ... {i + 1}/{len(rows)} rows processed")
@@ -94,9 +111,10 @@ def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, n
     return X, y
 
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train VeritasCore Phase 5 fusion model")
-    parser.add_argument("--n", type=int, default=300, help="Number of HaluEval source rows")
+    parser.add_argument("--n", type=int, default=600, help="Number of HaluEval rows (1 sample each; use >=500 for G5)")
     parser.add_argument(
         "--model", choices=["logistic_regression", "xgboost"], default="logistic_regression"
     )
@@ -109,8 +127,8 @@ def main() -> None:
 
     X, y = build_training_data_from_halueval(args.n)
 
-    if len(y) < 100:
-        print(f"WARNING: Only {len(y)} samples. G5 requires >=500 for reliable results.")
+    if len(y) < 500:
+        print(f"WARNING: Only {len(y)} samples. G5 requires >=500 for reliable results. Use --n 600.")
 
     print(f"\nTraining {args.model} on {len(y)} samples...")
     t0 = time.time()
