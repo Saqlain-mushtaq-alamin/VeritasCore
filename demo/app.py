@@ -73,7 +73,7 @@ def verify_response(
         f"|-------|-------|\n"
         f"| **Overall Verdict** | `{report.overall_verdict.value.upper()}` |\n"
         f"| **Verification Mode** | `{report.verification_mode.value}` |\n"
-        f"| **Domain Profile** | `{report.domain}` |\n"
+        f"| **Domain Profile** | `{report.domain_profile}` |\n"
         f"| **Claims analysed** | {len(report.claims)} |\n"
         f"| **Processing time** | {report.processing_time_ms:.0f} ms |\n"
     )

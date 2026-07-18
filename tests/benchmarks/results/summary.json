@@ -1,0 +1,42 @@
+{
+  "results": [
+    {
+      "auroc": 0.7208487638874986,
+      "f1": 0.6397058823529411,
+      "precision": 0.49714285714285716,
+      "recall": 0.8969072164948454,
+      "avg_latency_ms": 52.35845749935834,
+      "p95_latency_ms": 48.78141001390759,
+      "n_samples": 200,
+      "n_skipped": 0,
+      "mode": "nli",
+      "dataset": "HaluEval QA"
+    },
+    {
+      "auroc": 0.9615384615384617,
+      "f1": 0.8023952095808383,
+      "precision": 0.6767676767676768,
+      "recall": 0.9852941176470589,
+      "avg_latency_ms": 34.84946165515698,
+      "p95_latency_ms": 50.064619979821146,
+      "n_samples": 133,
+      "n_skipped": 0,
+      "mode": "nli",
+      "dataset": "FEVER (validation)"
+    }
+  ],
+  "baselines": {
+    "NLI-only (SummaC)": {
+      "halueval_auroc": 0.72,
+      "fever_auroc": 0.7
+    },
+    "Retrieval-only (FActScore)": {
+      "halueval_auroc": 0.68,
+      "fever_auroc": 0.74
+    },
+    "SelfCheckGPT": {
+      "halueval_auroc": 0.74,
+      "fever_auroc": 0.69
+    }
+  }
+}

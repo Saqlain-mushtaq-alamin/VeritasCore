@@ -1,17 +1,12 @@
 {
-  "dataset": "FEVER (validation)",
-  "n_samples": 200,
+  "auroc": 0.9615384615384617,
+  "f1": 0.8023952095808383,
+  "precision": 0.6767676767676768,
+  "recall": 0.9852941176470589,
+  "avg_latency_ms": 34.84946165515698,
+  "p95_latency_ms": 50.064619979821146,
+  "n_samples": 133,
   "n_skipped": 0,
   "mode": "nli",
-  "auroc": null,
-  "f1": null,
-  "precision": null,
-  "recall": null,
-  "avg_latency_ms": null,
-  "p95_latency_ms": null,
-  "notes": "Full FEVER benchmark pending. FEVER uses gold-evidence passages (oracle retrieval). Run: python scripts/run_benchmarks.py --datasets fever --n 200",
-  "model": "cross-encoder/nli-deberta-v3-large",
-  "quality_gate": "G8",
-  "gate_pass": null,
-  "gate_target": 0.72
+  "dataset": "FEVER (validation)"
 }
