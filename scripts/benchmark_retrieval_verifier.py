@@ -36,7 +36,7 @@ from veritascore.verifier.nli_verifier import NLIVerifier  # noqa: E402
 from veritascore.verifier.retrieval_verifier import RetrievalVerifier  # noqa: E402
 
 DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
-print("### THIS IS THE MODIFIED BENCHMARK ###")
+
 
 def load_halueval_qa(n: int) -> list[dict[str, Any]]:
     """Load HaluEval QA samples for the retrieval (ungrounded) benchmark.
