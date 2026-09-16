@@ -317,3 +317,240 @@ class TestPrompts:
     def test_prompt_strips_response_text(self) -> None:
         prompt = build_decomposition_prompt("   text with whitespace   ")
         assert "text with whitespace" in prompt
+
+    def test_v6_exists(self) -> None:
+        """v6 must be registered and its system prompt must contain the anti-reasoning rule."""
+        prompt = get_system_prompt("v6")
+        assert "Begin immediately" in prompt
+        assert "DO NOT explain, reason" in prompt
+
+    def test_v6_is_active_version(self) -> None:
+        """DECOMPOSITION_VERSION must be v6 after the Phase R2 bump."""
+        assert DECOMPOSITION_VERSION == "v6"
+
+    def test_get_assistant_prefill_v6(self) -> None:
+        from veritascore.decomposer.prompts import get_assistant_prefill
+
+        prefill = get_assistant_prefill("v6")
+        assert prefill is not None
+        assert prefill.startswith("1")
+
+    def test_get_assistant_prefill_v4_is_none(self) -> None:
+        from veritascore.decomposer.prompts import get_assistant_prefill
+
+        assert get_assistant_prefill("v4") is None
+
+    def test_get_assistant_prefill_default_version(self) -> None:
+        """Default version (v6) should return a non-None pre-fill."""
+        from veritascore.decomposer.prompts import get_assistant_prefill
+
+        assert get_assistant_prefill() is not None
+
+
+# ── LLMDecomposer: Parser unit tests (mock-based, no GPU) ────────────────────
+
+
+class TestLLMDecomposerParsing:
+    """Test _parse_numbered_claims and _filter_claims without loading a model.
+
+    These are pure unit tests — we call the static methods directly on
+    LLMDecomposer with synthetic raw output strings.
+    """
+
+    def test_parse_simple_numbered_list(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = "1. The sky is blue\n2. The ocean is deep\n3. Stars are hot"
+        claims = LLMDecomposer._parse_numbered_claims(raw)
+        assert claims == ["The sky is blue", "The ocean is deep", "Stars are hot"]
+
+    def test_parse_phi3_reasoning_preamble_then_list(self) -> None:
+        """The exact pattern from eval_decomposer_llm.log must be stripped."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = (
+            "Since this statement contains personal belief without presenting "
+            "clear factual information that can be extracted according to our "
+            "rules, we must skip opinions entirely based on rule #4. Therefore, the\n"
+            "1. Python was created in 1991 by Guido van Rossum\n"
+            "2. Python emphasizes code readability"
+        )
+        claims = LLMDecomposer._parse_numbered_claims(raw)
+        assert len(claims) == 2
+        assert "Python was created in 1991" in claims[0]
+
+    def test_parse_since_this_statement_preamble(self) -> None:
+        """'Since this statement...' preamble (exact Phi-3 pattern) must be dropped."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = "Since this statement is entirely opinion-based, there is nothing to extract.\nNONE"
+        claims = LLMDecomposer._parse_numbered_claims(raw)
+        # Should parse NONE sentinel correctly (empty list)
+        assert claims == []
+
+    def test_parse_since_there_are_no_factual_claims(self) -> None:
+        """'There are no factual claims' preamble must be stripped."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = "There are no factual claims in this text.\nNONE"
+        claims = LLMDecomposer._parse_numbered_claims(raw)
+        assert claims == []
+
+    def test_parse_none_sentinel_uppercase(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        assert LLMDecomposer._parse_numbered_claims("NONE") == []
+        assert LLMDecomposer._parse_numbered_claims("NONE.") == []
+
+    def test_parse_bullet_fallback(self) -> None:
+        """Dash/bullet list should be parsed if no numbered items found."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = "- The Earth orbits the Sun\n- Water boils at 100°C"
+        claims = LLMDecomposer._parse_numbered_claims(raw)
+        assert len(claims) == 2
+        assert "Earth orbits" in claims[0]
+
+    def test_parse_empty_string(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        assert LLMDecomposer._parse_numbered_claims("") == []
+
+    def test_parse_strips_markdown_code_fences(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = "```text\n1. Water is H2O\n2. Ice melts at 0°C\n```"
+        claims = LLMDecomposer._parse_numbered_claims(raw)
+        assert len(claims) == 2
+
+    def test_parse_numbered_with_period_and_paren(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw_period = "1. Claim one\n2. Claim two"
+        raw_paren = "1) Claim one\n2) Claim two"
+        assert len(LLMDecomposer._parse_numbered_claims(raw_period)) == 2
+        assert len(LLMDecomposer._parse_numbered_claims(raw_paren)) == 2
+
+    def test_filter_opinion_claims(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = ["I think the sky is blue", "Water boils at 100 degrees Celsius"]
+        filtered = LLMDecomposer._filter_claims(raw)
+        assert filtered == ["Water boils at 100 degrees Celsius"]
+
+    def test_filter_hedge_starters(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = ["Probably the most important factor", "The Earth orbits the Sun"]
+        filtered = LLMDecomposer._filter_claims(raw)
+        assert filtered == ["The Earth orbits the Sun"]
+
+    def test_filter_overlength_claim(self) -> None:
+        """Claims over 350 characters should be dropped as hallucinated/rambling."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        long_claim = "X " * 180  # 360 chars
+        raw = [long_claim, "Water is wet"]
+        filtered = LLMDecomposer._filter_claims(raw)
+        assert filtered == ["Water is wet"]
+
+    def test_filter_preserves_embedded_qualifiers(self) -> None:
+        """Embedded qualifiers like 'approximately' must NOT be filtered."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        raw = ["The speed of light is approximately 300,000 km/s"]
+        filtered = LLMDecomposer._filter_claims(raw)
+        assert filtered == ["The speed of light is approximately 300,000 km/s"]
+
+
+# ── LLMDecomposer: Message Building ──────────────────────────────────────────
+
+
+class TestLLMDecomposerMessageBuilding:
+    """Verify _build_messages() produces correct message structures."""
+
+    def test_v6_includes_assistant_prefill(self) -> None:
+        """v6 must append an assistant message to seed '1.' for anti-reasoning."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(prompt_version="v6")
+        messages = decomposer._build_messages("The sky is blue.")
+        assert len(messages) == 3
+        assert messages[0]["role"] == "system"
+        assert messages[1]["role"] == "user"
+        assert messages[2]["role"] == "assistant"
+        assert messages[2]["content"].startswith("1")
+
+    def test_v4_has_no_assistant_prefill(self) -> None:
+        """Pre-v6 versions must NOT include an assistant pre-fill."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(prompt_version="v4")
+        messages = decomposer._build_messages("The sky is blue.")
+        assert len(messages) == 2
+        assert all(m["role"] != "assistant" for m in messages)
+
+    def test_query_context_appears_in_user_message(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(prompt_version="v6")
+        messages = decomposer._build_messages("It's very tall.", query="Tell me about the Eiffel Tower.")
+        user_content = messages[1]["content"]
+        assert "Eiffel Tower" in user_content
+
+    def test_response_text_appears_in_user_message(self) -> None:
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(prompt_version="v6")
+        messages = decomposer._build_messages("Paris is in France.")
+        user_content = messages[1]["content"]
+        assert "Paris is in France." in user_content
+
+
+# ── LLMDecomposer: Timeout ────────────────────────────────────────────────────
+
+
+class TestLLMDecomposerTimeout:
+    """Verify _generate_with_timeout raises DecompositionError on timeout."""
+
+    def test_timeout_raises_decomposition_error(self) -> None:
+        """Mock a generator that sleeps indefinitely; timeout must fire."""
+        import time
+
+        from veritascore.core.exceptions import DecompositionError
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(timeout_per_sample=0.1)
+
+        # Monkey-patch _generate to simulate a very slow model
+        def slow_generate(messages: list) -> str:
+            time.sleep(10)  # Much longer than 0.1s timeout
+            return "1. This should never be returned"
+
+        decomposer._generate = slow_generate  # type: ignore[method-assign]
+
+        messages = [{"role": "user", "content": "test"}]
+        with pytest.raises(DecompositionError, match="timed out"):
+            decomposer._generate_with_timeout(messages)
+
+    def test_no_timeout_with_fast_generate(self) -> None:
+        """Fast generator must complete successfully within timeout."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(timeout_per_sample=5.0)
+
+        def fast_generate(messages: list) -> str:
+            return "1. Water is wet\n2. The sky is blue"
+
+        decomposer._generate = fast_generate  # type: ignore[method-assign]
+
+        messages = [{"role": "user", "content": "test"}]
+        result = decomposer._generate_with_timeout(messages)
+        assert "1. Water is wet" in result
+
+    def test_timeout_constructor_parameter(self) -> None:
+        """timeout_per_sample must be stored on the instance."""
+        from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+        decomposer = LLMDecomposer(timeout_per_sample=20.0)
+        assert decomposer.timeout_per_sample == 20.0
