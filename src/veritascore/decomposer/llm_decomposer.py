@@ -34,6 +34,7 @@ from veritascore.decomposer.base import BaseDecomposer
 from veritascore.decomposer.prompts import (
     DECOMPOSITION_VERSION,
     build_decomposition_prompt,
+    get_assistant_prefill,
     get_system_prompt,
 )
 from veritascore.decomposer.rule_decomposer import RuleDecomposer
@@ -48,8 +49,10 @@ _NUMBERED_LINE = re.compile(r"^\s*\d+[.)]\s*(.+)$")
 _BULLET_LINE = re.compile(r"^\s*[-•]\s*(.+)$")
 
 # Maximum tokens to generate for the claim list.
-# 384 tokens is sufficient for ~15 atomic claims with pronoun-resolved text.
-_MAX_NEW_TOKENS = 384
+# 256 tokens is sufficient for ~10 atomic claims. Lower budget cuts off
+# Phi-3-mini reasoning preambles that would otherwise fill 300+ tokens
+# before producing any numbered output.
+_MAX_NEW_TOKENS = 256
 
 # Generation parameters — deterministic (temperature=0)
 _GENERATION_KWARGS: dict[str, Any] = {
@@ -113,9 +116,16 @@ _OPINION_CLAIM_PREFIXES: tuple[str, ...] = (
 # Phi-3 commonly generates explanations like:
 #   "Since this instruction requires us only to provide..."
 #   "Since we need to extract only factual claims..."
+#   "Since this statement contains personal belief..."
 #   "Based on the instruction, I will only extract..."
+#   "The input contains no factual claims..."
+#   "There are no factual claims in the text..."
 _APOLOGY_LINE = re.compile(
     r"^\s*(?:i apologize|i\'m sorry|since i am|since we need|since this |since the |"
+    r"since there are|since your|since both|since all|since it|since we |"
+    r"this text |this input |this statement |the (?:text|input|statement) (?:contains|has|is)|"
+    r"there (?:are|is) no (?:factual|clear|extractable)|"
+    r"no factual|no clear factual|"
     r"based upon your|based on (the|your|this)|here (?:is|are) the|to address your|"
     r"since your instruction|please note|note that|"
     r"unfortunately|as per your|i cannot provide|"
@@ -160,6 +170,7 @@ class LLMDecomposer(BaseDecomposer):
         backend: str = "transformers",
         fallback_on_error: bool = True,
         prompt_version: str = DECOMPOSITION_VERSION,
+        timeout_per_sample: float = 15.0,
     ) -> None:
         if backend not in ("transformers", "ollama"):
             raise ValueError(f"backend must be 'transformers' or 'ollama', got '{backend}'")
@@ -168,6 +179,7 @@ class LLMDecomposer(BaseDecomposer):
         self.backend = backend
         self.fallback_on_error = fallback_on_error
         self.prompt_version = prompt_version
+        self.timeout_per_sample = timeout_per_sample
 
         self._model: Any = None
         self._tokenizer: Any = None
@@ -347,8 +359,20 @@ class LLMDecomposer(BaseDecomposer):
     # ── Inference ─────────────────────────────────────────────────────────────
 
     def _generate_transformers(self, messages: list[dict[str, str]]) -> str:
-        """Run inference with HuggingFace Transformers."""
+        """Run inference with HuggingFace Transformers.
+
+        When the prompt version has an assistant pre-fill (e.g. v6), the
+        messages list already contains a trailing ``{"role": "assistant",
+        "content": prefill}`` entry.  We apply the chat template WITHOUT
+        add_generation_prompt so the prefill is included literally in the
+        rendered token sequence; the model then continues from that token.
+        This makes it structurally impossible for Phi-3 to start the response
+        with a reasoning preamble.
+        """
         import torch
+
+        # Check whether this prompt version uses an assistant pre-fill.
+        has_prefill = messages and messages[-1]["role"] == "assistant"
 
         # Two-step approach: render chat template to text, then tokenize.
         # This is more reliable across transformers versions than using
@@ -356,7 +380,10 @@ class LLMDecomposer(BaseDecomposer):
         prompt_text = self._tokenizer.apply_chat_template(
             messages,
             tokenize=False,
-            add_generation_prompt=True,
+            # When we have a pre-fill the template should NOT append the
+            # generation-prompt suffix ("<|assistant|>") because the assistant
+            # turn is already the last message.
+            add_generation_prompt=not has_prefill,
         )
 
         encoded = self._tokenizer(
@@ -397,6 +424,14 @@ class LLMDecomposer(BaseDecomposer):
         # Decode only the newly generated tokens
         generated_ids = outputs[0][prompt_len:]
         result: str = self._tokenizer.decode(generated_ids, skip_special_tokens=True)
+
+        # When using assistant pre-fill, the model continues from "1." so the
+        # raw output starts with the remainder of the first claim text. We
+        # prepend the prefill to reconstruct a valid numbered list for parsing.
+        if has_prefill:
+            prefill = messages[-1]["content"]
+            result = prefill + result
+
         return result
 
     def _generate_ollama(self, messages: list[dict[str, str]]) -> str:
@@ -550,6 +585,83 @@ class LLMDecomposer(BaseDecomposer):
 
         return filtered
 
+    # ── Message Building ──────────────────────────────────────────────────────
+
+    def _build_messages(
+        self,
+        response_text: str,
+        query: str | None = None,
+    ) -> list[dict[str, str]]:
+        """Build the messages list for chat-template inference.
+
+        For prompt versions with an assistant pre-fill (currently v6), appends
+        a trailing ``{"role": "assistant", "content": prefill}`` message.
+        ``_generate_transformers`` then calls ``apply_chat_template`` with
+        ``add_generation_prompt=False`` so the prefill is included verbatim
+        and the model continues from that token.
+
+        Args:
+            response_text: Text to decompose.
+            query: Optional context query.
+
+        Returns:
+            Ordered messages list ready for chat-template rendering.
+        """
+        system_prompt = get_system_prompt(self.prompt_version)
+        user_prompt = build_decomposition_prompt(
+            response_text, query, version=self.prompt_version
+        )
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        prefill = get_assistant_prefill(self.prompt_version)
+        if prefill is not None:
+            messages.append({"role": "assistant", "content": prefill})
+        return messages
+
+    # ── Public Interface ──────────────────────────────────────────────────────
+
+    def _generate_with_timeout(self, messages: list[dict[str, str]]) -> str:
+        """Run _generate() with a per-sample wall-clock timeout.
+
+        Uses a background thread + join timeout. If the thread doesn't finish
+        in time, raises ``DecompositionError`` with a timeout message.
+        This prevents a single slow sample from blocking the evaluation loop.
+
+        Args:
+            messages: Chat messages list.
+
+        Returns:
+            Raw model output string.
+
+        Raises:
+            DecompositionError: If generation exceeds ``self.timeout_per_sample`` seconds.
+        """
+        import threading
+
+        result_container: list[str] = []
+        error_container: list[Exception] = []
+
+        def _worker() -> None:
+            try:
+                result_container.append(self._generate(messages))
+            except Exception as e:  # noqa: BLE001
+                error_container.append(e)
+
+        thread = threading.Thread(target=_worker, daemon=True)
+        thread.start()
+        thread.join(timeout=self.timeout_per_sample)
+
+        if thread.is_alive():
+            # Thread still running — generation timed out
+            raise DecompositionError(
+                f"LLM generation timed out after {self.timeout_per_sample:.0f}s per sample"
+            )
+        if error_container:
+            raise error_container[0]
+        return result_container[0]
+
     # ── Public Interface ──────────────────────────────────────────────────────
 
     def decompose(
@@ -588,16 +700,8 @@ class LLMDecomposer(BaseDecomposer):
 
             t0 = time.time()
 
-            system_prompt = get_system_prompt(self.prompt_version)
-            user_prompt = build_decomposition_prompt(
-                response_text, query, version=self.prompt_version
-            )
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ]
-
-            raw_output = self._generate(messages)
+            messages = self._build_messages(response_text, query)
+            raw_output = self._generate_with_timeout(messages)
             elapsed = time.time() - t0
 
             # Parse numbered claims from the output
