@@ -66,10 +66,11 @@ class TestBootstrapAurocCI:
     def test_ci_width_shrinks_with_more_data(self):
         """Wider CI for smaller samples (law of large numbers)."""
         rng = np.random.RandomState(1)
+        # Use a noisy classifier so neither set reaches near-perfect AUROC
         y_small = (rng.rand(30) > 0.5).astype(int).tolist()
-        score_small = [t + rng.randn() * 0.3 for t in y_small]
+        score_small = [t + rng.randn() * 0.8 for t in y_small]  # noisy
         y_large = (rng.rand(500) > 0.5).astype(int).tolist()
-        score_large = [t + rng.randn() * 0.3 for t in y_large]
+        score_large = [t + rng.randn() * 0.8 for t in y_large]  # same noise
 
         _, lo_s, hi_s = bootstrap_auroc_ci(y_small, score_small, n_bootstrap=300, seed=42)
         _, lo_l, hi_l = bootstrap_auroc_ci(y_large, score_large, n_bootstrap=300, seed=42)
@@ -181,13 +182,19 @@ class TestPairedBootstrapTest:
         assert 0.0 <= p <= 1.0
 
     def test_identical_scores_high_p(self, binary_data):
-        """When A == B, delta ≈ 0 and p ≈ 0.5."""
+        """When A == B, delta == 0 always, so p = mean(delta <= 0) = 1.0.
+
+        Note: The one-sided paired bootstrap test counts the fraction of resamples
+        where A is NOT better than B (delta <= 0). When A == B, every resample
+        gives delta = 0, so p = 1.0 (we cannot reject H0 that A <= B).
+        This is the correct statistical behaviour, not a bug.
+        """
         y_true, y_score_a, _, _ = binary_data
         delta, p = paired_bootstrap_test(
             y_true, y_score_a, y_score_a, n_bootstrap=500, seed=42
         )
-        assert abs(delta) < 0.01
-        assert 0.3 < p < 0.7  # should be around 0.5
+        assert abs(delta) < 1e-10  # delta should be exactly 0
+        assert p == 1.0  # one-sided: cannot reject H0 when A == B
 
     def test_deterministic_with_seed(self, binary_data):
         y_true, y_score_a, y_score_b, _ = binary_data
