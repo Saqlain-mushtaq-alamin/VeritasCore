@@ -1,0 +1,23 @@
+{
+  "mode": "nli",
+  "dataset": "FEVER (validation)",
+  "n_samples": 30,
+  "n_skipped": 0,
+  "timestamp": "2026-09-16T21:06:09.396124+00:00",
+  "scoring_formula": "fwd_c - 0.2*fwd_e - 0.6*rev_e",
+  "auroc": 0.995475113122172,
+  "f1": 0.7878787878787878,
+  "precision": 0.65,
+  "recall": 1.0,
+  "avg_latency_ms": 125.00772999998541,
+  "p95_latency_ms": 38.032939999743576,
+  "ci_auroc_mean": 0.99443898535127,
+  "ci_auroc_lower": 0.9730233920491274,
+  "ci_auroc_upper": 1.0,
+  "ci_f1_mean": 0.792016056856216,
+  "ci_f1_lower": 0.6666666666666666,
+  "ci_f1_upper": 0.9216153846153846,
+  "ci_n_bootstrap": 100,
+  "ci_level": 0.95,
+  "seed": 42
+}
