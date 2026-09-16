@@ -20,6 +20,7 @@ import io
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -34,6 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 from veritascore.decomposer.rule_decomposer import RuleDecomposer  # noqa: E402
 
 FIXTURES_PATH = Path(__file__).parent.parent / "tests" / "fixtures" / "decomposition_samples.json"
+DOCS_LOG_PATH = Path(__file__).parent.parent / "docs" / "phase1_evaluation_log.md"
 
 
 def load_samples() -> list[dict[str, Any]]:
@@ -140,6 +142,50 @@ def evaluate_decomposer(
     return results
 
 
+def log_results_to_doc(all_results: list[dict[str, Any]], timeout_s: float) -> None:
+    """Append a dated results block to docs/phase1_evaluation_log.md (R2.5).
+
+    Appends rather than overwrites, so the log accumulates historical runs.
+    Creates the file if it does not exist.
+
+    Args:
+        all_results: List of result dicts from evaluate_decomposer().
+        timeout_s: Per-sample timeout used for this run.
+    """
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    lines = [f"\n\n## Hardware Run — {ts}\n"]
+    lines.append(f"> Timeout per sample: {timeout_s:.0f}s  \n")
+    lines.append("> Run: `python scripts/evaluate_decomposer.py --decomposer llm --verbose`\n")
+
+    for r in all_results:
+        lines.append(f"\n### {r['name']}\n")
+        lines.append("| Metric | Result | Target | Status |\n")
+        lines.append("|---|---|---|---|\n")
+        acc_pass = r["in_range_pct"] >= 90
+        span_pass = r["span_validity_pct"] >= 85
+        lines.append(
+            f"| In expected claim-count range | {r['in_range_count']}/{r['n_samples']} "
+            f"({r['in_range_pct']}%) | ≥90% | {'✓' if acc_pass else '✗'} |\n"
+        )
+        lines.append(
+            f"| Span validity | {r['span_validity_pct']}% | >85% | {'✓' if span_pass else '✗'} |\n"
+        )
+        lines.append(f"| Avg claims/sample | {r['avg_claims_per_sample']} | — | — |\n")
+        lines.append(f"| Claims/sentence ratio | {r['claims_per_sentence_ratio']} | 1.5–3.0 | — |\n")
+        lines.append(f"| Avg latency | {r['avg_latency_ms']} ms | <2000ms | — |\n")
+        lines.append(f"| Max latency | {r['max_latency_ms']} ms | — | — |\n")
+        lines.append(f"| Failures | {r['n_failures']} | 0 | — |\n")
+        if r["failures"]:
+            lines.append("\n**Failures:**\n")
+            for f in r["failures"]:
+                lines.append(f"- Sample {f['id']}: `{f['error'][:120]}`\n")
+
+    text = "".join(lines)
+    with open(DOCS_LOG_PATH, "a", encoding="utf-8") as fh:
+        fh.write(text)
+    print(f"\n  [LOG] Results appended to {DOCS_LOG_PATH}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate VeritasCore claim decomposers")
     parser.add_argument(
@@ -147,6 +193,18 @@ def main() -> None:
         help="Which decomposer to evaluate (llm requires model download)",
     )
     parser.add_argument("--verbose", action="store_true", help="Print every claim, not just failures")
+    parser.add_argument(
+        "--timeout", type=float, default=15.0,
+        help="Per-sample timeout in seconds for LLM decomposer (default: 15s)",
+    )
+    parser.add_argument(
+        "--output-json", type=str, default=None, metavar="FILE",
+        help="Write results JSON to FILE (e.g. docs/llm_decomposer_results.json)",
+    )
+    parser.add_argument(
+        "--log-to-doc", action="store_true",
+        help="Append results to docs/phase1_evaluation_log.md (R2.5)",
+    )
     args = parser.parse_args()
 
     samples = load_samples()
@@ -160,7 +218,7 @@ def main() -> None:
 
     if args.decomposer in ("llm", "both"):
         from veritascore.decomposer.llm_decomposer import LLMDecomposer
-        llm_decomposer = LLMDecomposer(fallback_on_error=False)
+        llm_decomposer = LLMDecomposer(fallback_on_error=False, timeout_per_sample=args.timeout)
         all_results.append(evaluate_decomposer(llm_decomposer, samples, "LLMDecomposer", args.verbose))
         llm_decomposer.unload()
 
@@ -182,10 +240,22 @@ def main() -> None:
     print()
     if all_gates_passed:
         print("  [ALL GATES PASSED] G1 quality gate met.")
-        sys.exit(0)
     else:
         print("  [GATE FAILED] One or more G1 gates did not meet the target.")
-        sys.exit(1)
+
+    # Optional: write JSON results file
+    if args.output_json:
+        out_path = Path(args.output_json)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(all_results, fh, indent=2)
+        print(f"  [JSON] Results written to {out_path}")
+
+    # Optional: append to phase1 evaluation log (R2.5)
+    if args.log_to_doc:
+        log_results_to_doc(all_results, timeout_s=args.timeout)
+
+    sys.exit(0 if all_gates_passed else 1)
 
 
 if __name__ == "__main__":
