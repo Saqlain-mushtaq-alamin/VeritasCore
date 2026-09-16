@@ -75,3 +75,10 @@ site/
 
 # planing file 
 planing/
+
+# Scratch / debug
+scratch/
+
+# Build artifacts
+build/
+*.egg-info/
