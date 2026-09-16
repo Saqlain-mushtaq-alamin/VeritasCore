@@ -91,3 +91,72 @@ where generated claim text is paraphrased and must be matched back via
 in `TestFindBestSpan` (exact match, case-insensitive, sentence-overlap, fallback)
 but the >85% target for *paraphrased* spans should be re-validated against real
 LLM output during the hardware run in §3.
+
+---
+
+## 5. Phase R2 — LLMDecomposer Failure Diagnosis & Fixes Applied
+
+> **Status:** Fixes applied and unit-tested. Hardware re-run required to record G1 results.
+
+### 5.1 Root Cause (confirmed from `eval_decomposer_llm.log`)
+
+The `eval_decomposer_llm.log` shows Phi-3-mini-4k-instruct produced **zero parseable
+claims** and took **40s per sample**. The raw output snippet:
+
+```
+"Since this statement contains personal belief without presenting clear factual
+information that can be extracted according to our rules, we must skip opinions
+entirely based on rule #4. Therefore, the..."
+```
+
+**Diagnosis:** Phi-3-mini's chat template activates chain-of-thought reasoning mode.
+The model generates hundreds of reasoning tokens explaining _why_ it is filtering the
+input, rather than immediately outputting a numbered list. By the time it would start
+producing actual claims, `max_new_tokens=384` is exhausted and the result is empty.
+
+The `_APOLOGY_LINE` regex did not cover `"Since this statement..."` patterns,
+so the preamble was not stripped and `_parse_numbered_claims()` returned `[]`.
+
+### 5.2 Fixes Applied (Phase R2 — all changes committed on this branch)
+
+| Fix | File | Description |
+|-----|------|-------------|
+| **v6 prompt** | `prompts.py` | New system prompt with Rule 8: `"Begin immediately with 1. or NONE. DO NOT explain, reason, analyze..."` — strongest anti-reasoning signal at maximum recency position |
+| **Assistant pre-fill** | `prompts.py` + `llm_decomposer.py` | `get_assistant_prefill("v6")` returns `"1."`. `_build_messages()` appends this as `role=assistant`. `_generate_transformers()` uses `add_generation_prompt=False` so the model _continues_ from `"1."` — structurally impossible to start with reasoning. |
+| **Token budget reduction** | `llm_decomposer.py` | `_MAX_NEW_TOKENS` reduced 384 → 256. Cuts the budget available for reasoning tokens; 256 comfortably covers 10+ atomic claims. |
+| **Expanded `_APOLOGY_LINE` regex** | `llm_decomposer.py` | Now covers: `"since this statement"`, `"since there are"`, `"this text contains"`, `"there are no factual"`, `"no factual"`, etc. Parser fallback for any remaining preamble. |
+| **Per-sample timeout** | `llm_decomposer.py` | `timeout_per_sample=15.0` (default). `_generate_with_timeout()` uses `threading.Thread` + join. Raises `DecompositionError` if exceeded. Prevents evaluation loop hangs. |
+| **`_build_messages()` helper** | `llm_decomposer.py` | Extracted from `decompose()` for testability. Returns the full messages list including the v6 assistant pre-fill. |
+| **`--timeout` flag** | `evaluate_decomposer.py` | Pass per-sample timeout: `python scripts/evaluate_decomposer.py --decomposer llm --timeout 15` |
+| **`--log-to-doc` flag** | `evaluate_decomposer.py` | Appends timestamped results table to this file automatically (R2.5). |
+
+### 5.3 Unit Test Coverage Added (no GPU required)
+
+New test classes in `tests/unit/test_decomposer.py`:
+
+- **`TestLLMDecomposerParsing`** (12 tests) — Tests `_parse_numbered_claims()` and
+  `_filter_claims()` against the exact failing raw output from the eval log, plus
+  NONE sentinel, bullet fallback, markdown fence stripping, opinion/hedge filtering.
+- **`TestLLMDecomposerMessageBuilding`** (4 tests) — Verifies v6 produces a 3-message
+  list with `role=assistant` pre-fill, and v4 produces 2-message list without it.
+- **`TestLLMDecomposerTimeout`** (3 tests) — Verifies timeout fires with a mock slow
+  generator, fast generator completes normally, parameter stored correctly.
+- **`TestPrompts` extensions** (6 new tests) — v6 registered, active version is v6,
+  `get_assistant_prefill()` returns correct values per version.
+
+### 5.4 Re-Run Commands (Hardware Required)
+
+```bash
+# One-time model download (~7 GB):
+python scripts/download_models.py
+
+# Run LLMDecomposer evaluation with the fixes:
+python scripts/evaluate_decomposer.py --decomposer llm --verbose --timeout 15 --log-to-doc
+
+# Integration test suite:
+pytest tests/integration/test_decomposer_llm.py -v -m integration
+```
+
+Expected outcome with fixes: ≥90% in-range, avg latency <10s (was 40s+), results
+appended below in §Hardware Run.
+
