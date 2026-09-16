@@ -18,10 +18,15 @@ Scoring rationale:
     hallucinated claims, especially for short factual answers where entailment
     scores are uniformly low regardless of correctness.
 
+R3 Fixes:
+    - load_fever() now collects EXACTLY n non-NEI samples (was: count n rows then skip).
+    - Added --seed, --bootstrap-ci, --n-bootstrap flags.
+    - Optionally saves JSON results to --output directory.
+
 Usage:
     python scripts/benchmark_nli_verifier.py --dataset halueval --n 200
-    python scripts/benchmark_nli_verifier.py --dataset fever --n 200
-    python scripts/benchmark_nli_verifier.py --dataset both --n 200
+    python scripts/benchmark_nli_verifier.py --dataset fever --n 1000
+    python scripts/benchmark_nli_verifier.py --dataset both --n 200 --bootstrap-ci
 
 Requires datasets downloaded via scripts/download_datasets.py first.
 """
@@ -31,8 +36,10 @@ from __future__ import annotations
 
 import argparse
 import io
+import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -42,12 +49,15 @@ if hasattr(sys.stdout, "reconfigure"):
 else:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+SCRIPTS_DIR = Path(__file__).parent
+sys.path.insert(0, str(SCRIPTS_DIR))               # for stats_utils
+sys.path.insert(0, str(SCRIPTS_DIR.parent / "src"))  # for veritascore
 
+from stats_utils import bootstrap_auroc_ci, bootstrap_f1_ci, format_ci  # noqa: E402
 from veritascore.core.types import Claim, Verdict  # noqa: E402
 from veritascore.verifier.nli_verifier import NLIVerifier  # noqa: E402
 
-DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
+DATA_DIR = SCRIPTS_DIR.parent / "data" / "datasets"
 
 
 def load_halueval_qa(n: int) -> list[dict[str, Any]]:
@@ -103,7 +113,11 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
 
 
 def load_fever(n: int) -> list[dict[str, Any]]:
-    """Load FEVER validation samples: (claim, evidence, label).
+    """Load exactly n non-NEI FEVER validation samples: (claim, evidence, label).
+
+    BUG FIX (R3): The original version iterated over n rows then skipped NEI
+    rows, yielding fewer than n samples. This version collects exactly n
+    non-NEI samples before stopping.
 
     Uses copenlu/fever_gold_evidence (Parquet, no loading script required).
     Evidence schema: list of [page, sentence_id, sentence_text] triples.
@@ -119,15 +133,19 @@ def load_fever(n: int) -> list[dict[str, Any]]:
         )
     ds = load_from_disk(str(path))
     # Use validation split (15,935 rows) — balanced and unseen at train time
-    split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
+    raw_split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
-    for i, row in enumerate(split):
-        if i >= n:
+    skipped_nei = 0
+    skipped_no_evidence = 0
+
+    for row in raw_split:
+        if len(samples) >= n:  # R3 fix: collect EXACTLY n non-NEI samples
             break
         label = row.get("label", "")
         if label == "NOT ENOUGH INFO":
-            continue  # Skip — NLIVerifier has no direct analogue for NEI
+            skipped_nei += 1
+            continue  # skip but do NOT count toward n
         # Flatten evidence triples [[page, sent_id, text], ...] -> text
         raw_evidence = row.get("evidence", [])
         if isinstance(raw_evidence, list) and raw_evidence:
@@ -138,12 +156,18 @@ def load_fever(n: int) -> list[dict[str, Any]]:
         else:
             context = str(raw_evidence) if raw_evidence else ""
         if not context:
+            skipped_no_evidence += 1
             continue
         samples.append({
             "context": context,
             "claim_text": row.get("claim", ""),
             "label": "supported" if label == "SUPPORTS" else "hallucinated",
         })
+
+    print(
+        f"  [FEVER] Collected {len(samples)} non-NEI samples "
+        f"(skipped NEI={skipped_nei}, no-evidence={skipped_no_evidence})"
+    )
     return samples
 
 
@@ -162,7 +186,17 @@ def compute_f1_precision_recall(y_true: list[int], y_pred: list[int]) -> tuple[f
     )
 
 
-def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
+def run_benchmark(
+    samples: list[dict[str, Any]],
+    dataset_name: str,
+    bootstrap_ci: bool = False,
+    n_bootstrap: int = 2000,
+    seed: int = 42,
+    output_dir: Path | None = None,
+) -> None:
+    import numpy as np
+    from sklearn.metrics import f1_score, precision_score, recall_score
+
     print(f"\n{'=' * 70}")
     print(f"NLIVerifier Benchmark — {dataset_name} (n={len(samples)})")
     print(f"{'=' * 70}")
@@ -245,6 +279,7 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
     auroc = compute_auroc(y_true, y_score)
     f1, precision, recall = compute_f1_precision_recall(y_true, y_pred)
     avg_latency_ms = 1000 * sum(latencies) / len(latencies) if latencies else 0.0
+    p95_latency_ms = float(np.percentile(latencies, 95) * 1000) if latencies else 0.0
 
     gate_pass = auroc >= 0.72
     print(f"\n  Results ({len(y_true)} evaluated samples):")
@@ -253,6 +288,7 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
     print(f"    Precision:  {precision:.4f}")
     print(f"    Recall:     {recall:.4f}")
     print(f"    Avg latency/claim: {avg_latency_ms:.1f} ms")
+    print(f"    P95 latency/claim: {p95_latency_ms:.1f} ms")
     print()
     if gate_pass:
         print(f"  Quality Gate G2: [PASS] AUROC >= 0.72")
@@ -261,24 +297,91 @@ def run_benchmark(samples: list[dict[str, Any]], dataset_name: str) -> None:
         print(f"  Note: HaluEval QA is a hard benchmark for NLI-only methods due to")
         print(f"  short factual answers. FEVER achieves higher AUROC (full sentence claims).")
 
+    # Bootstrapped CIs (R3 addition)
+    ci_data: dict[str, float] = {}
+    if bootstrap_ci and len(y_true) >= 10:
+        print(f"\n  Computing bootstrapped CIs (n_bootstrap={n_bootstrap})...")
+        auc_mean, auc_lo, auc_hi = bootstrap_auroc_ci(y_true, y_score, n_bootstrap, seed=seed)
+        f1_mean, f1_lo, f1_hi = bootstrap_f1_ci(y_true, y_pred, n_bootstrap, seed=seed)
+        ci_data = {
+            "ci_auroc_mean": auc_mean,
+            "ci_auroc_lower": auc_lo,
+            "ci_auroc_upper": auc_hi,
+            "ci_f1_mean": f1_mean,
+            "ci_f1_lower": f1_lo,
+            "ci_f1_upper": f1_hi,
+            "ci_n_bootstrap": float(n_bootstrap),
+            "ci_level": 0.95,
+        }
+        print(f"    AUROC 95% CI: {format_ci(auc_mean, auc_lo, auc_hi)}")
+        print(f"    F1    95% CI: {format_ci(f1_mean, f1_lo, f1_hi)}")
+
+    # Save JSON results (R3 addition)
+    if output_dir is not None:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = dataset_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
+        result = {
+            "dataset": dataset_name,
+            "mode": "nli",
+            "n_samples": len(y_true),
+            "n_skipped": skipped,
+            "auroc": auroc,
+            "f1": f1,
+            "precision": precision,
+            "recall": recall,
+            "avg_latency_ms": avg_latency_ms,
+            "p95_latency_ms": p95_latency_ms,
+            "gate_pass": gate_pass,
+            "scoring_formula": "fwd_c - 0.2*fwd_e - 0.6*rev_e",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            **ci_data,
+        }
+        out_path = output_dir / f"{safe_name}_nli_results.json"
+        out_path.write_text(json.dumps(result, indent=2))
+        print(f"\n  Results saved → {out_path}")
+
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Benchmark NLIVerifier (Quality Gate G2)")
+    parser = argparse.ArgumentParser(
+        description="Benchmark NLIVerifier (Quality Gate G2)",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("--dataset", choices=["halueval", "fever", "both"], default="both")
-    parser.add_argument("--n", type=int, default=200, help="Number of source samples to load")
+    parser.add_argument("--n", type=int, default=200, help="Number of samples to collect")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for bootstrapping")
+    parser.add_argument("--bootstrap-ci", action="store_true", help="Compute bootstrapped 95% CIs")
+    parser.add_argument("--n-bootstrap", type=int, default=2000, help="Bootstrap resamples")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Optional directory to save JSON results",
+    )
     args = parser.parse_args()
 
     if args.dataset in ("halueval", "both"):
         try:
             samples = load_halueval_qa(args.n)
-            run_benchmark(samples, "HaluEval QA")
+            run_benchmark(
+                samples, "HaluEval QA",
+                bootstrap_ci=args.bootstrap_ci,
+                n_bootstrap=args.n_bootstrap,
+                seed=args.seed,
+                output_dir=args.output,
+            )
         except FileNotFoundError as e:
             print(f"Warning: {e}")
 
     if args.dataset in ("fever", "both"):
         try:
             samples = load_fever(args.n)
-            run_benchmark(samples, "FEVER (validation)")
+            run_benchmark(
+                samples, "FEVER (validation)",
+                bootstrap_ci=args.bootstrap_ci,
+                n_bootstrap=args.n_bootstrap,
+                seed=args.seed,
+                output_dir=args.output,
+            )
         except FileNotFoundError as e:
             print(f"Warning: {e}")
 
