@@ -1,0 +1,23 @@
+{
+  "mode": "nli",
+  "dataset": "TruthfulQA (MC)",
+  "n_samples": 100,
+  "n_skipped": 0,
+  "timestamp": "2026-09-16T21:07:57.062978+00:00",
+  "scoring_formula": "fwd_c - 0.2*fwd_e - 0.6*rev_e",
+  "note": "NLI applied to (question, answer_choice) pairs. AUROC measures ability to rank incorrect choices higher than correct ones.",
+  "auroc": 0.3441734417344174,
+  "f1": 0.9050279329608939,
+  "precision": 0.8350515463917526,
+  "recall": 0.9878048780487805,
+  "avg_latency_ms": 104.20597600001656,
+  "p95_latency_ms": 50.77418500013664,
+  "ci_auroc_mean": 0.32794718615808377,
+  "ci_auroc_lower": 0.15706953817945582,
+  "ci_auroc_upper": 0.46958912037037026,
+  "ci_f1_mean": 0.9075284874834645,
+  "ci_f1_lower": 0.8599087066779375,
+  "ci_f1_upper": 0.946259250693802,
+  "ci_n_bootstrap": 100,
+  "ci_level": 0.95
+}
