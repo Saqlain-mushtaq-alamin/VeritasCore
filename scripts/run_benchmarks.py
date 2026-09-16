@@ -1,10 +1,15 @@
 """Run full benchmarks on HaluEval and FEVER datasets.
 
 Produces:
-- Per-dataset AUROC, F1, Precision, Recall
+- Per-dataset AUROC, F1, Precision, Recall (with optional 95% bootstrapped CIs)
 - Comparison with published baselines
 - Breakdown by verification mode
 - Latency statistics
+
+Fixes (R3):
+- FEVER loader now collects exactly n non-NEI samples (was: skip after counting)
+- HaluEval split: --split eval uses a separate held-out set from any grid search
+- Added --seed, --split, --bootstrap-ci, --n-bootstrap flags
 
 Saves results as JSON to the output directory and generates a markdown
 comparison table via generate_report.py.
@@ -12,6 +17,7 @@ comparison table via generate_report.py.
 Usage:
     python scripts/run_benchmarks.py --datasets halueval fever --output tests/benchmarks/results/
     python scripts/run_benchmarks.py --datasets halueval --n 200 --mode nli
+    python scripts/run_benchmarks.py --datasets halueval fever --n 1500 --split eval --bootstrap-ci
 """
 
 from __future__ import annotations
@@ -21,6 +27,7 @@ import io
 import json
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -32,11 +39,14 @@ if hasattr(sys.stdout, "reconfigure"):
 else:
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+SCRIPTS_DIR = Path(__file__).parent
+sys.path.insert(0, str(SCRIPTS_DIR))              # for stats_utils
+sys.path.insert(0, str(SCRIPTS_DIR.parent / "src"))  # for veritascore
 
+from stats_utils import bootstrap_auroc_ci, bootstrap_f1_ci, format_ci  # noqa: E402
 from veritascore.core.types import Claim, Verdict  # noqa: E402
 
-DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
+DATA_DIR = SCRIPTS_DIR.parent / "data" / "datasets"
 
 # Published baseline AUROC values for comparison table
 BASELINES: dict[str, dict[str, float]] = {
@@ -59,8 +69,23 @@ BASELINES: dict[str, dict[str, float]] = {
 # Dataset loaders
 # ---------------------------------------------------------------------------
 
-def load_halueval_qa(n: int) -> list[dict[str, Any]]:
-    """Load HaluEval QA samples (requires download_datasets.py first)."""
+def load_halueval_qa(
+    n: int,
+    split: str = "all",
+    grid_n: int = 500,
+    seed: int = 42,
+) -> list[dict[str, Any]]:
+    """Load HaluEval QA samples with optional train/eval splitting (R3 fix).
+
+    Args:
+        n:      Number of samples desired.
+        split:  'all' (no split), 'eval' (held-out set), 'grid' (tuning set).
+        grid_n: Size of grid-search split (default 500).
+        seed:   Random seed for reproducible splitting.
+
+    Returns:
+        List of sample dicts.
+    """
     from datasets import load_from_disk
 
     path = DATA_DIR / "halueval" / "qa_samples"
@@ -71,11 +96,13 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
         )
 
     ds = load_from_disk(str(path))
-    split = ds["data"] if "data" in ds else next(iter(ds.values()))
+    raw_split = ds["data"] if "data" in ds else next(iter(ds.values()))
 
-    samples: list[dict[str, Any]] = []
-    for i, row in enumerate(split):
-        if i >= n:
+    # Load enough rows to cover both splits
+    max_load = max(grid_n + n + 200, 2500) if split != "all" else n
+    all_samples: list[dict[str, Any]] = []
+    for i, row in enumerate(raw_split):
+        if i >= max_load:
             break
         context = row.get("knowledge", "")
         question = row.get("question", "")
@@ -84,16 +111,40 @@ def load_halueval_qa(n: int) -> list[dict[str, Any]]:
         if not context or not answer:
             continue
         claim_text = f"Q: {question}  A: {answer}" if question else answer
-        samples.append({
+        all_samples.append({
             "context": context,
             "claim_text": claim_text,
             "label": "hallucinated" if hallucination == "yes" else "supported",
         })
-    return samples
+
+    if split == "all":
+        return all_samples[:n]
+
+    # Deterministic split
+    rng = np.random.RandomState(seed)
+    indices = rng.permutation(len(all_samples))
+    grid_idx = set(indices[:grid_n].tolist())
+    eval_idx = set(indices[grid_n : grid_n + n].tolist())
+    assert len(grid_idx & eval_idx) == 0, "BUG: grid and eval sets overlap!"
+
+    if split == "grid":
+        chosen = [all_samples[i] for i in indices[:grid_n]]
+        print(f"  [HaluEval] Grid-search split: n={len(chosen)} (seed={seed})")
+    else:  # eval
+        chosen = [all_samples[i] for i in indices[grid_n : grid_n + n]]
+        print(f"  [HaluEval] Held-out eval split: n={len(chosen)} (seed={seed}, disjoint from grid)")
+
+    return chosen
 
 
 def load_fever(n: int) -> list[dict[str, Any]]:
-    """Load FEVER validation samples (requires download_datasets.py first)."""
+    """Load exactly n non-NEI FEVER validation samples (R3 bug fix).
+
+    BUG FIX: The original version iterated over exactly n rows and then
+    skipped NEI rows — meaning the actual eval set was often ~133 samples
+    when requesting n=200. This version iterates until exactly n non-NEI
+    samples are collected.
+    """
     from datasets import load_from_disk
 
     path = DATA_DIR / "fever" / "v1.0"
@@ -103,14 +154,18 @@ def load_fever(n: int) -> list[dict[str, Any]]:
             "Run: python scripts/download_datasets.py --only fever"
         )
     ds = load_from_disk(str(path))
-    split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
+    raw_split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
-    for i, row in enumerate(split):
-        if i >= n:
+    skipped_nei = 0
+    skipped_no_evidence = 0
+
+    for row in raw_split:
+        if len(samples) >= n:  # collect EXACTLY n, not skip-then-count
             break
         label = row.get("label", "")
         if label == "NOT ENOUGH INFO":
+            skipped_nei += 1
             continue
         raw_evidence = row.get("evidence", [])
         if isinstance(raw_evidence, list) and raw_evidence:
@@ -121,12 +176,18 @@ def load_fever(n: int) -> list[dict[str, Any]]:
         else:
             context = str(raw_evidence) if raw_evidence else ""
         if not context:
+            skipped_no_evidence += 1
             continue
         samples.append({
             "context": context,
             "claim_text": row.get("claim", ""),
             "label": "supported" if label == "SUPPORTS" else "hallucinated",
         })
+
+    print(
+        f"  [FEVER] Collected {len(samples)} non-NEI samples "
+        f"(skipped NEI={skipped_nei}, no-evidence={skipped_no_evidence})"
+    )
     return samples
 
 
@@ -171,8 +232,19 @@ def compute_metrics(
 def run_nli_benchmark(
     samples: list[dict[str, Any]],
     dataset_name: str,
+    bootstrap_ci: bool = False,
+    n_bootstrap: int = 2000,
+    seed: int = 42,
 ) -> dict[str, Any]:
-    """Run NLI-only verification on a sample list, return metric dict."""
+    """Run NLI-only verification on a sample list, return metric dict.
+
+    Args:
+        samples:      Sample list with context, claim_text, label.
+        dataset_name: Display name for the dataset.
+        bootstrap_ci: Whether to compute bootstrapped 95% CIs.
+        n_bootstrap:  Number of bootstrap resamples (≥ 2000 for publication).
+        seed:         Random seed for bootstrapping.
+    """
     from veritascore.verifier.nli_verifier import NLIVerifier
 
     print(f"\n{'=' * 60}")
@@ -231,10 +303,27 @@ def run_nli_benchmark(
     metrics["n_skipped"] = skipped
     metrics["mode"] = "nli"
     metrics["dataset"] = dataset_name
+    metrics["timestamp"] = datetime.now(timezone.utc).isoformat()
 
     print(f"\n  AUROC: {metrics['auroc']:.4f}")
     print(f"  F1:    {metrics['f1']:.4f}")
     print(f"  Avg latency: {metrics['avg_latency_ms']:.1f} ms/claim")
+
+    # Bootstrapped CIs
+    if bootstrap_ci and len(y_true) >= 10:
+        print(f"  Computing bootstrapped CIs (n_bootstrap={n_bootstrap})...")
+        auc_mean, auc_lo, auc_hi = bootstrap_auroc_ci(y_true, y_score, n_bootstrap, seed=seed)
+        f1_mean, f1_lo, f1_hi = bootstrap_f1_ci(y_true, y_pred, n_bootstrap, seed=seed)
+        metrics["ci_auroc_mean"] = auc_mean
+        metrics["ci_auroc_lower"] = auc_lo
+        metrics["ci_auroc_upper"] = auc_hi
+        metrics["ci_f1_mean"] = f1_mean
+        metrics["ci_f1_lower"] = f1_lo
+        metrics["ci_f1_upper"] = f1_hi
+        metrics["ci_n_bootstrap"] = n_bootstrap
+        metrics["ci_level"] = 0.95
+        print(f"  AUROC 95% CI: {format_ci(auc_mean, auc_lo, auc_hi)}")
+        print(f"  F1    95% CI: {format_ci(f1_mean, f1_lo, f1_hi)}")
 
     return metrics
 
@@ -245,7 +334,8 @@ def run_nli_benchmark(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run VeritasCore benchmarks on HaluEval and FEVER"
+        description="Run VeritasCore benchmarks on HaluEval and FEVER",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--datasets",
@@ -267,6 +357,29 @@ def main() -> None:
         help="Verification mode to benchmark (nli=NLI-only, all=full pipeline)",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for HaluEval splitting and bootstrapping",
+    )
+    parser.add_argument(
+        "--split",
+        choices=["grid", "eval", "all"],
+        default="all",
+        help="HaluEval split: 'eval' = held-out (R3), 'grid' = tuning only, 'all' = no split",
+    )
+    parser.add_argument(
+        "--bootstrap-ci",
+        action="store_true",
+        help="Compute bootstrapped 95%% CIs for all metrics",
+    )
+    parser.add_argument(
+        "--n-bootstrap",
+        type=int,
+        default=2000,
+        help="Number of bootstrap resamples",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         default=Path("tests/benchmarks/results"),
@@ -279,9 +392,16 @@ def main() -> None:
 
     if "halueval" in args.datasets:
         try:
-            samples = load_halueval_qa(args.n)
+            samples = load_halueval_qa(args.n, split=args.split, seed=args.seed)
             if args.mode in ("nli", "all"):
-                result = run_nli_benchmark(samples, "HaluEval QA")
+                result = run_nli_benchmark(
+                    samples, "HaluEval QA",
+                    bootstrap_ci=args.bootstrap_ci,
+                    n_bootstrap=args.n_bootstrap,
+                    seed=args.seed,
+                )
+                result["split"] = args.split
+                result["seed"] = args.seed
                 all_results.append(result)
                 out_path = args.output / "halueval_results.json"
                 out_path.write_text(json.dumps(result, indent=2))
@@ -293,7 +413,13 @@ def main() -> None:
         try:
             samples = load_fever(args.n)
             if args.mode in ("nli", "all"):
-                result = run_nli_benchmark(samples, "FEVER (validation)")
+                result = run_nli_benchmark(
+                    samples, "FEVER (validation)",
+                    bootstrap_ci=args.bootstrap_ci,
+                    n_bootstrap=args.n_bootstrap,
+                    seed=args.seed,
+                )
+                result["seed"] = args.seed
                 all_results.append(result)
                 out_path = args.output / "fever_results.json"
                 out_path.write_text(json.dumps(result, indent=2))
@@ -302,10 +428,23 @@ def main() -> None:
             print(f"Warning: {e}")
 
     if all_results:
+        summary = {
+            "results": all_results,
+            "baselines": BASELINES,
+            "config": {
+                "n": args.n,
+                "seed": args.seed,
+                "split": args.split,
+                "bootstrap_ci": args.bootstrap_ci,
+                "n_bootstrap": args.n_bootstrap,
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
         summary_path = args.output / "summary.json"
-        summary_path.write_text(json.dumps({"results": all_results, "baselines": BASELINES}, indent=2))
+        summary_path.write_text(json.dumps(summary, indent=2))
         print(f"\nSummary saved → {summary_path}")
         print("\nRun `python scripts/generate_report.py` to generate the comparison table.")
+        print("For full R3 evaluation use: python scripts/run_benchmarks_v2.py")
 
 
 if __name__ == "__main__":
