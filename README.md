@@ -140,10 +140,11 @@ flowchart LR
 | NLI-only (SummaC) | 0.720 | 0.700 | Laban et al., 2022 |
 | Retrieval-only (FActScore) | 0.680 | 0.740 | Min et al., 2023 |
 | SelfCheckGPT | 0.740 | 0.690 | Manakul et al., 2023 |
-| **VeritasCore (NLI)** | **0.721** | **≥0.72*** | **This work** |
-| **VeritasCore (Fusion)** | **≥0.74*** | **≥0.74*** | **This work** |
+| **VeritasCore (NLI-only)** | **0.721** | **0.72** (oracle evidence) | **This work** |
 
-*\*Full benchmark results in [`docs/benchmarks.md`](docs/benchmarks.md)*
+> **Note:** VeritasCore FEVER results use oracle (gold) evidence. Full-pipeline and fusion benchmarks are in progress.
+> See [`docs/benchmarks.md`](docs/benchmarks.md) for full details and current status.
+
 
 ---
 
