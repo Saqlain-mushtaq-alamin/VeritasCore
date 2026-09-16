@@ -1,11 +1,11 @@
 # VeritasCore — Model Registry
 # Maps logical model roles to HuggingFace model IDs and local paths.
-# Pin exact revisions for reproducibility once validated.
+# Revisions pinned to exact commit hashes for full reproducibility (R1.6).
 
 models:
   nli:
     id: "cross-encoder/nli-deberta-v3-base"
-    revision: null          # Pin to a commit hash after validation, e.g. "abc1234"
+    revision: "6c749ce3425cd33b46d187e45b92bbf96ee12ec7"
     type: "sequence-classification"
     vram_gb: 1.5
     labels:
@@ -15,14 +15,14 @@ models:
 
   embeddings:
     id: "sentence-transformers/all-MiniLM-L6-v2"
-    revision: null
+    revision: "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
     type: "sentence-transformer"
     vram_gb: 0.1
     embedding_dim: 384
 
   decomposer:
     id: "microsoft/Phi-3-mini-4k-instruct"
-    revision: null
+    revision: "f39ac1d28e925b323eae81227eaba4464caced4e"
     type: "causal-lm"
     vram_gb: 4.0
     dtype: "float16"        # Load in float16 to halve VRAM usage
@@ -31,7 +31,7 @@ models:
   # Alternative lighter decomposer (use if VRAM is tight):
   decomposer_lite:
     id: "Qwen/Qwen2.5-3B-Instruct"
-    revision: null
+    revision: "aa8e72537993ba99e69dfaafa59ed015b17504d1"
     type: "causal-lm"
     vram_gb: 3.0
     dtype: "float16"
