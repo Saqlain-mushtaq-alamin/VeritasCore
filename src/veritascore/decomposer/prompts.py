@@ -16,7 +16,7 @@ from __future__ import annotations
 
 # ── Version Registry ──────────────────────────────────────────────────────────
 
-DECOMPOSITION_VERSION = "v5"  # Bump when making substantive prompt changes
+DECOMPOSITION_VERSION = "v6"  # Bump when making substantive prompt changes
 
 
 # ── v4 Prompts (current — maximum accuracy + minimum latency) ─────────────────
@@ -350,12 +350,92 @@ Output each claim on a separate line, numbered (1. 2. 3. etc.):"""
 
 # ── Registry ──────────────────────────────────────────────────────────────────
 
+# ── v6 Prompts ────────────────────────────────────────────────────────────────
+#
+# Design goals for v6:
+#   - Fixes Phi-3-mini's chain-of-thought reasoning mode.
+#   - Phi-3-mini (and Qwen2.5-Instruct) sometimes activate reasoning mode and
+#     produce preambles like:
+#       "Since this statement contains personal belief without presenting clear
+#        factual information ... we must skip opinions ... Therefore, the..."
+#     This generates hundreds of reasoning tokens before any numbered output,
+#     causing the 40s/sample timeout and zero parseable claims.
+#   - Fix 1: Adds "Begin immediately with 1. or NONE." as the FINAL rule
+#     (highest recency weight in attention) with a direct prohibition on ANY
+#     analysis before the first numbered claim.
+#   - Fix 2: Adds _ASSISTANT_PREFILL_V6 — the assistant turn seed text.
+#     LLMDecomposer._generate_transformers injects this as an assistant-role
+#     message before apply_chat_template, forcing the model to CONTINUE from
+#     "1." and making it structurally impossible to start with reasoning.
+#   - System prompt is intentionally brief: Phi-3-mini performs worse with
+#     very long system prompts (attention dilution).
+
+_SYSTEM_V6 = """\
+Extract atomic facts from text. Output ONLY a numbered list. No analysis, no reasoning.
+
+RULES:
+1. One fact per line. Split compound sentences joined by "and", "but", "while", "whereas", or semicolons.
+2. Do NOT split a single unified fact ("A uses B to do C" = ONE claim).
+3. Replace pronouns with the full name ("he" → person's name).
+4. SKIP opinions/beliefs: "I think", "I believe", "in my opinion", "it seems", "arguably", "personally". Extract any factual sentence present in the same input.
+5. Skip questions and commands.
+6. Keep factual qualifiers: "approximately", "about", "commonly", "generally".
+7. If no facts remain, output exactly: NONE
+8. Begin immediately with 1. or NONE. DO NOT explain, reason, analyze, or output ANY text before the first numbered item.
+
+EXAMPLES:
+
+Input: "The Pacific Ocean is the largest ocean on Earth."
+Output:
+1. The Pacific Ocean is the largest ocean on Earth
+
+Input: "I think Python is the best language. Python was created in 1991 by Guido van Rossum."
+Output:
+1. Python was created in 1991 by Guido van Rossum
+
+Input: "I believe renewable energy is the future. Solar panel costs have dropped by about 90% over the past decade."
+Output:
+1. Solar panel costs have dropped by about 90% over the past decade
+
+Input: "This movie is amazing and everyone should watch it. It was released in 2010 and grossed over $800 million worldwide."
+Output:
+1. The movie was released in 2010
+2. The movie grossed over $800 million worldwide
+
+Input: "Marie Curie was born in Warsaw, Poland on November 7, 1867, and she won Nobel Prizes in both Physics and Chemistry."
+Output:
+1. Marie Curie was born in Warsaw, Poland
+2. Marie Curie was born on November 7, 1867
+3. Marie Curie won a Nobel Prize in Physics
+4. Marie Curie won a Nobel Prize in Chemistry
+
+Input: "In my opinion, this is groundbreaking."
+Output:
+NONE
+
+Input: "What time is it?"
+Output:
+NONE
+"""
+
+_USER_V6 = """\
+{context_block}Input: "{response_text}"
+Output:
+"""
+
+# Assistant turn pre-fill: seed the response with "1." to force numbered output.
+# Inject this as the last message (role="assistant") before calling
+# apply_chat_template(add_generation_prompt=False).
+# This is the primary mechanism to prevent Phi-3 reasoning-mode activation.
+ASSISTANT_PREFILL_V6 = "1."
+
 _VERSIONS: dict[str, tuple[str, str]] = {
     "v1": (_SYSTEM_V1, _USER_V1),
     "v2": (_SYSTEM_V2, _USER_V2),
     "v3": (_SYSTEM_V3, _USER_V3),
     "v4": (_SYSTEM_V4, _USER_V4),
     "v5": (_SYSTEM_V4, _USER_V4),  # v5 = improved v4 (better few-shots, stricter anti-refusal rule)
+    "v6": (_SYSTEM_V6, _USER_V6),  # v6 = anti-reasoning fix for Phi-3-mini + assistant pre-fill
 }
 
 
@@ -366,7 +446,7 @@ def get_system_prompt(version: str = DECOMPOSITION_VERSION) -> str:
     """Return the system prompt for a given version.
 
     Args:
-        version: Prompt version string (e.g. "v4").
+        version: Prompt version string (e.g. "v6").
 
     Returns:
         System prompt string.
@@ -377,6 +457,26 @@ def get_system_prompt(version: str = DECOMPOSITION_VERSION) -> str:
     if version not in _VERSIONS:
         raise KeyError(f"Unknown prompt version '{version}'. Available: {list(_VERSIONS)}")
     return _VERSIONS[version][0]
+
+
+def get_assistant_prefill(version: str = DECOMPOSITION_VERSION) -> str | None:
+    """Return the assistant turn pre-fill string for a given version, or None.
+
+    The pre-fill is injected as a partial assistant message before generation
+    to force the model to continue from a numbered list rather than starting
+    with reasoning or explanation.
+
+    Currently only v6 uses a pre-fill. Earlier versions return None.
+
+    Args:
+        version: Prompt version string.
+
+    Returns:
+        Pre-fill string or None if not applicable for this version.
+    """
+    if version == "v6":
+        return ASSISTANT_PREFILL_V6
+    return None
 
 
 def build_decomposition_prompt(
