@@ -102,7 +102,7 @@ class VerificationRouter:
 
 **Purpose**: Check each claim against a provided context using Natural Language Inference.
 
-**Model**: `cross-encoder/nli-deberta-v3-large` — a fine-tuned DeBERTa-v3-large cross-encoder producing `[contradiction, neutral, entailment]` logits for (premise, hypothesis) pairs.
+**Model**: `cross-encoder/nli-deberta-v3-base` — a fine-tuned DeBERTa-v3-base cross-encoder producing `[contradiction, neutral, entailment]` logits for (premise, hypothesis) pairs.
 
 **Scoring formula** (grid-searched on HaluEval QA, n=200):
 ```
@@ -248,6 +248,6 @@ class VerificationReport:
 
 | Model | Task | Size | VRAM |
 |-------|------|------|------|
-| `cross-encoder/nli-deberta-v3-large` | NLI | ~900 MB | ~2 GB |
+| `cross-encoder/nli-deberta-v3-base` | NLI | ~400 MB | ~1.5 GB |
 | `llama3.2` (Ollama) | Decomposer | ~2 GB | ~4 GB |
 | Fusion model | Scoring | < 1 MB | CPU |
