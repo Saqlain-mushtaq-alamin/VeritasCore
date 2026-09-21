@@ -388,14 +388,30 @@ class LLMDecomposer(BaseDecomposer):
         # Two-step approach: render chat template to text, then tokenize.
         # This is more reliable across transformers versions than using
         # apply_chat_template with return_tensors directly.
-        prompt_text = self._tokenizer.apply_chat_template(
-            messages,
-            tokenize=False,
-            # When we have a pre-fill the template should NOT append the
-            # generation-prompt suffix ("<|assistant|>") because the assistant
-            # turn is already the last message.
-            add_generation_prompt=not has_prefill,
-        )
+        if has_prefill:
+            try:
+                prompt_text = self._tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    continue_final_message=True,
+                )
+            except TypeError:
+                # Fallback for older transformers where continue_final_message is not supported:
+                # render messages[:-1] with add_generation_prompt=True, then append prefill string.
+                prompt_text = (
+                    self._tokenizer.apply_chat_template(
+                        messages[:-1],
+                        tokenize=False,
+                        add_generation_prompt=True,
+                    )
+                    + messages[-1]["content"]
+                )
+        else:
+            prompt_text = self._tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
 
         encoded = self._tokenizer(
             prompt_text,
@@ -441,7 +457,8 @@ class LLMDecomposer(BaseDecomposer):
         # prepend the prefill to reconstruct a valid numbered list for parsing.
         if has_prefill:
             prefill = messages[-1]["content"]
-            result = prefill + result
+            sep = " " if prefill.endswith(".") and not result.startswith(" ") else ""
+            result = prefill + sep + result
 
         return result
 
