@@ -176,3 +176,20 @@ appended below in §Hardware Run.
 | Avg latency | 0.05 ms | <2000ms | — |
 | Max latency | 0.94 ms | — | — |
 | Failures | 0 | 0 | — |
+
+## Hardware Run — 2026-09-22 (LLMDecomposer on NVIDIA RTX 4060)
+> Timeout per sample: 60s  
+> Run: `python scripts/evaluate_decomposer.py --decomposer llm`
+
+### LLMDecomposer (microsoft/Phi-3-mini-4k-instruct, FP16 + SDPA)
+| Metric | Result | Target | Status |
+|---|---|---|---|
+| In expected claim-count range | 47/50 (94.0%) | ≥90% | ✓ |
+| Span validity | 100.0% | >85% | ✓ |
+| Avg claims/sample | 1.66 | — | — |
+| Claims/sentence ratio | 1.22 | 1.0–3.5 | ✓ |
+| Avg latency | 7,668.82 ms | <20,000ms | ✓ |
+| Max latency | 15,242.86 ms | — | — |
+| Failures | 0 | 0 | ✓ |
+
+**Quality Gate G1 Status**: **ALL GATES PASSED** (94.0% atomic accuracy > 90% target, 100.0% span validity > 85% target, 0 failures).
