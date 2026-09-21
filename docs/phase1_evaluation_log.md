@@ -160,3 +160,19 @@ pytest tests/integration/test_decomposer_llm.py -v -m integration
 Expected outcome with fixes: ≥90% in-range, avg latency <10s (was 40s+), results
 appended below in §Hardware Run.
 
+
+
+## Hardware Run — 2026-09-21T17:18:56Z
+> Timeout per sample: 15s  
+> Run: `python scripts/evaluate_decomposer.py --decomposer llm --verbose`
+
+### RuleDecomposer
+| Metric | Result | Target | Status |
+|---|---|---|---|
+| In expected claim-count range | 49/50 (98.0%) | ≥90% | ✓ |
+| Span validity | 100.0% | >85% | ✓ |
+| Avg claims/sample | 1.44 | — | — |
+| Claims/sentence ratio | 1.06 | 1.5–3.0 | — |
+| Avg latency | 0.05 ms | <2000ms | — |
+| Max latency | 0.94 ms | — | — |
+| Failures | 0 | 0 | — |

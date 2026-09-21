@@ -1,0 +1,16 @@
+[
+  {
+    "name": "RuleDecomposer",
+    "n_samples": 50,
+    "n_successful": 50,
+    "n_failures": 0,
+    "in_range_count": 49,
+    "in_range_pct": 98.0,
+    "span_validity_pct": 100.0,
+    "avg_claims_per_sample": 1.44,
+    "claims_per_sentence_ratio": 1.06,
+    "avg_latency_ms": 0.05,
+    "max_latency_ms": 0.94,
+    "failures": []
+  }
+]
