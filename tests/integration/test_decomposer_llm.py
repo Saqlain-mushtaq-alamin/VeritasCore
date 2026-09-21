@@ -143,7 +143,7 @@ class TestLLMDecomposerSpanMapping:
         for claim in claims:
             start, end = claim.source_span
             assert 0 <= start <= end <= len(text)
-            assert claim.source_text == text
+            assert claim.source_text == text[start:end]
 
     def test_claim_ids_unique(self, llm_decomposer: LLMDecomposer) -> None:
         text = "The Eiffel Tower is in Paris and it is 330 meters tall."
