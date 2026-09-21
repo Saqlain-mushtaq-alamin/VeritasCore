@@ -80,8 +80,10 @@ _CODE_PATTERN = re.compile(
 # This is a degenerate output that cannot be parsed as natural-language claims.
 _JSON_GARBAGE = re.compile(r"^\s*[\[{]\s*\\?[\"']\w", re.MULTILINE)
 
-# Filter for individual claim lines that are raw JSON fragments
-_JSON_CLAIM = re.compile(r'^\s*(?:\[|\{|\"|\')[\{\[\"\'']')
+# Filter for individual claim lines that are raw JSON fragments.
+# Matches lines that start with [ or { immediately followed by " or ' (JSON syntax).
+_JSON_CLAIM = re.compile(r'^\s*[\[{]["\']')
+
 
 # Pattern to detect if text is purely a question
 _PURE_QUESTION = re.compile(
