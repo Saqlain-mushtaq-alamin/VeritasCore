@@ -12,13 +12,14 @@ Or via Makefile:
 
 Timeout notes (Windows WDDM):
     On Windows with a WDDM GPU driver (RTX 40xx, etc.) the first CUDA kernel
-    dispatch takes 20–60 s because the driver lazily initialises the CUDA
-    context. We handle this with two mitigations:
-      1. timeout_per_sample=120 — generous enough for the cold CUDA start.
-      2. Warmup call in the module-scoped fixture — runs one short inference
-         immediately after model load so that the CUDA context is hot before
-         any timed test executes.
-    Subsequent inferences are typically 1–5 s on an RTX 4060 (fp16, sdpa).
+    dispatch takes 20-60 s because the driver lazily initialises the CUDA
+    context. We use timeout_per_sample=120 to cover this cold start.
+
+    IMPORTANT — DO NOT use a separate warmup LLMDecomposer instance.
+    Loading a second 4 GB model before the main fixture model would exhaust
+    VRAM and force device_map='auto' CPU-offloading on the main model.
+    CPU-offloaded Phi-3 produces degenerate JSON output instead of numbered
+    claims. The warmup is done directly on the main fixture's decomposer.
 """
 
 from __future__ import annotations
@@ -35,41 +36,38 @@ pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 # Per-sample timeout used by all integration tests.
-# 120 s gives the Windows WDDM driver enough time for the cold CUDA start
-# (typically 20–60 s on the first kernel dispatch) while still catching
-# genuine hangs.  Subsequent inferences on RTX 4060 fp16 take 1–5 s.
+# 120 s covers the Windows WDDM cold CUDA start (~20-60 s on first dispatch).
+# Subsequent inferences on RTX 4060 fp16+sdpa take 1-5 s.
 _INTEGRATION_TIMEOUT = 120.0
 
 
 @pytest.fixture(scope="module")
 def llm_decomposer() -> LLMDecomposer:
-    """Module-scoped fixture — load model once, warm up CUDA, reuse across tests.
+    """Module-scoped fixture: load model once, warm up CUDA, reuse across tests.
 
-    After loading the model we run one short warmup inference so that the
-    CUDA context is already initialised before any timed test runs.
-    Without this, the first test always hits the 20–60 s WDDM cold-start
-    and times out even with a generous timeout.
+    The warmup is done on the SAME decomposer instance (not a separate one)
+    to avoid consuming the full 4 GB VRAM budget twice, which would force the
+    main model onto CPU and cause broken JSON output.
     """
     config = EngineConfig(models=ModelConfig(device="auto"))
     decomposer = LLMDecomposer(
         config=config,
-        fallback_on_error=False,
+        fallback_on_error=True,   # Allow warmup to recover from any issue
         timeout_per_sample=_INTEGRATION_TIMEOUT,
     )
-    # Warmup: trigger CUDA context init so subsequent inferences are fast.
-    # We use fallback_on_error=True here so a warmup failure doesn't abort
-    # the whole test session.
+
+    # Warmup: load the model and run one inference to hot-start the CUDA
+    # context. After this, subsequent calls in tests will be fast (1-5 s).
+    # Using fallback_on_error=True so a warmup failure doesn't abort the session.
     try:
-        warmup = LLMDecomposer(
-            config=config,
-            fallback_on_error=True,
-            timeout_per_sample=_INTEGRATION_TIMEOUT,
-        )
-        warmup._load_model()  # load weights — shares HF cache with main fixture
-        warmup.decompose("The sky is blue.")  # triggers first CUDA dispatch
-        warmup.unload()
+        decomposer._load_model()
+        decomposer.decompose("The sky is blue.")
     except Exception:  # noqa: BLE001
-        pass  # warmup failure is non-fatal
+        pass  # warmup failure is non-fatal; individual tests will surface errors
+
+    # Switch to fallback_on_error=False for the actual tests so failures are visible.
+    decomposer.fallback_on_error = False
+
     yield decomposer
     decomposer.unload()
 
@@ -113,31 +111,34 @@ class TestLLMDecomposerBasic:
         assert llm_decomposer.decompose("") == []
         assert llm_decomposer.decompose("   ") == []
 
-    def test_opinion_filtering(self) -> None:
+    def test_opinion_filtering(self, llm_decomposer: LLMDecomposer) -> None:
         """LLM should drop opinions and extract only factual claims.
 
         Input: one opinion sentence + one factual sentence. Expected:
           - Opinion ("I believe Python is the best language") is NOT in output.
           - Fact ("Python was released in 1991") IS in output.
 
-        Uses fallback_on_error=True because Phi-3 sometimes outputs a
-        preamble explanation ("Since this instruction requires us to remove
-        opinions...") instead of numbered claims for short mixed inputs,
-        causing DecompositionError with fallback_on_error=False. The
-        fallback RuleDecomposer correctly handles this case and is also
-        the real production code path when LLM fails.
+        Uses the module fixture (fallback_on_error=False at test time, but
+        the model has already been warmed up so it should produce clean output).
+        If the LLM fails for this mixed input, the test verifies that the
+        rule-based fallback also handles it correctly by checking with
+        fallback_on_error=True.
         """
-        from veritascore.core.config import EngineConfig, ModelConfig
-        from veritascore.decomposer.llm_decomposer import LLMDecomposer
-
-        config = EngineConfig(models=ModelConfig(device="auto"))
-        decomposer = LLMDecomposer(
-            config=config,
-            fallback_on_error=True,
-            timeout_per_sample=_INTEGRATION_TIMEOUT,
-        )
         text = "I believe Python is the best language. Python was released in 1991."
-        claims = decomposer.decompose(text)
+
+        # Try with the warmed-up module fixture first (no fallback)
+        try:
+            claims = llm_decomposer.decompose(text)
+        except Exception:  # noqa: BLE001
+            # Fall back to a fresh decomposer with fallback enabled
+            config = EngineConfig(models=ModelConfig(device="auto"))
+            fallback_decomposer = LLMDecomposer(
+                config=config,
+                fallback_on_error=True,
+                timeout_per_sample=_INTEGRATION_TIMEOUT,
+            )
+            claims = fallback_decomposer.decompose(text)
+
         claim_texts = " ".join(c.text for c in claims).lower()
 
         # Fact must be preserved (either by LLM or rule fallback).
@@ -167,7 +168,7 @@ class TestLLMDecomposerPerformance:
         """Target: <60s for a ~20-word response (after CUDA warmup).
 
         The module fixture runs a warmup inference to hot-start the CUDA
-        context.  After warmup, RTX 4060 fp16+sdpa typically runs in 1–5 s.
+        context.  After warmup, RTX 4060 fp16+sdpa typically runs in 1-5 s.
         We use 60 s as the threshold to stay resilient to occasional WDDM
         scheduling jitter while still catching genuine hangs.
         """
@@ -185,12 +186,19 @@ class TestLLMDecomposerPerformance:
 
 class TestLLMDecomposerMemoryManagement:
     def test_unload_frees_memory(self) -> None:
+        """Verify unload() releases GPU memory.
+
+        We measure torch.cuda.memory_reserved() (total memory pool reserved
+        by the allocator) rather than memory_allocated() (bytes in active use).
+        After unload() + empty_cache(), the reserved pool shrinks because the
+        model weights are freed. memory_allocated() can equal mem_before if the
+        CUDA allocator immediately reuses cached blocks for other tensors.
+        """
         import torch
 
         if not torch.cuda.is_available():
             pytest.skip("No CUDA GPU available to test memory unloading")
 
-        # Create a dedicated instance to avoid interfering with other tests
         config = EngineConfig(models=ModelConfig(device="auto"))
         decomposer = LLMDecomposer(
             config=config,
@@ -198,19 +206,33 @@ class TestLLMDecomposerMemoryManagement:
             timeout_per_sample=_INTEGRATION_TIMEOUT,
         )
 
-        # Ensure model is loaded with a substantial prompt
+        # Load and run once so the model is fully on GPU
         text = "The Eiffel Tower is 330 meters tall and is located in Paris."
         decomposer.decompose(text)
-        mem_before = torch.cuda.memory_allocated()
+        torch.cuda.synchronize()
+        mem_reserved_before = torch.cuda.memory_reserved()
 
         decomposer.unload()
-        mem_after = torch.cuda.memory_allocated()
+        # empty_cache() releases the allocator's memory pool back to the OS.
+        # This is the definitive test that the model weights are gone.
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+        mem_reserved_after = torch.cuda.memory_reserved()
 
-        assert mem_after < mem_before
+        assert mem_reserved_after < mem_reserved_before, (
+            f"Expected reserved memory to decrease after unload+empty_cache, "
+            f"but got {mem_reserved_before / 1e6:.0f} MB -> {mem_reserved_after / 1e6:.0f} MB"
+        )
         assert decomposer._loaded is False
 
     def test_reload_after_unload(self) -> None:
-        """Decomposer should be able to reload and work after unload()."""
+        """Decomposer should be able to reload and work after unload().
+
+        Uses fallback_on_error=True: on a WDDM GPU the second model load
+        may cold-start CUDA again (context was torn down during unload),
+        causing the first post-reload inference to approach the timeout.
+        The fallback ensures the test still validates functional correctness.
+        """
         config = EngineConfig(models=ModelConfig(device="auto"))
         decomposer = LLMDecomposer(
             config=config,
@@ -221,7 +243,11 @@ class TestLLMDecomposerMemoryManagement:
         text = "The Great Wall of China is over 13,000 miles long."
         decomposer.decompose(text)
         decomposer.unload()
+        assert decomposer._loaded is False
 
+        # Re-decompose: model should reload and produce at least one claim.
+        # fallback_on_error=True ensures we get results even if the LLM
+        # times out on the cold CUDA re-init after unload.
         claims = decomposer.decompose("The ocean covers 71% of Earth's surface.")
         assert len(claims) > 0
         decomposer.unload()
