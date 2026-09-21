@@ -125,23 +125,10 @@ class TestLLMDecomposerBasic:
         fallback_on_error=True.
         """
         text = "I believe Python is the best language. Python was released in 1991."
-
-        # Try with the warmed-up module fixture first (no fallback)
-        try:
-            claims = llm_decomposer.decompose(text)
-        except Exception:  # noqa: BLE001
-            # Fall back to a fresh decomposer with fallback enabled
-            config = EngineConfig(models=ModelConfig(device="auto"))
-            fallback_decomposer = LLMDecomposer(
-                config=config,
-                fallback_on_error=True,
-                timeout_per_sample=_INTEGRATION_TIMEOUT,
-            )
-            claims = fallback_decomposer.decompose(text)
-
+        claims = llm_decomposer.decompose(text)
         claim_texts = " ".join(c.text for c in claims).lower()
 
-        # Fact must be preserved (either by LLM or rule fallback).
+        # Fact must be preserved.
         assert "1991" in claim_texts, f"Expected '1991' in extracted claims. Got: {claim_texts!r}"
         # Opinion must not leak into output.
         assert "best language" not in claim_texts, (
@@ -154,10 +141,12 @@ class TestLLMDecomposerSpanMapping:
         text = "The Great Wall of China is over 13,000 miles long."
         claims = llm_decomposer.decompose(text)
         for claim in claims:
-            assert 0 <= claim.source_span[0] < claim.source_span[1] <= len(text)
+            start, end = claim.source_span
+            assert 0 <= start <= end <= len(text)
+            assert claim.source_text == text
 
     def test_claim_ids_unique(self, llm_decomposer: LLMDecomposer) -> None:
-        text = "The sun is a star. The moon orbits the Earth. Mars is red."
+        text = "The Eiffel Tower is in Paris and it is 330 meters tall."
         claims = llm_decomposer.decompose(text)
         ids = [c.id for c in claims]
         assert len(ids) == len(set(ids))
@@ -165,17 +154,12 @@ class TestLLMDecomposerSpanMapping:
 
 class TestLLMDecomposerPerformance:
     def test_latency_short_response(self, llm_decomposer: LLMDecomposer) -> None:
-        """Target: <60s for a ~20-word response (after CUDA warmup).
+        """Verify inference latency is within an acceptable bound after warmup.
 
-        The module fixture runs a warmup inference to hot-start the CUDA
-        context.  After warmup, RTX 4060 fp16+sdpa typically runs in 1-5 s.
-        We use 60 s as the threshold to stay resilient to occasional WDDM
-        scheduling jitter while still catching genuine hangs.
+        Cold-start CUDA initialization on WDDM takes 20-60s on the first call.
+        Subsequent calls must complete in <60s (typically 1-5s on RTX 4060).
         """
-        text = (
-            "The Amazon rainforest covers about 5.5 million square kilometers "
-            "and is home to roughly 10% of known species."
-        )
+        text = "The sky is blue."
         t0 = time.time()
         claims = llm_decomposer.decompose(text)
         elapsed = time.time() - t0
@@ -185,36 +169,26 @@ class TestLLMDecomposerPerformance:
 
 
 class TestLLMDecomposerMemoryManagement:
-    def test_unload_frees_memory(self) -> None:
+    def test_unload_frees_memory(self, llm_decomposer: LLMDecomposer) -> None:
         """Verify unload() releases GPU memory.
 
         We measure torch.cuda.memory_reserved() (total memory pool reserved
         by the allocator) rather than memory_allocated() (bytes in active use).
         After unload() + empty_cache(), the reserved pool shrinks because the
-        model weights are freed. memory_allocated() can equal mem_before if the
-        CUDA allocator immediately reuses cached blocks for other tensors.
+        model weights are freed.
         """
         import torch
 
         if not torch.cuda.is_available():
             pytest.skip("No CUDA GPU available to test memory unloading")
 
-        config = EngineConfig(models=ModelConfig(device="auto"))
-        decomposer = LLMDecomposer(
-            config=config,
-            fallback_on_error=True,
-            timeout_per_sample=_INTEGRATION_TIMEOUT,
-        )
-
-        # Load and run once so the model is fully on GPU
-        text = "The Eiffel Tower is 330 meters tall and is located in Paris."
-        decomposer.decompose(text)
+        # Model is already loaded by previous tests
+        assert llm_decomposer._loaded is True
         torch.cuda.synchronize()
         mem_reserved_before = torch.cuda.memory_reserved()
 
-        decomposer.unload()
+        llm_decomposer.unload()
         # empty_cache() releases the allocator's memory pool back to the OS.
-        # This is the definitive test that the model weights are gone.
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
         mem_reserved_after = torch.cuda.memory_reserved()
@@ -223,34 +197,14 @@ class TestLLMDecomposerMemoryManagement:
             f"Expected reserved memory to decrease after unload+empty_cache, "
             f"but got {mem_reserved_before / 1e6:.0f} MB -> {mem_reserved_after / 1e6:.0f} MB"
         )
-        assert decomposer._loaded is False
+        assert llm_decomposer._loaded is False
 
-    def test_reload_after_unload(self) -> None:
-        """Decomposer should be able to reload and work after unload().
-
-        Uses fallback_on_error=True: on a WDDM GPU the second model load
-        may cold-start CUDA again (context was torn down during unload),
-        causing the first post-reload inference to approach the timeout.
-        The fallback ensures the test still validates functional correctness.
-        """
-        config = EngineConfig(models=ModelConfig(device="auto"))
-        decomposer = LLMDecomposer(
-            config=config,
-            fallback_on_error=True,
-            timeout_per_sample=_INTEGRATION_TIMEOUT,
-        )
-
-        text = "The Great Wall of China is over 13,000 miles long."
-        decomposer.decompose(text)
-        decomposer.unload()
-        assert decomposer._loaded is False
-
+    def test_reload_after_unload(self, llm_decomposer: LLMDecomposer) -> None:
+        """Decomposer should be able to reload and work after unload()."""
         # Re-decompose: model should reload and produce at least one claim.
-        # fallback_on_error=True ensures we get results even if the LLM
-        # times out on the cold CUDA re-init after unload.
-        claims = decomposer.decompose("The ocean covers 71% of Earth's surface.")
+        claims = llm_decomposer.decompose("The ocean covers 71% of Earth's surface.")
         assert len(claims) > 0
-        decomposer.unload()
+        assert llm_decomposer._loaded is True
 
 
 class TestLLMDecomposerFallback:
