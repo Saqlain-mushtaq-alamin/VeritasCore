@@ -81,7 +81,14 @@ _CODE_PATTERN = re.compile(
 _JSON_GARBAGE = re.compile(r"^\s*[\[{]\s*\\?[\"']\w", re.MULTILINE)
 
 # Filter for individual claim lines that are raw JSON fragments
-_JSON_CLAIM = re.compile(r'^\s*(?:\[|\{|\"|\')[\{\[\"\']')
+_JSON_CLAIM = re.compile(r'^\s*(?:\[|\{|\"|\')[\{\[\"\'']')
+
+# Pattern to detect if text is purely a question
+_PURE_QUESTION = re.compile(
+    r"^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did"
+    r"|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$",
+    re.IGNORECASE,
+)
 
 # ── Post-filtering constants ─────────────────────────────────────────────────
 
