@@ -74,12 +74,14 @@ _CODE_PATTERN = re.compile(
     re.MULTILINE,
 )
 
-# Pattern to detect if text is purely a question
-_PURE_QUESTION = re.compile(
-    r"^\s*(?:who|what|when|where|why|how|is|are|was|were|do|does|did"
-    r"|can|could|would|should|will|shall|have|has|had)\b.*\?\s*$",
-    re.IGNORECASE,
-)
+# Pattern to detect if the model output is a JSON array or object (not natural language).
+# CPU-offloaded Phi-3 sometimes generates function call JSON:
+#   '[{"name": "calculate_discount", "description": ...}]'
+# This is a degenerate output that cannot be parsed as natural-language claims.
+_JSON_GARBAGE = re.compile(r"^\s*[\[{]\s*\\?[\"']\w", re.MULTILINE)
+
+# Filter for individual claim lines that are raw JSON fragments
+_JSON_CLAIM = re.compile(r'^\s*(?:\[|\{|\"|\')[\{\[\"\']')
 
 # ── Post-filtering constants ─────────────────────────────────────────────────
 
@@ -480,6 +482,18 @@ class LLMDecomposer(BaseDecomposer):
         # Strip closing fence
         stripped = re.sub(r"\n?```\s*$", "", stripped).strip()
 
+        # Early exit: detect degenerate JSON output from CPU-offloaded models.
+        # CPU-offloaded Phi-3 sometimes generates function call / tool definition
+        # JSON (e.g. '[{"name": "calc", "description": ...}]') instead of natural-
+        # language numbered claims.  Returning [] here triggers the fallback path
+        # rather than propagating malformed data.
+        if _JSON_GARBAGE.search(stripped):
+            logger.warning(
+                "Parser: detected JSON garbage output (likely CPU-offload degenerate). "
+                "Returning empty — will trigger fallback if enabled."
+            )
+            return []
+
         # Check for the "NONE" sentinel (no factual claims)
         if stripped.upper() in ("NONE", "NONE."):
             return []
@@ -513,6 +527,11 @@ class LLMDecomposer(BaseDecomposer):
                 claim_text = claim_text.rstrip(".")
                 # Skip lines that are clearly meta-commentary masquerading as claims
                 if _META_LINE.match(claim_text):
+                    continue
+                # Skip raw JSON fragments (e.g. '[{"name": ...}]') that indicate
+                # CPU-offload degenerate output slipped through the early guard
+                if _JSON_CLAIM.match(claim_text):
+                    logger.debug("Parser: skipped JSON-fragment claim: %s", claim_text[:60])
                     continue
                 if len(claim_text) >= 6:
                     claims.append(claim_text)
