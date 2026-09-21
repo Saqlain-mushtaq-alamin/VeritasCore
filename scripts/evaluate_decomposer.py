@@ -194,8 +194,8 @@ def main() -> None:
     )
     parser.add_argument("--verbose", action="store_true", help="Print every claim, not just failures")
     parser.add_argument(
-        "--timeout", type=float, default=15.0,
-        help="Per-sample timeout in seconds for LLM decomposer (default: 15s)",
+        "--timeout", type=float, default=60.0,
+        help="Per-sample timeout in seconds for LLM decomposer (default: 60s)",
     )
     parser.add_argument(
         "--output-json", type=str, default=None, metavar="FILE",
