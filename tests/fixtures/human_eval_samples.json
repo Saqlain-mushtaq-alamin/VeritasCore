@@ -1,0 +1,634 @@
+{
+  "version": "1.0",
+  "description": "100-sample stratified annotation set for Phase R6 Human Evaluation. 50 HaluEval-style QA samples (stratified by question word), 50 FEVER-style samples (stratified by complexity), plus 10 calibration/control samples with known ground truth.",
+  "metadata": {
+    "n_halueval": 50,
+    "n_fever": 50,
+    "n_calibration": 10,
+    "n_total": 100,
+    "halueval_categories": [
+      "who",
+      "what",
+      "when",
+      "where",
+      "how-many"
+    ],
+    "fever_complexities": [
+      "single-fact",
+      "multi-fact",
+      "with-negation",
+      "numerical",
+      "multi-hop",
+      "hedging",
+      "shared-subject",
+      "list"
+    ],
+    "selection_seed": 42
+  },
+  "halueval_samples": [
+    {
+      "id": "H001",
+      "claim_text": "Python was created by Guido van Rossum.",
+      "category": "who"
+    },
+    {
+      "id": "H002",
+      "claim_text": "Python was first released in 1991.",
+      "category": "when"
+    },
+    {
+      "id": "H003",
+      "claim_text": "Python is an interpreted, high-level programming language.",
+      "category": "what"
+    },
+    {
+      "id": "H004",
+      "claim_text": "The Python Software Foundation is headquartered in Delaware, USA.",
+      "category": "where"
+    },
+    {
+      "id": "H005",
+      "claim_text": "Python 3.0 was released on December 3, 2008.",
+      "category": "when"
+    },
+    {
+      "id": "H006",
+      "claim_text": "The Great Wall of China stretches approximately 21,196 kilometers.",
+      "category": "how-many"
+    },
+    {
+      "id": "H007",
+      "claim_text": "Albert Einstein was born in Ulm, Germany, in 1879.",
+      "category": "where"
+    },
+    {
+      "id": "H008",
+      "claim_text": "The speed of light in a vacuum is approximately 299,792 kilometers per second.",
+      "category": "how-many"
+    },
+    {
+      "id": "H009",
+      "claim_text": "Shakespeare wrote approximately 37 plays.",
+      "category": "how-many"
+    },
+    {
+      "id": "H010",
+      "claim_text": "The Amazon River is the largest river by discharge volume in the world.",
+      "category": "what"
+    },
+    {
+      "id": "H011",
+      "claim_text": "Marie Curie was born in Warsaw and later moved to Paris to study physics.",
+      "category": "what"
+    },
+    {
+      "id": "H012",
+      "claim_text": "The moon orbits Earth and takes approximately 27 days to complete one orbit.",
+      "category": "when"
+    },
+    {
+      "id": "H013",
+      "claim_text": "DNA was first described by Watson and Crick in 1953, building on X-ray data from Rosalind Franklin.",
+      "category": "who"
+    },
+    {
+      "id": "H014",
+      "claim_text": "Nikola Tesla was a Serbian-American inventor who held over 300 patents.",
+      "category": "who"
+    },
+    {
+      "id": "H015",
+      "claim_text": "The human brain contains approximately 86 billion neurons and weighs about 1.4 kilograms.",
+      "category": "how-many"
+    },
+    {
+      "id": "H016",
+      "claim_text": "Isaac Newton formulated the laws of motion and universal gravitation in the 17th century.",
+      "category": "when"
+    },
+    {
+      "id": "H017",
+      "claim_text": "The Eiffel Tower was designed by Gustave Eiffel and completed in 1889 for the World's Fair.",
+      "category": "when"
+    },
+    {
+      "id": "H018",
+      "claim_text": "Charles Darwin published On the Origin of Species in 1859, introducing the theory of evolution by natural selection.",
+      "category": "when"
+    },
+    {
+      "id": "H019",
+      "claim_text": "The Berlin Wall fell on November 9, 1989, ending the division of East and West Germany.",
+      "category": "when"
+    },
+    {
+      "id": "H020",
+      "claim_text": "Jeff Bezos founded Amazon in 1994 and it became the world's largest online retailer.",
+      "category": "who"
+    },
+    {
+      "id": "H021",
+      "claim_text": "The Earth revolves around the Sun once per year.",
+      "category": "what"
+    },
+    {
+      "id": "H022",
+      "claim_text": "Penicillin was discovered by Alexander Fleming in 1928.",
+      "category": "who"
+    },
+    {
+      "id": "H023",
+      "claim_text": "The United States declared independence on July 4, 1776.",
+      "category": "when"
+    },
+    {
+      "id": "H024",
+      "claim_text": "Water consists of two hydrogen atoms and one oxygen atom.",
+      "category": "what"
+    },
+    {
+      "id": "H025",
+      "claim_text": "The Mona Lisa was painted by Leonardo da Vinci.",
+      "category": "who"
+    },
+    {
+      "id": "H026",
+      "claim_text": "Mount Kilimanjaro is the highest peak in Africa at 5,895 meters.",
+      "category": "where"
+    },
+    {
+      "id": "H027",
+      "claim_text": "The French Revolution began in 1789.",
+      "category": "when"
+    },
+    {
+      "id": "H028",
+      "claim_text": "The first iPhone was released by Apple on June 29, 2007.",
+      "category": "when"
+    },
+    {
+      "id": "H029",
+      "claim_text": "Neil Armstrong became the first human to walk on the Moon on July 20, 1969.",
+      "category": "who"
+    },
+    {
+      "id": "H030",
+      "claim_text": "The Pythagorean theorem states that a² + b² = c² for a right triangle.",
+      "category": "what"
+    },
+    {
+      "id": "H031",
+      "claim_text": "TCP/IP is the foundational protocol suite of the Internet.",
+      "category": "what"
+    },
+    {
+      "id": "H032",
+      "claim_text": "SQL was developed by IBM researchers Donald Chamberlin and Raymond Boyce.",
+      "category": "who"
+    },
+    {
+      "id": "H033",
+      "claim_text": "Linux was first released on September 17, 1991, by Linus Torvalds.",
+      "category": "when"
+    },
+    {
+      "id": "H034",
+      "claim_text": "The CRISPR-Cas9 gene editing technique was developed by Jennifer Doudna and Emmanuelle Charpentier.",
+      "category": "who"
+    },
+    {
+      "id": "H035",
+      "claim_text": "The Higgs boson was confirmed experimentally at CERN in 2012.",
+      "category": "when"
+    },
+    {
+      "id": "H036",
+      "claim_text": "HTTPS encrypts data using TLS (Transport Layer Security).",
+      "category": "what"
+    },
+    {
+      "id": "H037",
+      "claim_text": "The first computer bug was a literal moth found in a Harvard Mark II relay in 1947.",
+      "category": "when"
+    },
+    {
+      "id": "H038",
+      "claim_text": "Rust programming language was created by Graydon Hoare and first released in 2015.",
+      "category": "who"
+    },
+    {
+      "id": "H039",
+      "claim_text": "The GPS system consists of at least 24 operational satellites.",
+      "category": "how-many"
+    },
+    {
+      "id": "H040",
+      "claim_text": "Moore's Law predicts that transistor count doubles roughly every two years.",
+      "category": "what"
+    },
+    {
+      "id": "H041",
+      "claim_text": "Pluto is not classified as a planet.",
+      "category": "what"
+    },
+    {
+      "id": "H042",
+      "claim_text": "The temperature of the Sun's core is estimated to be approximately 15 million degrees Celsius.",
+      "category": "how-many"
+    },
+    {
+      "id": "H043",
+      "claim_text": "The Treaty of Versailles was signed on June 28, 1919.",
+      "category": "when"
+    },
+    {
+      "id": "H044",
+      "claim_text": "Arguably, Einstein's greatest achievement was the theory of general relativity.",
+      "category": "what"
+    },
+    {
+      "id": "H045",
+      "claim_text": "The Olympics were held in Tokyo in both 1964 and 2021.",
+      "category": "when"
+    },
+    {
+      "id": "H046",
+      "claim_text": "Wikipedia, founded in 2001 by Jimmy Wales and Larry Sanger, has over 6 million English articles.",
+      "category": "who"
+    },
+    {
+      "id": "H047",
+      "claim_text": "Carbon dioxide has the chemical formula CO₂.",
+      "category": "what"
+    },
+    {
+      "id": "H048",
+      "claim_text": "The population of China exceeded 1.4 billion in 2020.",
+      "category": "how-many"
+    },
+    {
+      "id": "H049",
+      "claim_text": "Shakespeare was born and died on the same date: April 23, in 1564 and 1616 respectively.",
+      "category": "when"
+    },
+    {
+      "id": "H050",
+      "claim_text": "The International Space Station orbits Earth at an altitude of approximately 408 kilometers.",
+      "category": "where"
+    }
+  ],
+  "fever_samples": [
+    {
+      "id": "F001",
+      "claim_text": "The Titanic sank in the North Atlantic Ocean in 1912.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F002",
+      "claim_text": "Adolf Hitler was born in Austria.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F003",
+      "claim_text": "Barack Obama served as the 44th President of the United States.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F004",
+      "claim_text": "The Battle of Waterloo was fought in 1815.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F005",
+      "claim_text": "Oxygen has an atomic number of 8.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F006",
+      "claim_text": "The currency of Japan is the yen.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F007",
+      "claim_text": "The Pacific Ocean is the largest ocean on Earth.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F008",
+      "claim_text": "Romeo and Juliet was written by William Shakespeare.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F009",
+      "claim_text": "Nelson Mandela was released from prison in 1990.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F010",
+      "claim_text": "The speed of sound in air at sea level is approximately 343 meters per second.",
+      "complexity": "single-fact"
+    },
+    {
+      "id": "F011",
+      "claim_text": "Mahatma Gandhi led India's non-violent independence movement and was assassinated in 1948.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F012",
+      "claim_text": "The Roman Empire fell in 476 AD when Romulus Augustulus was deposed by Odoacer.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F013",
+      "claim_text": "Alexander Graham Bell invented the telephone and received his patent on March 7, 1876.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F014",
+      "claim_text": "The Chernobyl nuclear disaster occurred in April 1986 and resulted in the evacuation of over 350,000 people.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F015",
+      "claim_text": "Apollo 11 landed on the Moon in July 1969, with Neil Armstrong and Buzz Aldrin walking on the surface.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F016",
+      "claim_text": "Florence Nightingale founded modern nursing and reduced hospital mortality rates by improving sanitation.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F017",
+      "claim_text": "The Hubble Space Telescope was launched in 1990 and has provided images from over 13 billion light-years away.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F018",
+      "claim_text": "The Treaty of Versailles ended World War I and imposed heavy reparations on Germany.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F019",
+      "claim_text": "Bill Gates co-founded Microsoft with Paul Allen in 1975 and later became the world's richest person.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F020",
+      "claim_text": "The ozone layer blocks harmful UV radiation and is found in the stratosphere, 15–35 kilometers above Earth's surface.",
+      "complexity": "multi-fact"
+    },
+    {
+      "id": "F021",
+      "claim_text": "The Great Wall of China is not visible from space with the naked eye.",
+      "complexity": "with-negation"
+    },
+    {
+      "id": "F022",
+      "claim_text": "Humans do not share 99% of their DNA with chimpanzees.",
+      "complexity": "with-negation"
+    },
+    {
+      "id": "F023",
+      "claim_text": "Napoleon Bonaparte was not short by the standards of his time.",
+      "complexity": "with-negation"
+    },
+    {
+      "id": "F024",
+      "claim_text": "Lightning does not always strike the tallest object in an area.",
+      "complexity": "with-negation"
+    },
+    {
+      "id": "F025",
+      "claim_text": "Albert Einstein did not fail mathematics in school.",
+      "complexity": "with-negation"
+    },
+    {
+      "id": "F026",
+      "claim_text": "World War II resulted in an estimated 70–85 million fatalities.",
+      "complexity": "numerical"
+    },
+    {
+      "id": "F027",
+      "claim_text": "The human genome contains approximately 3 billion base pairs.",
+      "complexity": "numerical"
+    },
+    {
+      "id": "F028",
+      "claim_text": "The Burj Khalifa in Dubai stands at 828 meters tall.",
+      "complexity": "numerical"
+    },
+    {
+      "id": "F029",
+      "claim_text": "Light from the Sun takes approximately 8 minutes and 20 seconds to reach Earth.",
+      "complexity": "numerical"
+    },
+    {
+      "id": "F030",
+      "claim_text": "The average adult human body contains approximately 5 liters of blood.",
+      "complexity": "numerical"
+    },
+    {
+      "id": "F031",
+      "claim_text": "Marie Curie, who won two Nobel Prizes, died in 1934 from aplastic anemia caused by radiation exposure.",
+      "complexity": "multi-hop"
+    },
+    {
+      "id": "F032",
+      "claim_text": "Winston Churchill, who led Britain through World War II, won the Nobel Prize in Literature in 1953.",
+      "complexity": "multi-hop"
+    },
+    {
+      "id": "F033",
+      "claim_text": "Cleopatra, who ruled Egypt, lived closer in time to the Moon landing than to the construction of the Great Pyramid.",
+      "complexity": "multi-hop"
+    },
+    {
+      "id": "F034",
+      "claim_text": "James Watson and Francis Crick, who discovered the double-helix structure of DNA, won the Nobel Prize in Physiology or Medicine in 1962.",
+      "complexity": "multi-hop"
+    },
+    {
+      "id": "F035",
+      "claim_text": "Aristotle, who was a student of Plato, later became the tutor of Alexander the Great.",
+      "complexity": "multi-hop"
+    },
+    {
+      "id": "F036",
+      "claim_text": "The universe is approximately 13.8 billion years old according to current scientific consensus.",
+      "complexity": "hedging"
+    },
+    {
+      "id": "F037",
+      "claim_text": "The extinction of the dinosaurs was most likely caused by an asteroid impact approximately 66 million years ago.",
+      "complexity": "hedging"
+    },
+    {
+      "id": "F038",
+      "claim_text": "It is widely accepted that Christopher Columbus was not the first European to reach the Americas.",
+      "complexity": "hedging"
+    },
+    {
+      "id": "F039",
+      "claim_text": "Scientists believe dark matter makes up approximately 27% of the universe's total mass-energy content.",
+      "complexity": "hedging"
+    },
+    {
+      "id": "F040",
+      "claim_text": "Evidence suggests that Neanderthals and modern humans interbred at some point.",
+      "complexity": "hedging"
+    },
+    {
+      "id": "F041",
+      "claim_text": "Beethoven composed the Ninth Symphony and lost his hearing before its premiere.",
+      "complexity": "shared-subject"
+    },
+    {
+      "id": "F042",
+      "claim_text": "The Amazon rainforest produces about 20% of the world's oxygen and covers approximately 5.5 million square kilometers.",
+      "complexity": "shared-subject"
+    },
+    {
+      "id": "F043",
+      "claim_text": "The Sahara Desert is the world's largest hot desert and covers about 9.2 million square kilometers.",
+      "complexity": "shared-subject"
+    },
+    {
+      "id": "F044",
+      "claim_text": "Isaac Newton developed calculus independently and also formulated the law of universal gravitation.",
+      "complexity": "shared-subject"
+    },
+    {
+      "id": "F045",
+      "claim_text": "The International Space Station was launched in 1998 and has been continuously inhabited since November 2000.",
+      "complexity": "shared-subject"
+    },
+    {
+      "id": "F046",
+      "claim_text": "The five permanent members of the UN Security Council are the USA, UK, France, Russia, and China.",
+      "complexity": "list"
+    },
+    {
+      "id": "F047",
+      "claim_text": "The planets in our solar system, in order from the Sun, are Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune.",
+      "complexity": "list"
+    },
+    {
+      "id": "F048",
+      "claim_text": "The primary colors of light are red, green, and blue.",
+      "complexity": "list"
+    },
+    {
+      "id": "F049",
+      "claim_text": "The four fundamental forces of nature are gravity, electromagnetism, the strong nuclear force, and the weak nuclear force.",
+      "complexity": "list"
+    },
+    {
+      "id": "F050",
+      "claim_text": "DNA is composed of four bases: adenine, thymine, cytosine, and guanine.",
+      "complexity": "list"
+    }
+  ],
+  "calibration_samples": [
+    {
+      "id": "CAL-001",
+      "claim_text": "The Earth orbits the Sun.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 1,
+        "factual": 1,
+        "overall": 1
+      }
+    },
+    {
+      "id": "CAL-002",
+      "claim_text": "The Earth orbits the Sun and has one natural satellite.",
+      "expected": {
+        "atomic": 0,
+        "self_contained": 1,
+        "factual": 1,
+        "overall": 0
+      }
+    },
+    {
+      "id": "CAL-003",
+      "claim_text": "It orbits in approximately 365 days.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 0,
+        "factual": 1,
+        "overall": 0
+      }
+    },
+    {
+      "id": "CAL-004",
+      "claim_text": "I believe the universe is infinite.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 1,
+        "factual": 0,
+        "overall": 0
+      }
+    },
+    {
+      "id": "CAL-005",
+      "claim_text": "The Titanic sank in 1912 after hitting an iceberg.",
+      "expected": {
+        "atomic": 0,
+        "self_contained": 1,
+        "factual": 1,
+        "overall": 0
+      }
+    },
+    {
+      "id": "CAL-006",
+      "claim_text": "The Titanic sank in 1912.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 1,
+        "factual": 1,
+        "overall": 1
+      }
+    },
+    {
+      "id": "CAL-007",
+      "claim_text": "He founded Apple in 1976.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 0,
+        "factual": 1,
+        "overall": 0
+      }
+    },
+    {
+      "id": "CAL-008",
+      "claim_text": "Steve Jobs co-founded Apple Computer Company in 1976.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 1,
+        "factual": 1,
+        "overall": 1
+      }
+    },
+    {
+      "id": "CAL-009",
+      "claim_text": "Perhaps the vaccine will prove effective.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 1,
+        "factual": 0,
+        "overall": 0
+      }
+    },
+    {
+      "id": "CAL-010",
+      "claim_text": "The Great Wall of China is approximately 21,196 kilometers long.",
+      "expected": {
+        "atomic": 1,
+        "self_contained": 1,
+        "factual": 1,
+        "overall": 1
+      }
+    }
+  ]
+}
