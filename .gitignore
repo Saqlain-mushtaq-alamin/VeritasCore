@@ -83,3 +83,7 @@ scratch/
 build/
 *.egg-info/
 benchmarks
+
+docs/r6_annotation_spreadsheet.csv
+docs/*.json
+docs/rule_docmposer_results.json
