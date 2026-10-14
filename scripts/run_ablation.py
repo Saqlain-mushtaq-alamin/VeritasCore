@@ -406,6 +406,11 @@ def build_claim_verdict(
     retrieval_score = sample.get("retrieval_score") if use_retrieval else None
     consistency_score = sample.get("consistency_score") if use_consistency else None
 
+    orig_nli = sample.get("nli_verdict") if use_nli else None
+    contradiction_score = getattr(orig_nli, "contradiction_score", None) if orig_nli else None
+    reverse_entailment_score = getattr(orig_nli, "reverse_entailment_score", None) if orig_nli else None
+    evidence = getattr(orig_nli, "evidence", None) if orig_nli else None
+
     # Infer verdict from best available signal
     best = nli_score if nli_score is not None else (
         retrieval_score if retrieval_score is not None else (
@@ -421,6 +426,9 @@ def build_claim_verdict(
         nli_score=nli_score,
         retrieval_score=retrieval_score,
         consistency_score=consistency_score,
+        contradiction_score=contradiction_score,
+        reverse_entailment_score=reverse_entailment_score,
+        evidence=evidence,
         reason="ablation",
         verification_mode=VerificationMode.GROUNDED,
     )
@@ -441,8 +449,11 @@ def compute_config_scores(
             use_retrieval=cfg["use_retrieval"],
             use_consistency=cfg["use_consistency"],
         )
-        score = scorer.score_claim(verdict)
-        scores.append(score)
+        trust_score = scorer.score_claim(verdict)
+        # scorer.score_claim outputs P(supported). For hallucination detection (label 1 = hallucinated),
+        # the prediction score must be P(hallucinated) = 1.0 - trust_score:
+        hallucination_score = 1.0 - trust_score
+        scores.append(hallucination_score)
         labels.append(sample["label"])
     return np.array(scores, dtype=float), np.array(labels, dtype=int)
 
