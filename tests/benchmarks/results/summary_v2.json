@@ -1,81 +1,41 @@
 {
   "phase": "R3",
-  "timestamp": "2026-09-16T21:06:09.527439+00:00",
+  "timestamp": "2026-10-14T19:20:59.915236+00:00",
   "config": {
     "datasets": [
-      "halueval",
       "fever"
     ],
-    "n": 30,
+    "n": 1000,
     "grid_n": 500,
     "seed": 42,
     "split": "eval",
     "bootstrap_ci": true,
-    "n_bootstrap": 100
+    "n_bootstrap": 2000
   },
   "results": [
     {
       "mode": "nli",
-      "dataset": "HaluEval QA",
-      "n_samples": 30,
-      "n_skipped": 0,
-      "timestamp": "2026-09-16T21:06:05.454128+00:00",
-      "scoring_formula": "fwd_c - 0.2*fwd_e - 0.6*rev_e",
-      "auroc": 0.8240740740740741,
-      "f1": 0.7391304347826086,
-      "precision": 0.6071428571428571,
-      "recall": 0.9444444444444444,
-      "avg_latency_ms": 562.3105699999845,
-      "p95_latency_ms": 316.8345650001124,
-      "ci_auroc_mean": 0.8283549744665255,
-      "ci_auroc_lower": 0.6805217760180996,
-      "ci_auroc_upper": 0.9283564814814814,
-      "ci_f1_mean": 0.7358342475657824,
-      "ci_f1_lower": 0.5833631484794276,
-      "ci_f1_upper": 0.865464298927118,
-      "ci_n_bootstrap": 100,
-      "ci_level": 0.95,
-      "split": "eval",
-      "grid_n": 500,
-      "seed": 42
-    },
-    {
-      "mode": "nli",
       "dataset": "FEVER (validation)",
-      "n_samples": 30,
+      "n_samples": 1000,
       "n_skipped": 0,
-      "timestamp": "2026-09-16T21:06:09.396124+00:00",
+      "timestamp": "2026-10-14T19:20:57.434364+00:00",
       "scoring_formula": "fwd_c - 0.2*fwd_e - 0.6*rev_e",
-      "auroc": 0.995475113122172,
-      "f1": 0.7878787878787878,
-      "precision": 0.65,
-      "recall": 1.0,
-      "avg_latency_ms": 125.00772999998541,
-      "p95_latency_ms": 38.032939999743576,
-      "ci_auroc_mean": 0.99443898535127,
-      "ci_auroc_lower": 0.9730233920491274,
-      "ci_auroc_upper": 1.0,
-      "ci_f1_mean": 0.792016056856216,
-      "ci_f1_lower": 0.6666666666666666,
-      "ci_f1_upper": 0.9216153846153846,
-      "ci_n_bootstrap": 100,
+      "auroc": 0.9677911164465787,
+      "f1": 0.8302828618968386,
+      "precision": 0.7210982658959537,
+      "recall": 0.9784313725490196,
+      "avg_latency_ms": 36.44870769995032,
+      "p95_latency_ms": 52.97178499022265,
+      "ci_auroc_mean": 0.9679754396499476,
+      "ci_auroc_lower": 0.9568265795789154,
+      "ci_auroc_upper": 0.9775878326684807,
+      "ci_f1_mean": 0.8302570033075658,
+      "ci_f1_lower": 0.8071649712039702,
+      "ci_f1_upper": 0.8527017489499414,
+      "ci_n_bootstrap": 2000,
       "ci_level": 0.95,
       "seed": 42
     }
   ],
-  "baselines": {
-    "NLI-only (SummaC)": {
-      "halueval_auroc": 0.72,
-      "fever_auroc": 0.7
-    },
-    "Retrieval-only (FActScore)": {
-      "halueval_auroc": 0.68,
-      "fever_auroc": 0.74
-    },
-    "SelfCheckGPT": {
-      "halueval_auroc": 0.74,
-      "fever_auroc": 0.69
-    }
-  },
   "significance_tests": []
 }
