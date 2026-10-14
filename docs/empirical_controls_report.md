@@ -38,26 +38,26 @@ Below is an audit of 20 randomly sampled FEVER validation pairs confirming real 
 
 | # | Claim | Gold Evidence Sentence (`triple[2]`) | Wiki Page (`triple[0]`) |
 |---|---|---|---|
-| 1 | Helmand Province contains Lashkargah. | "" | `` |
-| 2 | Kuching is in Malaysia. | "" | `` |
-| 3 | An imaging technique is used to detect calcaneal spurs. | "" | `` |
-| 4 | The Hindu Kush refers only to a strain of marijuana. | "" | `` |
-| 5 | Blue Jasmine has an Australian actress in it. | "" | `` |
-| 6 | Osamu Tezuka only has a father. | "" | `` |
-| 7 | Robert Palmer (writer) is involved in media. | "" | `` |
-| 8 | Ashley Graham is not a plus-size model. | "" | `` |
-| 9 | Carlos Santana formed Santana in 1979. | "" | `` |
-| 10 | There is a British actor name Marcus Bentley. | "" | `` |
-| 11 | Stripes was the first significant television role for at least one actor. | "" | `` |
-| 12 | The Good Wife is a movie. | "" | `` |
-| 13 | Reign Over Me is a film. | "" | `` |
-| 14 | Dakota Fanning is a dancer. | "" | `` |
-| 15 | Stripes was the first significant television role for at least one actor. | "" | `` |
-| 16 | Home for the Holidays stars no deceased professionals. | "" | `` |
-| 17 | Juventus F.C. adopted its characteristic black-and-white-striped home uniform in 1903. | "" | `` |
-| 18 | Kevin Kline stars in The Road to El Dorado. | "" | `` |
-| 19 | Southampton F.C. is a soccer team. | "" | `` |
-| 20 | The Bloods have ambiguous hand signs. | "" | `` |
+| 1 | Helmand Province contains Lashkargah. | "Lashkar Gah serves as the provincial capital ." | `Helmand_Province` |
+| 2 | Kuching is in Malaysia. | "Kuching -LSB- ˈkuːtʃɪŋ -RSB- -LRB- Jawi : , -RRB- , officially the City of Kuching , is the capital and the most populous city in the state of Sarawak in Malaysia ." | `Kuching` |
+| 3 | An imaging technique is used to detect calcaneal spurs. | "Calcaneal spurs are typically detected by a radiographic examination -LRB- commonly referred to as an `` x-ray '' -RRB- ." | `Calcaneal_spur` |
+| 4 | The Hindu Kush refers only to a strain of marijuana. | "The range and communities settled in it hosted ancient monasteries , important trade networks , and travelers between Central Asia and South Asia ." | `Hindu_Kush` |
+| 5 | Blue Jasmine has an Australian actress in it. | "Blue Jasmine is a 2013 American black comedy-drama film written and directed by Woody Allen ." | `Blue_Jasmine` |
+| 6 | Osamu Tezuka only has a father. | "As a young child Tezuka began to practice drawing so much that his mother would have to erase pages in his notebook in order to keep up with his output ." | `Osamu_Tezuka` |
+| 7 | Robert Palmer (writer) is involved in media. | "He is best known for his books , including Deep Blues ; his music journalism for the New York Times and Rolling Stone magazine ; his work producing blues recordings and the soundtrack of the film Deep Blues ; and his clarinet playing in the 1960s band the Insect Trust ." | `Robert_Palmer_-LRB-writer-RRB-` |
+| 8 | Ashley Graham is not a plus-size model. | "In 2017 , Graham became the first plus-size model to appear on the covers of British and American Vogue ." | `Ashley_Graham_-LRB-model-RRB-` |
+| 9 | Carlos Santana formed Santana in 1979. | "Carlos Santana -LRB- born July 20 , 1947 -RRB- is a Mexican and American musician who first became famous in the late 1960s and early 1970s with his band , Santana , which pioneered a fusion of rock and Latin American music ." | `Carlos_Santana` |
+| 10 | There is a British actor name Marcus Bentley. | "Marcus Morgan Bentley -LRB- born 4 October 1967 -RRB- is a British actor , broadcaster and voice-over artist ." | `Marcus_Bentley` |
+| 11 | Stripes was the first significant television role for at least one actor. | "Joe Flaherty , Dave Thomas , Timothy Busfield and Bill Paxton also appeared early in their careers ." | `Stripes_-LRB-film-RRB-` |
+| 12 | The Good Wife is a movie. | "The Good Wife is an American legal and political drama television series that aired on CBS from September 22 , 2009 , to May 8 , 2016 ." | `The_Good_Wife` |
+| 13 | Reign Over Me is a film. | "The film stars Adam Sandler , Don Cheadle , Jada Pinkett Smith , Liv Tyler , Donald Sutherland , Saffron Burrows and Mike Binder himself ." | `Reign_Over_Me` |
+| 14 | Dakota Fanning is a dancer. | "Hannah Dakota Fanning -LRB- born February 23 , 1994 -RRB- is an American actress and model ." | `Dakota_Fanning` |
+| 15 | Stripes was the first significant television role for at least one actor. | "Stripes is a 1981 American buddy military comedy film directed by Ivan Reitman , starring Bill Murray , Harold Ramis , Warren Oates , P. J. Soles , Sean Young , and John Candy ." | `Stripes_-LRB-film-RRB-` |
+| 16 | Home for the Holidays stars no deceased professionals. | "The film stars Holly Hunter , Robert Downey Jr. , Anne Bancroft , Charles Durning , Dylan McDermott , Geraldine Chaplin , Steve Guttenberg , Cynthia Stevenson , Claire Danes , Austin Pendleton and David Strathairn ." | `Home_for_the_Holidays_-LRB-1995_film-RRB-` |
+| 17 | Juventus F.C. adopted its characteristic black-and-white-striped home uniform in 1903. | "The club is the second oldest of its kind still active in the country after Genoa 's football section -LRB- 1893 -RRB- , has traditionally worn a black and white striped home kit since 1903 and has played its home matches in several grounds , being the latest the 41,507-capacity Juventus Stadium ." | `Juventus_F.C.` |
+| 18 | Kevin Kline stars in The Road to El Dorado. | "The film stars Kevin Kline , Kenneth Branagh , Armand Assante , Jim Cummings , Edward James Olmos , Tobin Bell and Rosie Perez ." | `The_Road_to_El_Dorado` |
+| 19 | Southampton F.C. is a soccer team. | "Southampton Football Club -LSB- saʊθˈæmptən , _ - hæmptən -RSB- is a professional association football club based in Southampton , Hampshire , England , which plays in the Premier League , the top tier of English football ." | `Southampton_F.C.` |
+| 20 | The Bloods have ambiguous hand signs. | "They are identified by the red color worn by their members and by particular gang symbols , including distinctive hand signs ." | `Bloods` |
 
 ---
 
