@@ -251,14 +251,20 @@ def print_iaa_report(
     n_aligned: dict[str, int],
     annotators: list[str],
     kappa_type: str,
+    pa_results: dict[str, float] | None = None,
+    ac1_results: dict[str, float] | None = None,
 ) -> bool:
     """Print formatted IAA report. Returns True if all gates pass."""
-    print(f"\n{'=' * 70}")
+    print(f"\n{'=' * 78}")
     print(f"Phase R6 — Inter-Annotator Agreement Report ({kappa_type})")
-    print(f"{'=' * 70}")
+    print(f"{'=' * 78}")
     print(f"  Annotators: {', '.join(annotators)}")
-    print(f"\n  {'Criterion':<22} {'κ':>6}  {'N pairs':>8}  {'Interpretation':<22}  {'Gate'}")
-    print(f"  {'-'*22} {'-'*6}  {'-'*8}  {'-'*22}  {'-'*6}")
+    if pa_results and ac1_results:
+        print(f"\n  {'Criterion':<18} {'κ':>6}  {'% Agree':>8}  {'AC1':>6}  {'N pairs':>8}  {'Interpretation':<16}  {'Gate'}")
+        print(f"  {'-'*18} {'-'*6}  {'-'*8}  {'-'*6}  {'-'*8}  {'-'*16}  {'-'*6}")
+    else:
+        print(f"\n  {'Criterion':<22} {'κ':>6}  {'N pairs':>8}  {'Interpretation':<22}  {'Gate'}")
+        print(f"  {'-'*22} {'-'*6}  {'-'*8}  {'-'*22}  {'-'*6}")
 
     all_pass = True
     for crit in CRITERIA:
@@ -269,8 +275,16 @@ def print_iaa_report(
         gate = "PASS" if passes else "FAIL"
         if crit == "overall" and not passes:
             all_pass = False
-        k_str = f"{k:.4f}" if k == k else "  nan"
-        print(f"  {crit:<22} {k_str:>6}  {n:>8}  {interp:<22}  [{gate}]")
+        k_str = f"{k:.4f}" if k == k else "   nan"
+
+        if pa_results and ac1_results:
+            pa = pa_results.get(crit, float("nan"))
+            ac1 = ac1_results.get(crit, float("nan"))
+            pa_str = f"{pa * 100:.1f}%" if pa == pa else "   nan"
+            ac1_str = f"{ac1:.4f}" if ac1 == ac1 else "   nan"
+            print(f"  {crit:<18} {k_str:>6}  {pa_str:>8}  {ac1_str:>6}  {n:>8}  {interp:<16}  [{gate}]")
+        else:
+            print(f"  {crit:<22} {k_str:>6}  {n:>8}  {interp:<22}  [{gate}]")
 
     print()
     if all_pass:
@@ -289,6 +303,8 @@ def write_report_json(
     kappa_type: str,
     all_pass: bool,
     out_path: Path,
+    pa_results: dict[str, float] | None = None,
+    ac1_results: dict[str, float] | None = None,
 ) -> None:
     """Write JSON report."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -300,6 +316,8 @@ def write_report_json(
         "results": {
             crit: {
                 "kappa": kappa_results.get(crit),
+                "percent_agreement": pa_results.get(crit) if pa_results else None,
+                "gwet_ac1": ac1_results.get(crit) if ac1_results else None,
                 "n_aligned_pairs": n_aligned.get(crit, 0),
                 "interpretation": interpret_kappa(kappa_results[crit]) if crit in kappa_results else None,
                 "passes": (kappa_results.get(crit, 0) >= KAPPA_TARGET),
