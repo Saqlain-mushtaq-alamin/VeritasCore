@@ -1,0 +1,251 @@
+[
+  {
+    "dataset_name": "HaluEval QA",
+    "mode": "nli",
+    "n_samples": 500,
+    "timestamp": "2026-10-14T19:25:45.985759+00:00",
+    "auroc": 0.6944680305676156,
+    "f1": 0.684971098265896,
+    "precision": 0.5473441108545035,
+    "recall": 0.915057915057915,
+    "brier_raw": 0.2252100584167418,
+    "ece_raw": 0.08155173998918129,
+    "brier_calibrated": 0.21924045673717543,
+    "ece_calibrated": 0.03930742983834978,
+    "plot_path": "docs\\calibration\\calibration_nli_halueval_qa.png",
+    "error_analysis": {
+      "category_counts": {
+        "complex_sentence": {
+          "fp": 2,
+          "fn": 2
+        },
+        "numerical": {
+          "fp": 77,
+          "fn": 6
+        },
+        "temporal": {
+          "fp": 0,
+          "fn": 2
+        },
+        "short_answer": {
+          "fp": 108,
+          "fn": 0
+        },
+        "negation": {
+          "fp": 4,
+          "fn": 0
+        },
+        "other": {
+          "fp": 5,
+          "fn": 12
+        }
+      },
+      "gallery": {
+        "complex_sentence": [
+          {
+            "index": 417,
+            "claim_text": "Q: The NBC-affiliated television station, owned by an American telecommunications company whose founder is Julian Sinclair Smith, called WJAR is more commonly known as what?  A: The Sinclair Broadcast Group-owned Rhode Island NBC affiliate is called WJAR.",
+            "context_snippet": "WJAR (more commonly known as NBC 10) is the NBC-affiliated television station for the state of Rhode Island and Bristol County, Massachusetts licensed to Providence. Owned by Sinclair Broadcast Group,",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": -0.2036,
+            "category": "complex_sentence"
+          }
+        ],
+        "numerical": [
+          {
+            "index": 118,
+            "claim_text": "Q: Irma Pamela Hall, an American actress who has appeared in numerous films and television shows since the 1970s, and is best known for playing matriarchal figures including in which 2004 American black comedy thriller film directed by Joel and Ethan Coen?  A: Irma Pamela Hall is known for playing m",
+            "context_snippet": " She is best known for playing matriarchal figures in the films \"A Family Thing\", \"Soul Food\", and \"The Ladykillers\".The Ladykillers is a 2004 American black comedy thriller film directed by Joel and ",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": -0.2,
+            "category": "numerical"
+          }
+        ],
+        "temporal": [
+          {
+            "index": 67,
+            "claim_text": "Q: What era was the man associated with Fanny Talbot the leading art critic of?  A: John Ruskin, a prominent social thinker, was associated with Fanny Talbot during the Victorian era.",
+            "context_snippet": "Fanny Talbot (n\u00e9e) Browne (1824\u20131917) was a landowner and philanthropist, and a friend and correspondent of the influential art critic John Ruskin.John Ruskin (8 February 1819 \u2013 20 January 1900) was t",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": -0.1915,
+            "category": "temporal"
+          }
+        ],
+        "short_answer": [
+          {
+            "index": 441,
+            "claim_text": "Q: Who was born first, Francis Nethersole or Elizabeth Stuart?  A: Sir Francis Nethersole",
+            "context_snippet": "Sir Francis Nethersole (1587\u20131659) was an English diplomat, secretary to the Electress Elizabeth, Member of Parliament for Corfe Castle, Dorset, and a Civil War political pamphleteer.Elizabeth Stuart ",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.9673,
+            "category": "short_answer"
+          }
+        ],
+        "negation": [
+          {
+            "index": 357,
+            "claim_text": "Q: Are both Print and National Journal periodicals?  A: no",
+            "context_snippet": "Print, A Quarterly Journal of the Graphic Arts was a limited edition quarterly periodical begun in 1940 and continued under different names up to the present day as Print, a bimonthly American magazin",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.9967,
+            "category": "negation"
+          }
+        ],
+        "other": [
+          {
+            "index": 191,
+            "claim_text": "Q: True Williams was the first to illustrate which title character of a Mark Twain novel?  A: True Williams was the first to illustrate the character of Huckleberry Finn.",
+            "context_snippet": " He drew all illustrations to the first edition of \"The Adventures of Tom Sawyer\" (1876) and was thus the first to illustrate such characters as Tom Sawyer and Huckleberry Finn.Thomas \"Tom\" Sawyer is ",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": -0.1969,
+            "category": "other"
+          }
+        ]
+      },
+      "total_errors": 218,
+      "total_samples": 500,
+      "error_rate": 0.436
+    },
+    "per_class_report": {
+      "supported": {
+        "precision": 0.6716417910447762,
+        "recall": 0.18672199170124482,
+        "f1-score": 0.2922077922077922,
+        "support": 241.0
+      },
+      "hallucinated": {
+        "precision": 0.5473441108545035,
+        "recall": 0.915057915057915,
+        "f1-score": 0.684971098265896,
+        "support": 259.0
+      },
+      "accuracy": 0.564,
+      "macro avg": {
+        "precision": 0.6094929509496398,
+        "recall": 0.5508899533795799,
+        "f1-score": 0.4885894452368441,
+        "support": 500.0
+      },
+      "weighted avg": {
+        "precision": 0.6072555927062149,
+        "recall": 0.564,
+        "f1-score": 0.49565918474589,
+        "support": 500.0
+      }
+    }
+  },
+  {
+    "dataset_name": "FEVER (validation)",
+    "mode": "nli",
+    "n_samples": 500,
+    "timestamp": "2026-10-14T19:26:20.675719+00:00",
+    "auroc": 0.9541025641025641,
+    "f1": 0.8155339805825242,
+    "precision": 0.7039106145251397,
+    "recall": 0.9692307692307692,
+    "brier_raw": 0.16528474289684822,
+    "ece_raw": 0.27789731486316516,
+    "brier_calibrated": 0.08263020392657629,
+    "ece_calibrated": 0.05539672964346085,
+    "plot_path": "docs\\calibration\\calibration_nli_fever_validation.png",
+    "error_analysis": {
+      "category_counts": {
+        "complex_sentence": {
+          "fp": 0,
+          "fn": 0
+        },
+        "numerical": {
+          "fp": 15,
+          "fn": 2
+        },
+        "temporal": {
+          "fp": 3,
+          "fn": 0
+        },
+        "short_answer": {
+          "fp": 0,
+          "fn": 0
+        },
+        "negation": {
+          "fp": 0,
+          "fn": 0
+        },
+        "other": {
+          "fp": 88,
+          "fn": 6
+        }
+      },
+      "gallery": {
+        "numerical": [
+          {
+            "index": 438,
+            "claim_text": "Janelle Mon\u00e1e was conceived on December 1st, 1985.",
+            "context_snippet": "Janelle Mon\u00e1e Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- d\u0292\u0259\u02c8n\u025bl_mo\u028a\u02c8ne\u026a -RSB- -RRB- is an American singer , songwriter , actress , and model signed to her own imprint , Wondaland Arts So",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": -0.1988,
+            "category": "numerical"
+          }
+        ],
+        "temporal": [
+          {
+            "index": 158,
+            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
+            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.944,
+            "category": "temporal"
+          }
+        ],
+        "other": [
+          {
+            "index": 95,
+            "claim_text": "Mary-Kate Olsen and Ashley Olsen are former child artists.",
+            "context_snippet": "Mary-Kate Olsen and Ashley Olsen -LRB- born June 13 , 1986 -RRB- , also known as the Olsen twins collectively , are American fashion designers and former child actresses .",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": -0.2,
+            "category": "other"
+          }
+        ]
+      },
+      "total_errors": 114,
+      "total_samples": 500,
+      "error_rate": 0.228
+    },
+    "per_class_report": {
+      "supported": {
+        "precision": 0.9436619718309859,
+        "recall": 0.5583333333333333,
+        "f1-score": 0.7015706806282722,
+        "support": 240.0
+      },
+      "hallucinated": {
+        "precision": 0.7039106145251397,
+        "recall": 0.9692307692307692,
+        "f1-score": 0.8155339805825242,
+        "support": 260.0
+      },
+      "accuracy": 0.772,
+      "macro avg": {
+        "precision": 0.8237862931780628,
+        "recall": 0.7637820512820512,
+        "f1-score": 0.7585523306053983,
+        "support": 500.0
+      },
+      "weighted avg": {
+        "precision": 0.8189912660319458,
+        "recall": 0.772,
+        "f1-score": 0.7608315966044833,
+        "support": 500.0
+      }
+    }
+  }
+]
