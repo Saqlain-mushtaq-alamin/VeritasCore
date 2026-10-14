@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `d0b71707b25d`).
+> All numbers generated automatically from saved raw experimental runs (commit `a4b2aadd9bcc`).
 
 ---
 
@@ -55,7 +55,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, 2,000 resamples).
-> *Git commit:* `d0b71707b25d`
+> *Git commit:* `a4b2aadd9bcc`
 
 | Method | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:-----------------------:|:--------------------:|----------|:--------------------:|:----------------------:|
@@ -72,7 +72,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Evaluates the contribution of each signal combination on the disjoint held-out evaluation sets.
 > **All numbers are MEASURED with LIVE web retrieval** (Tavily Search API). Bootstrapped 95% CIs with 2,000 resamples.
-> *Git commit:* `d0b71707b25d`
+> *Git commit:* `a4b2aadd9bcc`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
