@@ -115,6 +115,7 @@ def run_hypothesis_only_baseline(seed: int = 42) -> dict[str, Any]:
                 verdict=Verdict.SUPPORTED,
                 confidence=0.5,
                 reason="hypothesis-only",
+                verification_mode=VerificationMode.GROUNDED,
             )
             feats = extract_features(dummy_verdict)
             X_feats.append([feats[k] for k in feature_keys])
