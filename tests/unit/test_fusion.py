@@ -79,6 +79,8 @@ def make_synthetic_data(n: int = 60, seed: int = 42) -> tuple[np.ndarray, np.nda
             rng.uniform(0, 3, n_pos),  # num_entities
             rng.uniform(0.4, 1.0, n_pos),  # nli_confidence_gap
             np.ones(n_pos),  # has_evidence
+            rng.uniform(0.0, 0.4, n_pos),  # nli_contradiction_score
+            rng.uniform(0.6, 1.0, n_pos),  # nli_reverse_entailment
         ]
     )
     negative = np.column_stack(
@@ -98,6 +100,8 @@ def make_synthetic_data(n: int = 60, seed: int = 42) -> tuple[np.ndarray, np.nda
             rng.uniform(0, 3, n_neg),
             rng.uniform(0.4, 1.0, n_neg),
             np.zeros(n_neg),
+            rng.uniform(0.6, 1.0, n_neg),  # nli_contradiction_score
+            rng.uniform(0.0, 0.4, n_neg),  # nli_reverse_entailment
         ]
     )
 

@@ -24,6 +24,7 @@ from pathlib import Path
 
 import numpy as np
 
+sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from veritascore.core.types import Claim, Verdict, VerificationMode  # noqa: E402
@@ -33,55 +34,38 @@ DATA_DIR = Path(__file__).parent.parent / "data" / "datasets"
 MODEL_DIR = Path(__file__).parent.parent / "models" / "fusion"
 
 
-def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, np.ndarray]:
-    """Build training data from HaluEval QA via real NLI verification.
+def build_synthetic_data(n: int = 1000, seed: int = 42) -> tuple[np.ndarray, np.ndarray]:
+    """Generate synthetic training data covering all 17 features."""
+    from validate_phase5 import build_synthetic_data as _build_synth
+    return _build_synth(n=n, seed=seed)
 
-    HaluEval QA schema (actual fields):
-        knowledge     — supporting paragraph (NLI premise/context)
-        question      — the question being answered
-        answer        — the (possibly hallucinated) answer
-        hallucination — "yes" (hallucinated) / "no" (supported)
 
-    Each row is ONE training sample.  The claim is formatted as
-    "Q: <question>  A: <answer>" — the same format used by the benchmark
-    script to achieve AUROC 0.72+.
+def build_training_data_from_halueval(n_source_rows: int, seed: int = 42) -> tuple[np.ndarray, np.ndarray]:
+    """Build training data from HaluEval QA grid-search split via real NLI verification.
+
+    Uses the disjoint grid-search split so training never contaminates
+    the held-out evaluation split.
     """
-    print("Loading HaluEval dataset...")
-    from datasets import load_from_disk
-
+    from run_benchmarks_v2 import load_halueval_split
     from veritascore.verifier.nli_verifier import NLIVerifier
 
-    path = DATA_DIR / "halueval" / "qa_samples"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"HaluEval not found at {path}. "
-            "Run: python scripts/download_datasets.py --only halueval"
-        )
-    ds = load_from_disk(str(path))
-    split = ds["data"] if "data" in ds else next(iter(ds.values()))
+    print(f"Loading HaluEval grid-search split (n={n_source_rows}, seed={seed})...")
+    samples = load_halueval_split(split="grid", n=n_source_rows, grid_n=n_source_rows, seed=seed)
 
     print("Loading NLI verifier for feature extraction...")
     nli = NLIVerifier()
 
-    rows = [row for i, row in enumerate(split) if i < n_source_rows]
-
-    print(f"Extracting features from {len(rows)} rows ...")
+    print(f"Extracting features from {len(samples)} samples ...")
     features_list = []
     labels: list[int] = []
 
-    for i, row in enumerate(rows):
-        knowledge = row.get("knowledge", "")
-        question = row.get("question", "")
-        answer = row.get("answer", "")
-        hallucination = str(row.get("hallucination", "")).strip().lower()
-
-        if not knowledge or not answer:
+    for i, sample in enumerate(samples):
+        context = sample.get("context", "")
+        claim_text = sample.get("claim_text", "")
+        if not context or not claim_text:
             continue
 
-        # Format claim identically to the benchmark script so NLI signals
-        # match what was measured in the AUROC evaluation.
-        claim_text = f"Q: {question}  A: {answer}" if question else answer
-        label = 0 if hallucination == "yes" else 1   # 1 = supported, 0 = hallucinated
+        label = 1 if sample["label"] == "supported" else 0  # 1 = supported, 0 = hallucinated
 
         claim = Claim(
             id=f"c{i}",
@@ -90,7 +74,7 @@ def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, n
             source_text=claim_text,
         )
         try:
-            verdict = nli.verify([claim], context=knowledge)[0]
+            verdict = nli.verify([claim], context=context)[0]
         except Exception:
             from veritascore.core.types import ClaimVerdict
             verdict = ClaimVerdict(
@@ -101,7 +85,7 @@ def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, n
         labels.append(label)
 
         if (i + 1) % 50 == 0:
-            print(f"  ... {i + 1}/{len(rows)} rows processed")
+            print(f"  ... {i + 1}/{len(samples)} samples processed")
 
     nli.unload()
 
@@ -114,7 +98,9 @@ def build_training_data_from_halueval(n_source_rows: int) -> tuple[np.ndarray, n
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train VeritasCore Phase 5 fusion model")
-    parser.add_argument("--n", type=int, default=600, help="Number of HaluEval rows (1 sample each; use >=500 for G5)")
+    parser.add_argument("--n", type=int, default=600, help="Number of rows (use >=500 for G5)")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--synthetic", action="store_true", help="Train on synthetic 17-feature data")
     parser.add_argument(
         "--model", choices=["logistic_regression", "xgboost"], default="logistic_regression"
     )
@@ -125,7 +111,11 @@ def main() -> None:
     print(f"Phase 5 Fusion Model Training — {args.model}")
     print(f"{'=' * 70}")
 
-    X, y = build_training_data_from_halueval(args.n)
+    if args.synthetic:
+        print("Using synthetic 17-feature training data...")
+        X, y = build_synthetic_data(args.n, seed=args.seed)
+    else:
+        X, y = build_training_data_from_halueval(args.n, seed=args.seed)
 
     if len(y) < 500:
         print(f"WARNING: Only {len(y)} samples. G5 requires >=500 for reliable results. Use --n 600.")
