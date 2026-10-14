@@ -102,6 +102,8 @@ def build_synthetic_data(n: int = 600, seed: int = 42) -> tuple[np.ndarray, np.n
         rng.uniform(0, 3, n_pos),
         rng.uniform(0.4, 1.0, n_pos),
         np.ones(n_pos),
+        rng.uniform(0.0, 0.4, n_pos),
+        rng.uniform(0.6, 1.0, n_pos),
     ])
     neg = np.column_stack([
         rng.uniform(0.0, 0.4, n_neg),
@@ -119,6 +121,8 @@ def build_synthetic_data(n: int = 600, seed: int = 42) -> tuple[np.ndarray, np.n
         rng.uniform(0, 3, n_neg),
         rng.uniform(0.4, 1.0, n_neg),
         np.zeros(n_neg),
+        rng.uniform(0.6, 1.0, n_neg),
+        rng.uniform(0.0, 0.4, n_neg),
     ])
 
     assert pos.shape[1] == n_feats and neg.shape[1] == n_feats
@@ -241,6 +245,8 @@ def main() -> None:
         rng_noisy.uniform(0, 3, n_pos_n),                         # num_entities
         np.clip(rng_noisy.normal(0.60, noise, n_pos_n), 0, 1),   # nli_confidence_gap
         rng_noisy.choice([0.0, 1.0], size=n_pos_n, p=[0.25, 0.75]),  # has_evidence (noisy)
+        np.clip(rng_noisy.normal(0.28, noise, n_pos_n), 0, 1),       # nli_contradiction_score
+        np.clip(rng_noisy.normal(0.72, noise, n_pos_n), 0, 1),       # nli_reverse_entailment
     ])
     neg_noisy = np.column_stack([
         np.clip(rng_noisy.normal(0.28, noise, n_pos_n), 0, 1),
@@ -258,6 +264,8 @@ def main() -> None:
         rng_noisy.uniform(0, 3, n_pos_n),
         np.clip(rng_noisy.normal(0.40, noise, n_pos_n), 0, 1),
         rng_noisy.choice([0.0, 1.0], size=n_pos_n, p=[0.60, 0.40]),  # has_evidence (noisy)
+        np.clip(rng_noisy.normal(0.72, noise, n_pos_n), 0, 1),       # nli_contradiction_score
+        np.clip(rng_noisy.normal(0.28, noise, n_pos_n), 0, 1),       # nli_reverse_entailment
     ])
     X_noisy = np.vstack([pos_noisy, neg_noisy])
     y_noisy = np.array([1] * n_pos_n + [0] * n_pos_n)

@@ -133,7 +133,7 @@ class TestSummaCZSReimplemented:
         scorer.device = "cpu"
         scorer.batch_size = 32
         scorer.model_name = "cross-encoder/nli-deberta-v3-base"
-        scorer._entailment_idx = 2
+        scorer._entailment_idx = 1
         scorer.tokenizer = MagicMock()
         scorer.model = MagicMock()
         # Patch _nli_batch to return the specified probabilities
@@ -162,10 +162,10 @@ class TestSummaCZSReimplemented:
             result = scorer.score("", "claim")
         assert result == 0.5
 
-    def test_entailment_idx_is_2(self):
-        """DeBERTa NLI label order: 0=contradiction, 1=neutral, 2=entailment."""
+    def test_entailment_idx_is_1(self):
+        """DeBERTa NLI label order: 0=contradiction, 1=entailment, 2=neutral."""
         scorer = self._make_scorer([0.5])
-        assert scorer.entailment_idx == 2
+        assert scorer.entailment_idx == 1
 
 
 # ---------------------------------------------------------------------------

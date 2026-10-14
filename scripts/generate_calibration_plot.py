@@ -74,6 +74,27 @@ from sklearn.metrics import (
 # Part A — Reliability diagrams
 # =============================================================================
 
+def compute_ece(y_true: np.ndarray, y_prob: np.ndarray, n_bins: int = 10) -> float:
+    """Compute Expected Calibration Error (ECE) across uniform probability bins."""
+    y_true_arr = np.asarray(y_true, dtype=float)
+    y_prob_arr = np.clip(np.asarray(y_prob, dtype=float), 0.0, 1.0)
+    bin_boundaries = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    n = len(y_true_arr)
+    if n == 0:
+        return 0.0
+    for i in range(n_bins):
+        if i == n_bins - 1:
+            mask = (y_prob_arr >= bin_boundaries[i]) & (y_prob_arr <= bin_boundaries[i + 1])
+        else:
+            mask = (y_prob_arr >= bin_boundaries[i]) & (y_prob_arr < bin_boundaries[i + 1])
+        if np.any(mask):
+            acc = float(np.mean(y_true_arr[mask]))
+            conf = float(np.mean(y_prob_arr[mask]))
+            ece += (float(np.sum(mask)) / n) * abs(acc - conf)
+    return float(ece)
+
+
 def plot_reliability_diagram(
     y_true: list[int],
     y_score_raw: list[float],
@@ -86,26 +107,32 @@ def plot_reliability_diagram(
 
     Args:
         y_true:             Binary ground-truth labels (1 = hallucinated).
-        y_score_raw:        Raw (uncalibrated) prediction scores.
+        y_score_raw:        Raw prediction scores (probabilities or continuous formula scores).
         y_score_calibrated: Platt-scaled scores (None to skip second panel).
         title:              Figure title.
         output_path:        PNG save path.
         n_bins:             Number of calibration bins.
 
     Returns:
-        Dict with brier_raw (and brier_calibrated when available).
+        Dict with brier_raw, ece_raw (and brier_calibrated, ece_calibrated when available).
     """
     y_true_arr = np.asarray(y_true)
-    raw_arr = np.clip(np.asarray(y_score_raw, dtype=float), 0.0, 1.0)
+    raw_np = np.asarray(y_score_raw, dtype=float)
+    if np.min(raw_np) < 0.0 or np.max(raw_np) > 1.0:
+        raw_arr = 1.0 / (1.0 + np.exp(-raw_np))
+    else:
+        raw_arr = np.clip(raw_np, 0.0, 1.0)
 
     metrics: dict[str, float] = {}
     metrics["brier_raw"] = float(brier_score_loss(y_true_arr, raw_arr))
+    metrics["ece_raw"] = compute_ece(y_true_arr, raw_arr, n_bins=n_bins)
 
     if not _HAS_MPL:
         print(f"  [WARN] matplotlib not installed — skipping plot: {output_path.name}")
         if y_score_calibrated is not None:
             cal_arr = np.clip(np.asarray(y_score_calibrated, dtype=float), 0.0, 1.0)
             metrics["brier_calibrated"] = float(brier_score_loss(y_true_arr, cal_arr))
+            metrics["ece_calibrated"] = compute_ece(y_true_arr, cal_arr, n_bins=n_bins)
         return metrics
 
     has_calib = y_score_calibrated is not None
@@ -118,6 +145,7 @@ def plot_reliability_diagram(
     if has_calib:
         calib_arr = np.clip(np.asarray(y_score_calibrated, dtype=float), 0.0, 1.0)
         metrics["brier_calibrated"] = float(brier_score_loss(y_true_arr, calib_arr))
+        metrics["ece_calibrated"] = compute_ece(y_true_arr, calib_arr, n_bins=n_bins)
         panels.append((axes[1], calib_arr, "After Platt Scaling"))
 
     for ax, scores, label in panels:
@@ -143,7 +171,8 @@ def plot_reliability_diagram(
         ax2_twin.set_ylim(0, ax2_twin.get_ylim()[1] * 4)
 
         brier = float(brier_score_loss(y_true_arr, scores))
-        ax.set_title(f"{label}\nBrier Score: {brier:.4f}", fontsize=11, fontweight="bold")
+        ece = compute_ece(y_true_arr, scores, n_bins=n_bins)
+        ax.set_title(f"{label}\nBrier: {brier:.4f} | ECE: {ece:.4f}", fontsize=11, fontweight="bold")
         ax.set_xlabel("Mean Predicted Probability", fontsize=10)
         ax.set_ylabel("Fraction of Positives", fontsize=10)
         ax.legend(loc="upper left", fontsize=9)
@@ -386,36 +415,9 @@ def generate_synthetic_data(
 # =============================================================================
 
 def load_halueval_for_r7(n: int = 500, seed: int = 42) -> list[dict[str, Any]]:
-    """Load n HaluEval QA samples (held-out eval subset)."""
-    from datasets import load_from_disk  # type: ignore[import-untyped]
-
-    path = DATA_DIR / "halueval" / "qa_samples"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"HaluEval not found at {path}. "
-            "Run: python scripts/download_datasets.py --only halueval"
-        )
-    ds = load_from_disk(str(path))
-    split = ds["data"] if "data" in ds else next(iter(ds.values()))
-    rng = np.random.RandomState(seed)
-    all_samples: list[dict[str, Any]] = []
-    for i, row in enumerate(split):
-        if i >= n * 5:
-            break
-        context = row.get("knowledge", "")
-        question = row.get("question", "")
-        answer = row.get("answer", "")
-        hallucination = str(row.get("hallucination", "")).strip().lower()
-        if not context or not answer:
-            continue
-        claim_text = f"Q: {question}  A: {answer}" if question else answer
-        all_samples.append({
-            "context": context,
-            "claim_text": claim_text,
-            "label": "hallucinated" if hallucination == "yes" else "supported",
-        })
-    idx = rng.permutation(len(all_samples))[:n]
-    return [all_samples[i] for i in idx]
+    """Load n HaluEval QA samples from held-out eval split (disjoint from grid)."""
+    from run_benchmarks_v2 import load_halueval_split
+    return load_halueval_split(split="eval", n=n, grid_n=min(n, 500), seed=seed)
 
 
 def load_fever_for_r7(n: int = 500) -> list[dict[str, Any]]:
@@ -826,16 +828,22 @@ def main() -> None:  # noqa: C901
 
                 y_score_calib: list[float] | None = None
                 try:
-                    from veritascore.scorer.calibration import CalibrationModule
-                    calibrator = CalibrationModule()
-                    if calibrator.load(MODEL_DIR / "calibrator.joblib"):
-                        cal_arr = calibrator.calibrate(np.asarray(y_score_raw, dtype=float))
-                        y_score_calib = cal_arr.tolist()
-                        print("  Loaded Platt calibrator — calibrated scores available.")
+                    from sklearn.linear_model import LogisticRegression
+                    print(f"  [Platt] Fitting Platt scaling on {dataset} tuning split...")
+                    if dataset == "halueval":
+                        from run_benchmarks_v2 import load_halueval_split
+                        grid_samples = load_halueval_split(split="grid", n=min(args.n, 500), grid_n=min(args.n, 500), seed=args.seed)
                     else:
-                        print("  No saved calibrator — raw scores only.")
+                        from baseline_summac import load_fever
+                        grid_samples = load_fever(min(args.n, 500))
+
+                    y_true_grid, y_score_grid, _ = score_samples_nli(grid_samples, f"{ds_label} (tuning split)")
+                    platt = LogisticRegression(C=1.0, solver="lbfgs")
+                    platt.fit(np.asarray(y_score_grid).reshape(-1, 1), np.asarray(y_true_grid))
+                    y_score_calib = platt.predict_proba(np.asarray(y_score_raw).reshape(-1, 1))[:, 1].tolist()
+                    print(f"  Platt calibrator fitted on tuning split (slope={platt.coef_[0][0]:.3f}, intercept={platt.intercept_[0]:.3f}).")
                 except Exception as exc:
-                    print(f"  [WARN] Calibrator load failed: {exc}")
+                    print(f"  [WARN] Tuning split calibration failed ({exc}) — falling back to raw scores.")
 
                 res = run_dataset_pipeline(
                     dataset_name=ds_label,

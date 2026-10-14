@@ -140,16 +140,26 @@ class SummaCZSReimplemented:
         self.batch_size = batch_size
         self.model_name = model_name
 
-        print(f"  Loading NLI model {model_name!r} on {device}...")
-        self.tokenizer = _at_mod.from_pretrained(model_name)
-        self.model = _amsc_mod.from_pretrained(model_name)
+        revision = "6c749ce3425cd33b46d187e45b92bbf96ee12ec7"
+        print(f"  Loading NLI model {model_name!r} (rev={revision[:7]}) on {device}...")
+        self.tokenizer = _at_mod.from_pretrained(model_name, revision=revision)
+        self.model = _amsc_mod.from_pretrained(model_name, revision=revision)
         self.model.to(device)
         self.model.eval()
 
-        # DeBERTa NLI label order: 0=contradiction, 1=neutral, 2=entailment
-        # (confirmed from cross-encoder/nli-deberta-v3-base config)
-        self._entailment_idx = 2
-
+        # Discover entailment index dynamically from model config.
+        # Note: cross-encoder/nli-deberta-v3-base uses {0: 'contradiction', 1: 'entailment', 2: 'neutral'}.
+        id2label = getattr(self.model.config, "id2label", None)
+        entailment_idx = None
+        if id2label:
+            for idx, label in id2label.items():
+                if "entail" in str(label).lower():
+                    entailment_idx = int(idx)
+                    break
+        if entailment_idx is None:
+            entailment_idx = 1
+        self._entailment_idx = entailment_idx
+        print(f"  SummaC ZS entailment index: {self._entailment_idx} (id2label={id2label})")
         print(f"  SummaC ZS model ready on {device}.")
 
     def _nli_batch(self, pairs: list[tuple[str, str]]) -> list[float]:
@@ -221,38 +231,15 @@ class SummaCZSReimplemented:
 # Dataset loaders (mirrors benchmark_nli_verifier.py exactly)
 # ---------------------------------------------------------------------------
 
-def load_halueval_qa(n: int) -> list[dict[str, Any]]:
-    """Load exactly n HaluEval QA samples with oracle knowledge paragraphs."""
-    from datasets import load_from_disk  # type: ignore[import-untyped]
-
-    path = DATA_DIR / "halueval" / "qa_samples"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"HaluEval QA not found at {path}. "
-            "Run: python scripts/download_datasets.py --only halueval"
-        )
-
-    ds = load_from_disk(str(path))
-    split = ds["data"] if "data" in ds else next(iter(ds.values()))
-
-    samples: list[dict[str, Any]] = []
-    for i, row in enumerate(split):
-        if i >= n:
-            break
-        context = row.get("knowledge", "")
-        question = row.get("question", "")
-        answer = row.get("answer", "")
-        hallucination = str(row.get("hallucination", "")).strip().lower()
-        if not context or not answer:
-            continue
-        claim_text = f"Q: {question}  A: {answer}" if question else answer
-        samples.append({
-            "context": context,
-            "claim_text": claim_text,
-            "label": "hallucinated" if hallucination == "yes" else "supported",
-        })
-
-    return samples
+def load_halueval_qa(
+    n: int,
+    split: str = "eval",
+    grid_n: int = 500,
+    seed: int = 42,
+) -> list[dict[str, Any]]:
+    """Load HaluEval QA samples using the exact same split logic as run_benchmarks_v2.py."""
+    from run_benchmarks_v2 import load_halueval_split
+    return load_halueval_split(split=split, n=n, grid_n=grid_n, seed=seed)
 
 
 def load_fever(n: int) -> list[dict[str, Any]]:
@@ -443,6 +430,9 @@ def run_summac_benchmark(
         output_dir.mkdir(parents=True, exist_ok=True)
         safe_name = dataset_name.lower().replace(" ", "_").replace("(", "").replace(")", "")
         save_result = {k: v for k, v in result.items() if not k.startswith("_")}
+        save_result["y_true"] = result.get("_y_true", [])
+        save_result["y_score"] = result.get("_y_score", [])
+        save_result["y_pred"] = result.get("_y_pred", [])
         out_path = output_dir / f"{safe_name}_summac_oracle_results.json"
         out_path.write_text(json.dumps(save_result, indent=2))
         print(f"\n  Results saved → {out_path}")
@@ -470,6 +460,18 @@ def main() -> None:
         default="both",
     )
     parser.add_argument("--n", type=int, default=200)
+    parser.add_argument(
+        "--split",
+        choices=["eval", "grid", "all"],
+        default="eval",
+        help="HaluEval split to use: 'eval' (held-out), 'grid' (tune only), 'all' (no split)",
+    )
+    parser.add_argument(
+        "--grid-n",
+        type=int,
+        default=500,
+        help="Size of the HaluEval grid-search split (must be disjoint from eval)",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--bootstrap-ci", action="store_true")
     parser.add_argument("--n-bootstrap", type=int, default=2000)
@@ -506,8 +508,8 @@ def main() -> None:
 
     if args.dataset in ("halueval", "both"):
         try:
-            print(f"\n[HaluEval] Loading {args.n} samples...")
-            samples = load_halueval_qa(args.n)
+            print(f"\n[HaluEval] Loading {args.n} samples (split={args.split}, seed={args.seed})...")
+            samples = load_halueval_qa(args.n, split=args.split, grid_n=args.grid_n, seed=args.seed)
             r = run_summac_benchmark(
                 samples, "HaluEval QA", scorer,
                 bootstrap_ci=args.bootstrap_ci,
@@ -515,6 +517,8 @@ def main() -> None:
                 seed=args.seed,
                 output_dir=args.output,
             )
+            r["split"] = args.split
+            r["grid_n"] = args.grid_n
             results.append(r)
         except FileNotFoundError as e:
             print(f"  Warning: {e}")

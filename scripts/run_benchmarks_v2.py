@@ -66,20 +66,11 @@ from veritascore.core.types import Claim, Verdict  # noqa: E402
 
 DATA_DIR = REPO_ROOT / "data" / "datasets"
 
-# Published baseline AUROC values for comparison table
+# Published baselines: Only empirical re-runs or explicitly cited published baselines
+# using identical datasets and protocols are included. Cross-dataset estimates
+# (e.g., SelfCheckGPT on WikiBio, FActScore on biographical LM output) are purged.
 BASELINES: dict[str, dict[str, float]] = {
-    "NLI-only (SummaC)": {
-        "halueval_auroc": 0.720,
-        "fever_auroc": 0.700,
-    },
-    "Retrieval-only (FActScore)": {
-        "halueval_auroc": 0.680,
-        "fever_auroc": 0.740,
-    },
-    "SelfCheckGPT": {
-        "halueval_auroc": 0.740,
-        "fever_auroc": 0.690,
-    },
+    # Populated dynamically from empirical re-runs in results directory
 }
 
 
@@ -244,14 +235,14 @@ def load_fever_fixed(n: int = 1000) -> list[dict[str, Any]]:
 
 
 def load_truthfulqa(n: int = 817) -> list[dict[str, Any]]:
-    """Load TruthfulQA multiple-choice samples.
+    """Load TruthfulQA multiple-choice samples (Exploratory Negative Probe).
 
-    Uses the 'mc1_targets' field: the first answer in mc_targets is the
-    correct one (label 1); others are incorrect (label 0). We treat each
-    (question, answer) pair as a claim and the question itself as context.
-
-    For NLI-based detection: we check whether the answer is 'entailed'
-    by its own question context. Truthful answers should be more self-consistent.
+    Note on validity: In TruthfulQA, questions cannot semantically entail answers.
+    Using question as premise and answer as hypothesis tests prior bias / consistency
+    rather than factual entailment against reference evidence. Results must be
+    reported strictly as an exploratory negative probe highlighting NLI limits
+    without external retrieval.
+    Also collects complete question choice sets so no question is truncated mid-choice.
     """
     from datasets import load_from_disk  # type: ignore[import-untyped]
 
@@ -266,9 +257,8 @@ def load_truthfulqa(n: int = 817) -> list[dict[str, Any]]:
     raw_split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
 
     samples: list[dict[str, Any]] = []
-    for i, row in enumerate(raw_split):
-        if len(samples) >= n:
-            break
+    questions_loaded = 0
+    for row in raw_split:
         question = row.get("question", "")
         mc1 = row.get("mc1_targets", {})
         if not mc1 or not question:
@@ -277,19 +267,32 @@ def load_truthfulqa(n: int = 817) -> list[dict[str, Any]]:
         labels = mc1.get("labels", [])
         if not choices or not labels:
             continue
+
+        q_samples: list[dict[str, Any]] = []
         for choice, lbl in zip(choices, labels):
             if not choice:
                 continue
-            samples.append({
+            q_samples.append({
                 "context": question,
                 "claim_text": choice,
                 "label": "supported" if lbl == 1 else "hallucinated",
             })
-        if len(samples) >= n:
+
+        if not q_samples:
+            continue
+
+        # Keep whole question sets together to avoid mid-question truncation
+        if len(samples) + len(q_samples) > n and len(samples) > 0:
             break
 
-    print(f"  [TruthfulQA] Loaded {len(samples)} (question, answer) pairs from {i + 1} questions")
-    return samples[:n]
+        samples.extend(q_samples)
+        questions_loaded += 1
+
+    print(
+        f"  [TruthfulQA] [Exploratory Negative Probe] Loaded {len(samples)} "
+        f"(question, answer) pairs from {questions_loaded} complete questions"
+    )
+    return samples
 
 
 # ---------------------------------------------------------------------------
@@ -447,41 +450,171 @@ def run_nli_benchmark(
 # Significance testing across result pairs
 # ---------------------------------------------------------------------------
 
-def run_significance_tests(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Run DeLong + paired bootstrap tests between VeritasCore and baselines.
+def run_significance_tests(
+    results: list[dict[str, Any]],
+    results_dir: Path | None = None,
+    n_bootstrap: int = 2000,
+    seed: int = 42,
+) -> list[dict[str, Any]]:
+    """Run DeLong's test and paired bootstrap between VeritasCore and SummaC baseline.
 
     Args:
-        results: List of benchmark result dicts (must include _y_true, _y_score).
+        results:     List of VeritasCore result dicts (with _y_true, _y_score).
+        results_dir: Directory containing baseline result JSON files.
+        n_bootstrap: Number of bootstrap iterations for paired bootstrap test.
+        seed:        Random seed.
 
     Returns:
-        List of comparison dicts with z-stat and p-values.
+        List of paired statistical comparison dicts with z-stat, p-values, CIs.
     """
-    # Find VeritasCore NLI result for each dataset
     comparisons: list[dict[str, Any]] = []
 
-    for dataset in ("HaluEval QA", "FEVER (validation)", "TruthfulQA (MC)"):
-        vc_results = [r for r in results if r.get("dataset") == dataset and "_y_true" in r]
+    dataset_baseline_files = {
+        "HaluEval QA": [
+            "halueval_qa_summac_oracle_results.json",
+            "halueval_summac_oracle_results.json",
+        ],
+        "FEVER (validation)": [
+            "fever_validation_summac_oracle_results.json",
+            "fever_summac_oracle_results.json",
+        ],
+    }
+
+    for dataset, baseline_filenames in dataset_baseline_files.items():
+        vc_results = [r for r in results if r.get("dataset") == dataset and ("_y_true" in r or "y_true" in r)]
         if not vc_results:
             continue
         vc = vc_results[0]
-        y_true = np.array(vc["_y_true"])
-        y_score_vc = np.array(vc["_y_score"])
+        y_true_vc = np.array(vc.get("_y_true", vc.get("y_true", [])))
+        y_score_vc = np.array(vc.get("_y_score", vc.get("y_score", [])))
 
-        print(f"\n  Significance tests — {dataset}:")
-        print(f"  VeritasCore NLI AUROC: {vc.get('auroc', 'N/A'):.4f}")
+        print(f"\n{'=' * 70}")
+        print(f"Paired Significance Test — {dataset}")
+        print(f"{'=' * 70}")
+        print(f"  VeritasCore AUROC: {vc.get('auroc', 'N/A'):.4f} (n={len(y_true_vc)})")
 
-        # Compare vs. published baselines using a synthetic null score
-        # (We don't have the actual baseline predictions, so we note this limitation)
-        comparisons.append({
+        baseline_file: Path | None = None
+        if results_dir is not None:
+            for bf_name in baseline_filenames:
+                p = results_dir / bf_name
+                if p.exists():
+                    baseline_file = p
+                    break
+
+        if baseline_file is None:
+            msg = (
+                f"SummaC baseline file not found in {results_dir} "
+                f"({', '.join(baseline_filenames)}). "
+                f"Run: python scripts/baseline_summac.py --dataset {dataset.split()[0].lower()} "
+                f"--n {len(y_true_vc)} --output {results_dir}"
+            )
+            print(f"  [NOTE] {msg}")
+            comparisons.append({
+                "dataset": dataset,
+                "method_a": "VeritasCore (NLI)",
+                "auroc_a": vc.get("auroc"),
+                "method_b": "SummaC ZS (not found)",
+                "status": "baseline_not_found",
+                "note": msg,
+            })
+            continue
+
+        try:
+            baseline_data = json.loads(baseline_file.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"  [ERROR] Failed to read {baseline_file}: {e}")
+            continue
+
+        y_true_b = np.array(baseline_data.get("y_true", baseline_data.get("_y_true", [])))
+        y_score_b = np.array(baseline_data.get("y_score", baseline_data.get("_y_score", [])))
+
+        if len(y_true_b) == 0 or len(y_score_b) == 0:
+            msg = (
+                f"Baseline file {baseline_file.name} does not contain raw 'y_true'/'y_score'. "
+                "Re-run scripts/baseline_summac.py to generate paired raw scores."
+            )
+            print(f"  [WARN] {msg}")
+            comparisons.append({
+                "dataset": dataset,
+                "method_a": "VeritasCore (NLI)",
+                "auroc_a": vc.get("auroc"),
+                "method_b": "SummaC ZS (reimplemented)",
+                "auroc_b": baseline_data.get("auroc"),
+                "status": "raw_scores_missing",
+                "note": msg,
+            })
+            continue
+
+        if len(y_true_vc) != len(y_true_b):
+            msg = (
+                f"Sample size mismatch: VeritasCore n={len(y_true_vc)} vs "
+                f"SummaC n={len(y_true_b)}. Cannot run paired test. "
+                "Re-run with matching --n."
+            )
+            print(f"  [WARN] {msg}")
+            comparisons.append({
+                "dataset": dataset,
+                "method_a": "VeritasCore (NLI)",
+                "auroc_a": vc.get("auroc"),
+                "method_b": "SummaC ZS (reimplemented)",
+                "auroc_b": baseline_data.get("auroc"),
+                "status": "sample_mismatch",
+                "note": msg,
+            })
+            continue
+
+        if not np.array_equal(y_true_vc, y_true_b):
+            msg = (
+                "Label mismatch between VeritasCore and baseline samples! "
+                "Runs must use identical seeds, splits, and order for paired testing."
+            )
+            print(f"  [WARN] {msg}")
+            comparisons.append({
+                "dataset": dataset,
+                "method_a": "VeritasCore (NLI)",
+                "auroc_a": vc.get("auroc"),
+                "method_b": "SummaC ZS (reimplemented)",
+                "auroc_b": baseline_data.get("auroc"),
+                "status": "label_mismatch",
+                "note": msg,
+            })
+            continue
+
+        # Execute DeLong's test and paired bootstrap
+        delong_res = delong_test(y_true_vc, y_score_vc, y_score_b)
+        paired_boot = paired_bootstrap_test(
+            y_true_vc, y_score_vc, y_score_b, n_resamples=n_bootstrap, seed=seed
+        )
+
+        auroc_vc = float(vc.get("auroc", 0.0))
+        auroc_b = float(baseline_data.get("auroc", 0.0))
+        delta_auroc = auroc_vc - auroc_b
+
+        comp = {
             "dataset": dataset,
             "method_a": "VeritasCore (NLI)",
-            "auroc_a": vc.get("auroc"),
-            "n": len(y_true),
-            "note": (
-                "Significance test vs. published baselines requires their raw scores. "
-                "Use DeLong's test when baseline predictions are available."
-            ),
-        })
+            "auroc_a": auroc_vc,
+            "method_b": "SummaC ZS (reimplemented, DeBERTa-v3)",
+            "auroc_b": auroc_b,
+            "delta_auroc": float(delta_auroc),
+            "delong_z": float(delong_res["z"]),
+            "delong_p_value": float(delong_res["p_value"]),
+            "delong_ci_diff": [float(x) for x in delong_res.get("ci_diff", (0, 0, 0))],
+            "paired_bootstrap_p_value": float(paired_boot["p_value"]),
+            "n_samples": len(y_true_vc),
+            "statistically_significant_p05": bool(delong_res["p_value"] < 0.05),
+        }
+        comparisons.append(comp)
+
+        print(f"  SummaC ZS AUROC:       {auroc_b:.4f}")
+        print(f"  AUROC Delta (VC-Base): {delta_auroc:+.4f}")
+        print(f"  DeLong z-statistic:    {delong_res['z']:.4f}")
+        print(f"  DeLong p-value:        {delong_res['p_value']:.4e}")
+        if delong_res.get("ci_diff"):
+            mean_d, lo_d, hi_d = delong_res["ci_diff"]
+            print(f"  DeLong 95% CI on Diff: {format_ci(mean_d, lo_d, hi_d)}")
+        print(f"  Paired Bootstrap p:    {paired_boot['p_value']:.4e}")
+        print(f"  Significant (p < 0.05): {'YES' if delong_res['p_value'] < 0.05 else 'NO'}")
 
     return comparisons
 
@@ -587,8 +720,11 @@ def main() -> None:
             result["seed"] = args.seed
             all_results.append(result)
 
-            # Strip raw arrays before saving (large)
+            # Save full results with raw scores for paired significance testing
             save_result = {k: v for k, v in result.items() if not k.startswith("_")}
+            save_result["y_true"] = result.get("_y_true", [])
+            save_result["y_score"] = result.get("_y_score", [])
+            save_result["y_pred"] = result.get("_y_pred", [])
             out_path = args.output / "halueval_results_v2.json"
             out_path.write_text(json.dumps(save_result, indent=2))
             print(f"\n  Results saved → {out_path}")
@@ -613,6 +749,9 @@ def main() -> None:
             all_results.append(result)
 
             save_result = {k: v for k, v in result.items() if not k.startswith("_")}
+            save_result["y_true"] = result.get("_y_true", [])
+            save_result["y_score"] = result.get("_y_score", [])
+            save_result["y_pred"] = result.get("_y_pred", [])
             out_path = args.output / "fever_results_v2.json"
             out_path.write_text(json.dumps(save_result, indent=2))
             print(f"\n  Results saved → {out_path}")
@@ -628,7 +767,7 @@ def main() -> None:
             samples = load_truthfulqa(n=args.n)
             result = run_nli_benchmark(
                 samples,
-                "TruthfulQA (MC)",
+                "TruthfulQA (MC) [Exploratory Negative Probe]",
                 bootstrap_ci=args.bootstrap_ci,
                 n_bootstrap=args.n_bootstrap,
                 seed=args.seed,
@@ -637,6 +776,9 @@ def main() -> None:
             all_results.append(result)
 
             save_result = {k: v for k, v in result.items() if not k.startswith("_")}
+            save_result["y_true"] = result.get("_y_true", [])
+            save_result["y_score"] = result.get("_y_score", [])
+            save_result["y_pred"] = result.get("_y_pred", [])
             out_path = args.output / "truthfulqa_results_v2.json"
             out_path.write_text(json.dumps(save_result, indent=2))
             print(f"\n  Results saved → {out_path}")
@@ -647,17 +789,27 @@ def main() -> None:
     # Significance tests
     # -----------------------------------------------------------------------
     sig_comparisons: list[dict[str, Any]] = []
-    if args.significance_test and len(all_results) >= 2:
+    if args.significance_test:
         print("\n" + "-" * 70)
-        print("Significance Tests")
+        print("Significance Tests (vs. SummaC Baseline)")
         print("-" * 70)
-        sig_comparisons = run_significance_tests(all_results)
+        sig_comparisons = run_significance_tests(
+            all_results,
+            results_dir=args.output,
+            n_bootstrap=args.n_bootstrap,
+            seed=args.seed,
+        )
 
     # -----------------------------------------------------------------------
     # Save summary
     # -----------------------------------------------------------------------
     if all_results:
         save_results = [{k: v for k, v in r.items() if not k.startswith("_")} for r in all_results]
+        # Summary omits raw arrays to keep file size reasonable
+        summary_results = [
+            {k: v for k, v in r.items() if k not in ("y_true", "y_score", "y_pred")}
+            for r in save_results
+        ]
         summary = {
             "phase": "R3",
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -670,8 +822,7 @@ def main() -> None:
                 "bootstrap_ci": args.bootstrap_ci,
                 "n_bootstrap": args.n_bootstrap,
             },
-            "results": save_results,
-            "baselines": BASELINES,
+            "results": summary_results,
             "significance_tests": sig_comparisons,
         }
         summary_path = args.output / "summary_v2.json"
@@ -686,16 +837,39 @@ def main() -> None:
         print(header)
         print("-" * 70)
 
-        # Baselines
-        for method, vals in BASELINES.items():
-            hu = f"{vals.get('halueval_auroc', 'N/A'):.3f}"
-            fv = f"{vals.get('fever_auroc', 'N/A'):.3f}"
-            print(f"  {method:<33} {hu:>18} {fv:>14}")
+        # Check for empirical SummaC baseline in output dir
+        summac_hu_file = args.output / "halueval_qa_summac_oracle_results.json"
+        if not summac_hu_file.exists():
+            summac_hu_file = args.output / "halueval_summac_oracle_results.json"
+        summac_fv_file = args.output / "fever_validation_summac_oracle_results.json"
+        if not summac_fv_file.exists():
+            summac_fv_file = args.output / "fever_summac_oracle_results.json"
 
+        summac_hu_str = "N/A"
+        if summac_hu_file.exists():
+            try:
+                s_data = json.loads(summac_hu_file.read_text(encoding="utf-8"))
+                summac_hu_str = f"{s_data['auroc']:.4f}"
+                if "ci_auroc_lower" in s_data:
+                    summac_hu_str += f" ({s_data['ci_auroc_lower']:.3f}-{s_data['ci_auroc_upper']:.3f})"
+            except Exception:
+                pass
+
+        summac_fv_str = "N/A"
+        if summac_fv_file.exists():
+            try:
+                s_data = json.loads(summac_fv_file.read_text(encoding="utf-8"))
+                summac_fv_str = f"{s_data['auroc']:.4f}"
+                if "ci_auroc_lower" in s_data:
+                    summac_fv_str += f" ({s_data['ci_auroc_lower']:.3f}-{s_data['ci_auroc_upper']:.3f})"
+            except Exception:
+                pass
+
+        print(f"  {'SummaC ZS (Empirical Re-run)':<33} {summac_hu_str:>18} {summac_fv_str:>14}")
         print("-" * 70)
 
         # VeritasCore results
-        for r in save_results:
+        for r in summary_results:
             auroc_str = f"{r['auroc']:.4f}" if r.get("auroc") is not None else "N/A"
             if "ci_auroc_lower" in r:
                 auroc_str = (
@@ -713,6 +887,7 @@ def main() -> None:
         print("=" * 70)
         print("\n✓ Phase R3 evaluation complete.")
         print("  Next: run significance tests with --significance-test flag")
+        print("        run ablation study (Phase R5)\n")
         print("        run ablation study (Phase R5)\n")
 
 
