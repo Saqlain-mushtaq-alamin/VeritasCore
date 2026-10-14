@@ -87,7 +87,7 @@ def run_hypothesis_only_baseline(seed: int = 42) -> dict[str, Any]:
     """Control 2: Hypothesis-only baseline using only surface features without context."""
     print("\n[Control 2] Hypothesis-Only Baseline (Surface Features Only)...")
     from run_benchmarks_v2 import load_fever_fixed, load_halueval_split
-    from veritascore.core.types import Claim, ClaimVerdict, Verdict
+    from veritascore.core.types import Claim, ClaimVerdict, Verdict, VerificationMode
     from veritascore.scorer.features import extract_features
 
     feature_keys = [
