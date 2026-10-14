@@ -48,6 +48,8 @@ FEATURE_NAMES: list[str] = [
     "num_entities",
     "nli_confidence_gap",
     "has_evidence",
+    "nli_contradiction_score",
+    "nli_reverse_entailment",
 ]
 
 
@@ -115,6 +117,12 @@ def extract_features(verdict: ClaimVerdict) -> dict[str, float]:
         "num_entities": float(len(proper_nouns)),
         "nli_confidence_gap": float(abs(nli_entailment - nli_contradiction)),
         "has_evidence": 1.0 if verdict.evidence else 0.0,
+        "nli_contradiction_score": (
+            float(verdict.contradiction_score) if verdict.contradiction_score is not None else 0.0
+        ),
+        "nli_reverse_entailment": (
+            float(verdict.reverse_entailment_score) if verdict.reverse_entailment_score is not None else 0.0
+        ),
     }
 
 

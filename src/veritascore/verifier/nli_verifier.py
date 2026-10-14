@@ -176,9 +176,10 @@ class NLIVerifier(BaseVerifier):
         logger.info("Loading NLI model: %s", model_name)
         t0 = time.time()
 
+        revision = self.config.models.nli_revision
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self._model = AutoModelForSequenceClassification.from_pretrained(model_name)
+            self._tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
+            self._model = AutoModelForSequenceClassification.from_pretrained(model_name, revision=revision)
 
             self._device = self._resolve_device()
             self._model = self._model.to(self._device)

@@ -147,7 +147,8 @@ class SemanticConsistencyChecker:
         t0 = time.time()
 
         try:
-            self._model = SentenceTransformer(model_name)
+            revision = self.config.models.embedding_revision
+            self._model = SentenceTransformer(model_name, revision=revision)
             device = self._resolve_device()
             self._model = self._model.to(device)
         except Exception as e:

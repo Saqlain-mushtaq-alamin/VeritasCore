@@ -32,13 +32,25 @@ class ModelConfig(BaseSettings):
         default="cross-encoder/nli-deberta-v3-base",
         description="HuggingFace model ID for NLI (grounded verification)",
     )
+    nli_revision: str | None = Field(
+        default="6c749ce3425cd33b46d187e45b92bbf96ee12ec7",
+        description="Pinned HuggingFace commit hash for NLI model",
+    )
     embedding_model: str = Field(
         default="sentence-transformers/all-MiniLM-L6-v2",
         description="HuggingFace model ID for sentence embeddings",
     )
+    embedding_revision: str | None = Field(
+        default="1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+        description="Pinned HuggingFace commit hash for embeddings model",
+    )
     decomposer_model: str = Field(
         default="microsoft/Phi-3-mini-4k-instruct",
         description="HuggingFace model ID for claim decomposition LLM",
+    )
+    decomposer_revision: str | None = Field(
+        default="f39ac1d28e925b323eae81227eaba4464caced4e",
+        description="Pinned HuggingFace commit hash for decomposer model",
     )
     device: str = Field(
         default="auto",

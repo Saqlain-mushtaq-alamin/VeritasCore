@@ -233,12 +233,15 @@ class LLMDecomposer(BaseDecomposer):
         logger.info("Loading decomposer model (transformers): %s", model_name)
         t0 = time.time()
 
+        revision = self.config.models.decomposer_revision
         try:
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self._tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
 
             self._device = self._resolve_device()
 
             load_kwargs: dict[str, Any] = {}
+            if revision:
+                load_kwargs["revision"] = revision
 
             if self._device != "cpu":
                 load_kwargs["torch_dtype"] = torch.float16
