@@ -1,4 +1,4 @@
-﻿"""compute_iaa.py — Phase R6: Compute inter-annotator agreement (Cohen's/Fleiss' kappa).
+"""compute_iaa.py — Phase R6: Compute inter-annotator agreement (Cohen's/Fleiss' kappa).
 
 Usage:
     # Two-annotator mode (Cohen's kappa):
@@ -66,6 +66,40 @@ def cohen_kappa(y1: list[int], y2: list[int]) -> float:
 
     kappa = (po - pe) / (1 - pe)
     return round(kappa, 4)
+
+
+def percent_agreement(y1: list[int], y2: list[int]) -> float:
+    """Compute observed raw percent agreement between two binary annotators."""
+    if len(y1) != len(y2):
+        raise ValueError(f"Annotation vectors must have equal length: {len(y1)} vs {len(y2)}")
+    if len(y1) == 0:
+        return float("nan")
+    return round(sum(a == b for a, b in zip(y1, y2)) / len(y1), 4)
+
+
+def gwet_ac1(y1: list[int], y2: list[int]) -> float:
+    """Compute Gwet's AC1 statistic for two binary annotators.
+
+    Immune to the prevalence paradox that penalizes Cohen's kappa when
+    classes are heavily imbalanced.
+    """
+    if len(y1) != len(y2):
+        raise ValueError(f"Annotation vectors must have equal length: {len(y1)} vs {len(y2)}")
+    if len(y1) == 0:
+        return float("nan")
+
+    n = len(y1)
+    po = sum(a == b for a, b in zip(y1, y2)) / n
+
+    p1 = (sum(y1) + sum(y2)) / (2 * n)
+    p0 = 1.0 - p1
+    pe = 2.0 * p1 * p0
+
+    if pe >= 1.0:
+        return 1.0 if po == 1.0 else 0.0
+
+    ac1 = (po - pe) / (1.0 - pe)
+    return round(float(ac1), 4)
 
 
 # ── Fleiss' Kappa (three or more annotators) ──────────────────────────────────
