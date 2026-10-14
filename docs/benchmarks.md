@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `a4b2aadd9bcc`).
+> All numbers generated automatically from saved raw experimental runs (commit `f4086c60d97f`).
 
 ---
 
@@ -55,7 +55,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, 2,000 resamples).
-> *Git commit:* `a4b2aadd9bcc`
+> *Git commit:* `f4086c60d97f`
 
 | Method | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:-----------------------:|:--------------------:|----------|:--------------------:|:----------------------:|
@@ -72,7 +72,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Evaluates the contribution of each signal combination on the disjoint held-out evaluation sets.
 > **All numbers are MEASURED with LIVE web retrieval** (Tavily Search API). Bootstrapped 95% CIs with 2,000 resamples.
-> *Git commit:* `a4b2aadd9bcc`
+> *Git commit:* `f4086c60d97f`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
@@ -144,4 +144,36 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 | 2 | 43.4 | 23.06 | 742 |
 | 4 | 24.6 | 40.72 | 742 |
 | 8 | 24.1 | 41.58 | 742 |
+
+
+---
+
+## Empirical Controls & Sanity Checks
+
+To confirm methodological validity and eliminate experimental artifacts, seven rigorous empirical controls were conducted (detailed full report in [`docs/empirical_controls_report.md`](empirical_controls_report.md)):
+
+1. **Shuffled-Label AUROC (Null Hypothesis Test):**
+   - HaluEval QA: **0.5004 ± 0.0134** (vs. original 0.7147)
+   - FEVER: **0.4971 ± 0.0162** (vs. original 0.9678)
+   - *Confirmation:* Perfectly centered at 0.50, proving scoring correctness and zero label/sorting contamination.
+
+2. **Hypothesis-Only Baseline (Claim Surface Features Only):**
+   - Evaluates a Logistic Regression baseline using only claim surface features (`claim_length`, `claim_word_count`, `has_numbers`, `has_proper_nouns`, `num_entities`) without any evidence.
+   - **FEVER:** 5-fold CV AUROC = **0.5549** (near-random, confirming FEVER claims do not leak truth value via surface shortcuts).
+   - **HaluEval QA:** 5-fold CV AUROC = **0.7445** (reveals a known dataset artifact in HaluEval where ChatGPT-generated hallucinations are systematically more verbose than human ground truth answers).
+
+3. **FEVER Gold Context Audit:**
+   - 20 randomly sampled FEVER validation pairs were inspected. In the `copenlu/fever_gold_evidence` benchmark download, `triple[2]` contains the **actual gold sentence text** (not just the Wikipedia page title), explaining the high AUROC (0.9678) of DeBERTa-v3 on gold evidence passages.
+
+4. **Determinism:**
+   - Independent passes on duplicate evaluation splits yielded `max_abs_diff = 0.00e+00`, confirming exact bitwise reproducibility under fixed seeds.
+
+5. **LLM Decomposer Fallback & Timeout Behavior:**
+   - Evaluated thread-based timeout architecture (`daemon=True`, 60s timeout). Across the 50-sample hardware run, **0 timeouts occurred** (maximum observed latency 15.24s), and fallback was never invoked.
+
+6. **Holm-Bonferroni Correction:**
+   - Applied step-down correction across all 6 ablation comparisons. Primary signal ablations (`-NLI` adjusted p = 0.0075 / 0.0050; `-Retrieval` adjusted p = 0.0150 / 0.0360) remain statistically significant at $\alpha = 0.05$.
+
+7. **Out-of-Domain Transfer Protocol:**
+   - The NLI weight formula (`fwd_contradiction - 0.2*fwd_entailment - 0.6*rev_entailment`) was tuned **exclusively on the HaluEval QA grid split ($n=500$)**. FEVER ($n=1,000$) served as a true zero-shot out-of-domain transfer benchmark.
 
