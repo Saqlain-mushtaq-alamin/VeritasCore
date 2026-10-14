@@ -52,25 +52,70 @@ python scripts/download_datasets.py --only halueval fever
 
 ## Run Benchmarks
 
-### NLI-only benchmark (recommended starting point)
+### 1. Main Benchmark: VeritasCore NLI Evaluation (Phase R3)
+
+Run the unified evaluation script on the disjoint held-out test split with bootstrapped 95% confidence intervals and paired statistical significance tests:
 
 ```bash
-python scripts/run_benchmarks.py --datasets halueval fever --n 1000
+python scripts/run_benchmarks_v2.py \
+    --datasets halueval fever \
+    --n 1500 \
+    --grid-n 500 \
+    --split eval \
+    --seed 42 \
+    --bootstrap-ci \
+    --n-bootstrap 2000 \
+    --significance-test \
+    --output tests/benchmarks/results/
 ```
 
-### Full pipeline benchmark (requires API keys in .env)
+### 2. Paired SummaC ZS Oracle Baseline (Phase R4)
+
+Run the reimplemented SummaC ZS baseline on the exact same held-out split and sample order:
 
 ```bash
-python scripts/run_benchmarks.py --datasets halueval fever --n 1000 --mode all
+python scripts/baseline_summac.py \
+    --dataset both \
+    --n 1500 \
+    --grid-n 500 \
+    --split eval \
+    --seed 42 \
+    --bootstrap-ci \
+    --n-bootstrap 2000 \
+    --output tests/benchmarks/results/
 ```
 
-### Run the test suite
+### 3. Reliability Diagrams & Error Analysis (Phase R7)
+
+Fit Platt scaling on the grid split and evaluate calibration (ECE, Brier score) on the held-out evaluation split:
+
+```bash
+python scripts/generate_calibration_plot.py \
+    --datasets halueval fever \
+    --n 500 \
+    --seed 42 \
+    --output results/calibration/
+```
+
+### 4. Ablation Study (Phase R5)
+
+Measure incremental signal contributions across components:
+
+```bash
+python scripts/run_ablation.py \
+    --dataset halueval \
+    --n 500 \
+    --seed 42 \
+    --output results/ablation/
+```
+
+### 5. Run the Test Suite
 
 ```bash
 pytest tests/ -v
 ```
 
-### Static analysis
+### 6. Static Analysis
 
 ```bash
 ruff check src/
@@ -91,7 +136,7 @@ mypy src/ --ignore-missing-imports
 
 ## Model Revisions Used
 
-All model revisions are pinned in `configs/models/model_registry.yaml`. The exact commit hashes guarantee that the same model weights are loaded regardless of future upstream changes.
+All model revisions are pinned in `configs/models/model_registry.yaml` and loaded via `ModelConfig.nli_revision`, `embedding_revision`, and `decomposer_revision`. This guarantees identical weights are loaded across machines:
 
 | Model | Pinned Revision |
 |-------|----------------|
@@ -100,7 +145,10 @@ All model revisions are pinned in `configs/models/model_registry.yaml`. The exac
 | `microsoft/Phi-3-mini-4k-instruct` | `f39ac1d28e925b323eae81227eaba4464caced4e` |
 | `Qwen/Qwen2.5-3B-Instruct` | `aa8e72537993ba99e69dfaafa59ed015b17504d1` |
 
-## Notes on Reported Results
+## Evaluation Methodology & Protocol
 
-- **HaluEval AUROC 0.721**: NLI-only mode, n=200 samples (held-out split). Grid search was performed on a separate 500-sample split.
-- **FEVER AUROC 0.72**: NLI-only mode, oracle (gold) evidence provided — not end-to-end retrieval. See `docs/benchmarks.md` for full methodology details and caveats.
+- **Train/Test Split Separation**: HaluEval QA is strictly partitioned into non-overlapping splits: a 500-sample grid search set (`split="grid"`) used for hyperparameter selection / Platt scaling calibration, and an independent held-out evaluation set (`split="eval"`, n=1500) for all reported metrics.
+- **Strictly Paired Baselines**: SummaC ZS baseline uses the identical held-out eval samples, random seed (42), and label mapping (`split="eval"`). Both VeritasCore and SummaC store raw `y_true` and `y_score` arrays.
+- **Statistical Significance**: DeLong's test and paired bootstrap tests (2,000 resamples) compute two-sided p-values and 95% confidence intervals on AUROC differences between paired models.
+- **TruthfulQA Protocol**: Evaluated strictly as an exploratory negative probe. Since questions cannot semantically entail answers without external reference knowledge, ungrounded NLI evaluates prior bias rather than factual entailment.
+- **FEVER Protocol**: Evaluated on gold/oracle validation evidence with non-NEI samples collected systematically. See `docs/benchmarks.md` for detailed discussion.

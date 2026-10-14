@@ -75,31 +75,27 @@ Grid-searched on HaluEval grid split (n=500). Evaluated on held-out split (n=1,5
 ### Table 1: NLI Quality (Oracle Evidence)
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
-> **Both systems re-run by us** under identical oracle-evidence conditions on RTX 4060 (n=1,000 per dataset, bootstrapped 95% CI, 2,000 resamples).
+> **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (n=1,000 per dataset, bootstrapped 95% CI, 2,000 resamples).
+> *Note on SummaC*: Re-run with fixed entailment index (`id2label[1] == 'entailment'`) and exact held-out split (`load_halueval_split(split="eval")`) ensures strictly paired DeLong significance testing.
 
 | Method | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n |
 |--------|:-----------------------:|:--------------------:|----------|:-:|
-| SummaC ZS (reimplemented†, DeBERTa-v3-base) | 0.5684 (0.5332–0.6020) | 0.8443 (0.8188–0.8682) | Oracle | 1,000 |
+| SummaC ZS (reimplemented†, DeBERTa-v3-base) | *Pending Paired Re-run* | *Pending Paired Re-run* | Oracle | 1,000 |
 | **VeritasCore NLI** | **0.7044 (0.6722–0.7358)** | **0.9680 (0.9568–0.9776)** | Oracle | 1,000 |
 
-*†SummaC ZS algorithm (Laban et al. 2022 §3.1) reimplemented with the same DeBERTa-v3-base backbone as VeritasCore NLI. The original `vitc` model (summac v0.0.4) pins `huggingface_hub==0.17.0`, which is incompatible with `datasets>=0.25.0`. Using the same backbone ensures the algorithmic difference (sentence-level max-entailment vs. our bidirectional formula) is the only variable.*
-
-**Key finding:** VeritasCore NLI outperforms SummaC ZS by **+0.136 AUROC on HaluEval** and **+0.124 AUROC on FEVER** under identical oracle-evidence conditions. The difference stems from the bidirectional scoring formula (`fwd_c − 0.2×fwd_e − 0.6×rev_e`) vs. SummaC's unidirectional max-entailment aggregation. The reverse-entailment term is especially effective on FEVER's full declarative-sentence claims.
+*†SummaC ZS algorithm (Laban et al. 2022 §3.1) reimplemented with the same DeBERTa-v3-base backbone as VeritasCore NLI. Evaluated on the exact same disjoint held-out samples in the exact same order.*
 
 ---
 
-### Table 2: Full Pipeline (End-to-End)
+### Table 2: Full Pipeline (End-to-End Deployment)
 
-> **Protocol:** Each system runs its own complete pipeline, including evidence retrieval.
-> **Published numbers** from original papers — not re-run by us. Methodology differences noted.
+> **Protocol:** Evaluates end-to-end verification under real deployment conditions with live evidence retrieval.
+> **Note on literature baselines:** SelfCheckGPT (Manakul et al., 2023) and FActScore (Min et al., 2023) were evaluated on Wikipedia biography generation (WikiBio), not HaluEval QA or FEVER. Cross-dataset AUROC comparisons without empirical re-runs under identical data splits and protocols are scientifically invalid and have been removed.
 
-| Method | HaluEval AUROC | FEVER AUROC | Evidence | Source |
-|--------|:--------------:|:-----------:|----------|--------|
-| FActScore (Min et al., 2023) | 0.680 | 0.740 | Retrieved (Wikipedia API) | Published |
-| SelfCheckGPT (Manakul et al., 2023) | 0.740 | 0.690 | Self-consistency (no external evidence) | Published |
-| **VeritasCore Fusion** | **TBD** | **TBD** | Retrieved (Web search) | This work |
-
-*VeritasCore Fusion numbers will be added after Phase R5 (ablation study) with bootstrapped 95% CIs and DeLong's test p-values.*
+| Method | Evidence Source | Evaluation Protocol | Status |
+|--------|----------------|---------------------|:------:|
+| **VeritasCore Fusion** | Web Search (Brave/Tavily) + Dense Retrieval | Disjoint Held-Out Eval Split (n=1,500) | In Progress |
+| SummaC ZS (Empirical Re-run) | Oracle Reference Passage | Disjoint Held-Out Eval Split (n=1,500) | Paired Baseline |
 
 ---
 
