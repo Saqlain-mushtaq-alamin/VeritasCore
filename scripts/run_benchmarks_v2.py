@@ -581,9 +581,9 @@ def run_significance_tests(
             continue
 
         # Execute DeLong's test and paired bootstrap
-        delong_res = delong_test(y_true_vc, y_score_vc, y_score_b)
-        paired_boot = paired_bootstrap_test(
-            y_true_vc, y_score_vc, y_score_b, n_resamples=n_bootstrap, seed=seed
+        delong_z, delong_p = delong_test(y_true_vc, y_score_vc, y_score_b)
+        boot_delta, boot_p = paired_bootstrap_test(
+            y_true_vc, y_score_vc, y_score_b, n_bootstrap=n_bootstrap, seed=seed
         )
 
         auroc_vc = float(vc.get("auroc", 0.0))
@@ -597,24 +597,21 @@ def run_significance_tests(
             "method_b": "SummaC ZS (reimplemented, DeBERTa-v3)",
             "auroc_b": auroc_b,
             "delta_auroc": float(delta_auroc),
-            "delong_z": float(delong_res["z"]),
-            "delong_p_value": float(delong_res["p_value"]),
-            "delong_ci_diff": [float(x) for x in delong_res.get("ci_diff", (0, 0, 0))],
-            "paired_bootstrap_p_value": float(paired_boot["p_value"]),
+            "delong_z": float(delong_z),
+            "delong_p_value": float(delong_p),
+            "paired_bootstrap_delta": float(boot_delta),
+            "paired_bootstrap_p_value": float(boot_p),
             "n_samples": len(y_true_vc),
-            "statistically_significant_p05": bool(delong_res["p_value"] < 0.05),
+            "statistically_significant_p05": bool(delong_p < 0.05),
         }
         comparisons.append(comp)
 
         print(f"  SummaC ZS AUROC:       {auroc_b:.4f}")
         print(f"  AUROC Delta (VC-Base): {delta_auroc:+.4f}")
-        print(f"  DeLong z-statistic:    {delong_res['z']:.4f}")
-        print(f"  DeLong p-value:        {delong_res['p_value']:.4e}")
-        if delong_res.get("ci_diff"):
-            mean_d, lo_d, hi_d = delong_res["ci_diff"]
-            print(f"  DeLong 95% CI on Diff: {format_ci(mean_d, lo_d, hi_d)}")
-        print(f"  Paired Bootstrap p:    {paired_boot['p_value']:.4e}")
-        print(f"  Significant (p < 0.05): {'YES' if delong_res['p_value'] < 0.05 else 'NO'}")
+        print(f"  DeLong z-statistic:    {delong_z:.4f}")
+        print(f"  DeLong p-value:        {delong_p:.4e}")
+        print(f"  Paired Bootstrap p:    {boot_p:.4e}")
+        print(f"  Significant (p < 0.05): {'YES' if delong_p < 0.05 else 'NO'}")
 
     return comparisons
 
