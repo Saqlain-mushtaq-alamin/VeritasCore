@@ -144,18 +144,17 @@ class RetrievalVerifier:
 
 ---
 
-### 5. Consistency Verifier (`veritascore.scorer`)
+### 5. Semantic Consistency Checker (`veritascore.verifier`)
 
-**Purpose**: Estimate claim consistency by checking whether the LLM produces the same claim across multiple stochastic re-samples.
+**Purpose**: Detect off-topic or non-responsive claims by assessing semantic relevance using dense sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`, ~80MB). A claim can be factual and supported by NLI or retrieval, yet completely fail to answer the user's query—this module verifies relevance and internal coherence rather than factual truth.
 
-**Algorithm**:
-1. Re-prompt the LLM `n` times (default n=5) at temperature > 0
-2. Extract the target claim from each response
-3. Use NLI to compare claim against each re-sampled response
-4. Consistency score = mean entailment probability across re-samples
+**Algorithm & Signals**:
+1. **Query-Claim Relevance**: Cosine similarity between query and claim embeddings ($[0.0, 1.0]$) to confirm the claim directly addresses the prompt.
+2. **Claim-Claim Coherence**: Average pairwise cosine similarity among all extracted claims ($[-1.0, 1.0]$) to detect internally contradictory or topic-scattered outputs.
+3. **Response-Query Relevance**: Global cosine similarity between the full LLM response and the user query ($[-1.0, 1.0]$).
 
-High consistency → claim likely reliable.
-Low consistency → LLM is uncertain → possible hallucination.
+High consistency → claim is topical, responsive, and coherent with surrounding claims.  
+Low consistency → claim is off-topic, evasive, or uncoordinated with the rest of the response.
 
 ---
 
@@ -248,6 +247,8 @@ class VerificationReport:
 
 | Model | Task | Size | VRAM |
 |-------|------|------|------|
-| `cross-encoder/nli-deberta-v3-base` | NLI | ~400 MB | ~1.5 GB |
-| `llama3.2` (Ollama) | Decomposer | ~2 GB | ~4 GB |
-| Fusion model | Scoring | < 1 MB | CPU |
+| `cross-encoder/nli-deberta-v3-base` | NLI Verifier | ~400 MB | ~1.5 GB |
+| `sentence-transformers/all-MiniLM-L6-v2` | Consistency Checker | ~80 MB | ~100 MB |
+| `microsoft/Phi-3-mini-4k-instruct` | Decomposer (LLM) | ~4 GB (fp16) | ~4 GB |
+| `Qwen/Qwen2.5-3B-Instruct` | Decomposer Lite (fallback) | ~3 GB (fp16) | ~3 GB |
+| Fusion model (`scikit-learn`) | Multi-Signal Scoring | < 1 MB | CPU |
