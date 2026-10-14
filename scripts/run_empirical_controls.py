@@ -156,8 +156,11 @@ def run_fever_context_audit(n_samples: int = 20, seed: int = 42) -> list[dict[st
     ds = load_from_disk(str(path))
     raw_split = ds["validation"] if "validation" in ds else next(iter(ds.values()))
 
-    # Filter non-NEI
-    valid_rows = [r for r in raw_split if r.get("label") in ("SUPPORTS", "REFUTES")]
+    # Filter non-NEI with non-empty evidence
+    valid_rows = [
+        r for r in raw_split
+        if r.get("label") in ("SUPPORTS", "REFUTES") and r.get("evidence")
+    ]
     rng = random.Random(seed)
     sampled_rows = rng.sample(valid_rows, min(n_samples, len(valid_rows)))
 
@@ -166,19 +169,31 @@ def run_fever_context_audit(n_samples: int = 20, seed: int = 42) -> list[dict[st
         raw_evidence = row.get("evidence", [])
         evidence_triples = []
         extracted_sentences = []
-        for group in raw_evidence:
-            if isinstance(group, list):
-                for triple in group:
-                    if isinstance(triple, (list, tuple)) and len(triple) >= 3:
-                        wiki_page = str(triple[0])
-                        sent_id = str(triple[1])
-                        sent_text = str(triple[2])
-                        evidence_triples.append({
-                            "wiki_page": wiki_page,
-                            "sent_id": sent_id,
-                            "sent_text": sent_text,
-                        })
+        for item in raw_evidence:
+            if isinstance(item, (list, tuple)) and len(item) >= 3:
+                # Direct triple: [wiki_page, sent_id, sent_text]
+                if isinstance(item[0], str) and isinstance(item[2], str):
+                    wiki_page = str(item[0])
+                    sent_id = str(item[1])
+                    sent_text = str(item[2])
+                    evidence_triples.append({
+                        "wiki_page": wiki_page,
+                        "sent_id": sent_id,
+                        "sent_text": sent_text,
+                    })
+                    if sent_text:
                         extracted_sentences.append(sent_text)
+                elif isinstance(item[0], (list, tuple)):
+                    # Nested group: [[wiki_page, sent_id, sent_text]]
+                    for sub in item:
+                        if isinstance(sub, (list, tuple)) and len(sub) >= 3:
+                            evidence_triples.append({
+                                "wiki_page": str(sub[0]),
+                                "sent_id": str(sub[1]),
+                                "sent_text": str(sub[2]),
+                            })
+                            if len(sub) > 2 and sub[2]:
+                                extracted_sentences.append(str(sub[2]))
 
         full_context = " ".join(extracted_sentences)
         has_real_text = len(full_context.split()) >= 4
