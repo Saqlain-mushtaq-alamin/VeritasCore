@@ -150,17 +150,18 @@ def generate_table_calibration() -> str:
     """Generate Table 3: Calibration and Error Analysis (Phase R7)."""
     calib = load_json(CALIB_DIR / "calibration_report.json")
     rows = []
-    for ds_key, data in calib.items():
-        name = data.get("dataset_name", ds_key)
+    items = calib if isinstance(calib, list) else calib.values()
+    for data in items:
+        name = data.get("dataset_name", "")
         raw_brier = data.get("brier_raw", 0.0)
         cal_brier = data.get("brier_calibrated", 0.0)
         raw_ece = data.get("ece_raw", 0.0)
         cal_ece = data.get("ece_calibrated", 0.0)
         auroc = data.get("auroc", 0.0)
-        err_rate = data.get("error_rate", 0.0)
+        f1 = data.get("f1", 0.0)
         rows.append(
-            f"| {name} | {auroc:.4f} | {raw_brier:.4f} | **{cal_brier:.4f}** | "
-            f"{raw_ece:.4f} | **{cal_ece:.4f}** | {err_rate * 100:.1f}% |"
+            f"| {name} | {auroc:.4f} | {f1:.4f} | {raw_brier:.4f} | **{cal_brier:.4f}** | "
+            f"{raw_ece:.4f} | **{cal_ece:.4f}** |"
         )
 
     table_rows = "\n".join(rows)
@@ -168,8 +169,8 @@ def generate_table_calibration() -> str:
 
 > **Protocol:** Evaluated on held-out test split (n=500 per dataset) with Platt scaling fitted on disjoint tuning split.
 
-| Dataset | AUROC | Raw Brier | Calibrated Brier | Raw ECE | Calibrated ECE | Error Rate |
-|---------|:-----:|:---------:|:----------------:|:-------:|:--------------:|:----------:|
+| Dataset | AUROC | F1 | Raw Brier | Calibrated Brier | Raw ECE | Calibrated ECE |
+|---------|:-----:|:--:|:---------:|:----------------:|:-------:|:--------------:|
 {table_rows}
 
 *Calibration diagrams:*
