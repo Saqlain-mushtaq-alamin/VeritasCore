@@ -203,6 +203,7 @@ class NLIVerifier(BaseVerifier):
             numpy array of shape (3,): [contradiction, neutral, entailment]
             probabilities, reordered according to the discovered label index.
         """
+        self._load_model()
         import numpy as np
         import torch
 
