@@ -140,79 +140,86 @@ ABLATION_CONFIGS: list[dict[str, Any]] = [
 # Dataset loaders
 # ---------------------------------------------------------------------------
 
-def load_halueval_qa(n: int) -> list[dict[str, Any]]:
-    """Load HaluEval QA samples."""
-    from datasets import load_from_disk
+def load_halueval_qa(n: int, seed: int = 42) -> list[dict[str, Any]]:
+    """Load HaluEval QA samples from held-out evaluation split."""
+    try:
+        from run_benchmarks_v2 import load_halueval_split
+        return load_halueval_split(split="eval", n=n, grid_n=min(n, 500), seed=seed)
+    except Exception:
+        from datasets import load_from_disk
 
-    path = DATA_DIR / "halueval" / "qa_samples"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"HaluEval not found at {path}. "
-            "Run: python scripts/download_datasets.py --only halueval"
-        )
-    ds = load_from_disk(str(path))
-    split = ds["data"] if "data" in ds else next(iter(ds.values()))
+        path = DATA_DIR / "halueval" / "qa_samples"
+        if not path.exists():
+            raise FileNotFoundError(
+                f"HaluEval not found at {path}. "
+                "Run: python scripts/download_datasets.py --only halueval"
+            )
+        ds = load_from_disk(str(path))
+        split = ds["data"] if "data" in ds else next(iter(ds.values()))
 
-    samples = []
-    for i, row in enumerate(split):
-        if i >= n:
-            break
-        knowledge = row.get("knowledge", "")
-        question = row.get("question", "")
-        answer = row.get("answer", "")
-        hallucination = str(row.get("hallucination", "")).strip().lower()
-        if not knowledge or not answer:
-            continue
-        claim_text = f"Q: {question}  A: {answer}" if question else answer
-        label = 1 if hallucination == "yes" else 0  # 1 = hallucinated (positive class)
-        samples.append({
-            "claim_text": claim_text,
-            "context": knowledge,
-            "label": label,
-        })
-    return samples
+        samples = []
+        for i, row in enumerate(split):
+            if i >= n:
+                break
+            knowledge = row.get("knowledge", "")
+            question = row.get("question", "")
+            answer = row.get("answer", "")
+            hallucination = str(row.get("hallucination", "")).strip().lower()
+            if not knowledge or not answer:
+                continue
+            claim_text = f"Q: {question}  A: {answer}" if question else answer
+            label = 1 if hallucination == "yes" else 0  # 1 = hallucinated (positive class)
+            samples.append({
+                "claim_text": claim_text,
+                "context": knowledge,
+                "label": label,
+            })
+        return samples
 
 
 def load_fever(n: int) -> list[dict[str, Any]]:
     """Load FEVER validation samples (SUPPORTS=0, REFUTES=1), excluding NEI."""
-    from datasets import load_from_disk
+    try:
+        from run_benchmarks_v2 import load_fever_fixed
+        return load_fever_fixed(n=n)
+    except Exception:
+        from datasets import load_from_disk
 
-    path = DATA_DIR / "fever" / "validation"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"FEVER not found at {path}. "
-            "Run: python scripts/download_datasets.py --only fever"
-        )
-    ds = load_from_disk(str(path))
+        path = DATA_DIR / "fever" / "validation"
+        if not path.exists():
+            raise FileNotFoundError(
+                f"FEVER not found at {path}. "
+                "Run: python scripts/download_datasets.py --only fever"
+            )
+        ds = load_from_disk(str(path))
 
-    label_map = {"SUPPORTS": 0, "REFUTES": 1}
-    samples = []
-    for row in ds:
-        if len(samples) >= n:
-            break
-        lbl = row.get("label", "")
-        if lbl not in label_map:
-            continue
-        claim = row.get("claim", "")
-        # Flatten evidence passages
-        evidence_parts = []
-        for ev_group in row.get("evidence", []):
-            for ev in (ev_group if isinstance(ev_group, list) else [ev_group]):
-                if isinstance(ev, dict):
-                    text = ev.get("text", "") or ev.get("evidence", "")
-                    if text:
-                        evidence_parts.append(str(text))
-                elif isinstance(ev, str) and ev:
-                    evidence_parts.append(ev)
-        context = " ".join(evidence_parts[:5])
-        if not claim:
-            continue
-        samples.append({
-            "claim_text": claim,
-            "context": context,
-            "label": label_map[lbl],
-        })
-    return samples
+        label_map = {"SUPPORTS": 0, "REFUTES": 1}
+        samples = []
+        for row in ds:
+            if len(samples) >= n:
+                break
+            lbl = row.get("label", "")
+            if lbl not in label_map:
+                continue
+            claim = row.get("claim", "")
+            evidence_parts = []
+            for ev_group in row.get("evidence", []):
+                for ev in (ev_group if isinstance(ev_group, list) else [ev_group]):
+                    if isinstance(ev, dict):
+                        text = ev.get("text", "") or ev.get("evidence", "")
+                        if text:
+                            evidence_parts.append(str(text))
+                    elif isinstance(ev, str) and ev:
+                        evidence_parts.append(ev)
+            context = " ".join(evidence_parts[:5])
+            if not claim:
+                continue
+            samples.append({
+                "claim_text": claim,
+                "context": context,
+                "label": label_map[lbl],
+            })
+        return samples
 
 
 # ---------------------------------------------------------------------------
@@ -635,6 +642,10 @@ def main() -> None:
         help="Retrain fusion model on a small synthetic dataset before ablation"
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--output", type=str, default=str(RESULTS_DIR),
+        help="Directory to write ablation results (default: results/ablation)"
+    )
     args = parser.parse_args()
 
     print("=" * 70)
@@ -690,7 +701,7 @@ def main() -> None:
     for ds_name in args.datasets:
         print(f"\n  Loading {ds_name} (n={args.n})...")
         if ds_name == "halueval":
-            raw = load_halueval_qa(args.n)
+            raw = load_halueval_qa(args.n, seed=args.seed)
         else:
             raw = load_fever(args.n)
         print(f"  Loaded {len(raw)} samples (label distribution: "
@@ -742,7 +753,8 @@ def main() -> None:
 
     # ── Output ────────────────────────────────────────────────────────────
     print("\n[Step 6] Writing results...")
-    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(args.output)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     # JSON results
     json_output: dict[str, Any] = {
@@ -772,7 +784,7 @@ def main() -> None:
             for r in results
         ]
 
-    json_path = RESULTS_DIR / "ablation_results.json"
+    json_path = out_dir / "ablation_results.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(json_output, f, indent=2)
     print(f"  JSON results: {json_path}")
@@ -783,7 +795,7 @@ def main() -> None:
         retrieval_is_simulated=retrieval_is_simulated,
         n_bootstrap=args.n_bootstrap,
     )
-    md_path = RESULTS_DIR / "ablation_table.md"
+    md_path = out_dir / "ablation_table.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md_table)
     print(f"  Markdown table: {md_path}")

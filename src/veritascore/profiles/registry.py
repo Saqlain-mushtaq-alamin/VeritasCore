@@ -9,7 +9,7 @@ from veritascore.profiles.base import DomainProfile
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_PROFILES_DIR = Path(__file__).parent.parent.parent.parent.parent / "configs" / "profiles"
+DEFAULT_PROFILES_DIR = Path(__file__).resolve().parents[3] / "configs" / "profiles"
 
 
 class ProfileRegistry:
