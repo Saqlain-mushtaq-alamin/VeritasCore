@@ -183,10 +183,10 @@ def generate_table_latency() -> str:
     """Generate Tables 5a-5d: Latency and Hardware Analysis (Phase R8)."""
     lat = load_json(LATENCY_PATH)
     hw = lat.get("hardware", {})
-    t5a = lat.get("table_5a_per_component", [])
-    t5b = lat.get("table_5b_e2e_pipeline", [])
-    t5c = lat.get("table_5c_cold_start", [])
-    t5d = lat.get("table_5d_batch_scaling", [])
+    t5a = lat.get("component_results", [])
+    t5b = lat.get("e2e_results", [])
+    t5c = lat.get("cold_start_results", [])
+    t5d = lat.get("batch_scale_results", [])
 
     rows_5a = "\n".join(
         f"| {c['component']} | {c['device']} | {c['precision']} | {c['batch_size']} | "
@@ -194,8 +194,8 @@ def generate_table_latency() -> str:
         for c in t5a
     )
     rows_5b = "\n".join(
-        f"| {p['pipeline_mode']} | {p['device']} | {p['n_claims']} | "
-        f"{p['avg_total_ms']:.1f} | {p['per_claim_ms']:.1f} | {p['gpu_memory_mb']:.0f} |"
+        f"| {p['mode']} | {p['device']} | {p['n_claims']} | "
+        f"{p['total_ms']:.1f} | {p['per_claim_ms']:.1f} | {p['gpu_memory_mb']:.0f} |"
         for p in t5b
     )
     rows_5c = "\n".join(
@@ -203,17 +203,17 @@ def generate_table_latency() -> str:
         for m in t5c
     )
     rows_5d = "\n".join(
-        f"| {b['batch_size']} | {b['avg_per_claim_ms']:.1f} | {b['throughput_per_sec']:.2f} | {b['gpu_memory_mb']:.0f} |"
+        f"| {b['batch_size']} | {b['avg_ms_per_claim']:.1f} | {b['throughput_per_sec']:.2f} | {b['gpu_memory_mb']:.0f} |"
         for b in t5d
     )
 
     return f"""### Hardware Disclosure (Phase R8 — Paper Section 4.4)
 
-- **CPU:** {hw.get('cpu', 'AMD64')} ({hw.get('cpu_cores', 12)} cores, {hw.get('cpu_threads', 24)} threads)
-- **GPU:** {hw.get('gpu_name', 'NVIDIA GeForce RTX 4060')} ({hw.get('gpu_vram_gb', 8.0):.1f} GB VRAM)
+- **CPU:** {hw.get('cpu', 'AMD64')} ({hw.get('cpu_cores_physical', 12)} cores, {hw.get('cpu_threads_logical', 24)} threads)
+- **GPU:** {hw.get('gpu', 'NVIDIA GeForce RTX 4060')} ({hw.get('gpu_vram_gb', 8.0):.1f} GB VRAM)
 - **RAM:** {hw.get('ram_gb', 31.1):.1f} GB
 - **OS:** {hw.get('os', 'Windows')}
-- **Software:** Python {hw.get('python_version', '3.11')}, PyTorch {hw.get('torch_version', '2.5.1')}, CUDA {hw.get('cuda_version', '12.1')}
+- **Software:** Python {hw.get('python', '3.11')}, PyTorch {hw.get('pytorch_version', '2.5.1')}, CUDA {hw.get('cuda_version', '12.1')}
 
 ### Table 5a: Per-Component Latency
 | Component | Device | Precision | Batch | Avg (ms) | P95 (ms) | Throughput (claims/s) | GPU Mem (MB) |
