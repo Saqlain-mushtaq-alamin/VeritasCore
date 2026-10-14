@@ -888,7 +888,6 @@ def main() -> None:
         print("\n✓ Phase R3 evaluation complete.")
         print("  Next: run significance tests with --significance-test flag")
         print("        run ablation study (Phase R5)\n")
-        print("        run ablation study (Phase R5)\n")
 
 
 if __name__ == "__main__":
