@@ -401,6 +401,9 @@ def main() -> None:
     n_aligned: dict[str, int] = {}
 
     # Cohen's kappa (2 annotators) or extend to Fleiss' (3+)
+    pa_results: dict[str, float] | None = None
+    ac1_results: dict[str, float] | None = None
+
     if len(annotator_ids) >= 3 and annotator_ids[2] in by_annotator:
         ann_c = annotator_ids[2]
         c_rows = by_annotator[ann_c]
@@ -429,17 +432,25 @@ def main() -> None:
 
     else:
         kappa_type = "Cohen's κ"
+        pa_results = {}
+        ac1_results = {}
         for crit in CRITERIA:
             ya, yb = aligned[crit]
             kappa_results[crit] = cohen_kappa(ya, yb) if ya else float("nan")
+            pa_results[crit] = percent_agreement(ya, yb) if ya else float("nan")
+            ac1_results[crit] = gwet_ac1(ya, yb) if ya else float("nan")
             n_aligned[crit] = len(ya)
         annotators_used = [ann_a, ann_b]
 
-    all_pass = print_iaa_report(kappa_results, n_aligned, annotators_used, kappa_type)
+    all_pass = print_iaa_report(
+        kappa_results, n_aligned, annotators_used, kappa_type,
+        pa_results=pa_results, ac1_results=ac1_results,
+    )
 
     write_report_json(
         kappa_results, n_aligned, annotators_used, kappa_type, all_pass,
         Path(args.output_json),
+        pa_results=pa_results, ac1_results=ac1_results,
     )
 
     sys.exit(0 if all_pass else 1)
