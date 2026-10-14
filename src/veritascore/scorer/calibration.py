@@ -51,7 +51,7 @@ class CalibrationModule:
     def __init__(self) -> None:
         self._calibrator: Any = None
 
-    def fit(self, raw_scores: np.ndarray, labels: np.ndarray) -> None:
+    def fit(self, raw_scores: np.ndarray[Any, Any], labels: np.ndarray[Any, Any]) -> None:
         """Fit the Platt scaling calibrator.
 
         Args:
@@ -86,7 +86,7 @@ class CalibrationModule:
         self._calibrator.fit(raw_scores.reshape(-1, 1), labels)
         logger.info("Calibrator fit on %d samples", len(raw_scores))
 
-    def calibrate(self, raw_scores: np.ndarray) -> np.ndarray:
+    def calibrate(self, raw_scores: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
         """Apply the fitted calibration mapping to raw scores.
 
         Args:
@@ -105,7 +105,7 @@ class CalibrationModule:
         raw_scores = np.asarray(raw_scores, dtype=float)
         original_shape = raw_scores.shape
         flat = raw_scores.reshape(-1, 1)
-        calibrated: np.ndarray = self._calibrator.predict_proba(flat)[:, 1]
+        calibrated: np.ndarray[Any, Any] = self._calibrator.predict_proba(flat)[:, 1]
         return calibrated.reshape(original_shape)
 
     def calibrate_one(self, raw_score: float) -> float:

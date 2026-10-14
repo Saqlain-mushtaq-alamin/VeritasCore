@@ -203,8 +203,8 @@ class FusionScorer(BaseScorer):
 
     @staticmethod
     def train(
-        X: np.ndarray,
-        y: np.ndarray,
+        X: np.ndarray[Any, Any],
+        y: np.ndarray[Any, Any],
         save_dir: Path = Path("models/fusion"),
         model_type: str = "logistic_regression",
         calibration_holdout_fraction: float = 0.2,

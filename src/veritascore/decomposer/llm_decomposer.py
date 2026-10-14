@@ -365,10 +365,7 @@ class LLMDecomposer(BaseDecomposer):
 
         # Single word / very short non-factual response
         words = stripped.rstrip(".!?").split()
-        if len(words) <= 1:
-            return True
-
-        return False
+        return len(words) <= 1
 
     # ── Inference ─────────────────────────────────────────────────────────────
 
