@@ -82,10 +82,14 @@ def generate_table1(commit: str) -> str:
         sc_fever_ci.get("auroc_ci_upper", summac_fever["auroc"]),
     )
 
-    halu_p_delong = sig["halueval"]["delong"]["p_value"]
-    halu_p_boot = sig["halueval"]["paired_bootstrap"]["p_value"]
-    fever_p_delong = sig["fever"]["delong"]["p_value"]
-    fever_p_boot = sig["fever"]["paired_bootstrap"]["p_value"]
+    sig_by_ds = {item["dataset"]: item for item in sig}
+    halu_sig = sig_by_ds["HaluEval QA"]
+    fever_sig = sig_by_ds["FEVER (validation)"]
+
+    halu_p_delong = halu_sig["delong_p_value"]
+    halu_p_boot = halu_sig["paired_bootstrap_p_value"]
+    fever_p_delong = fever_sig["delong_p_value"]
+    fever_p_boot = fever_sig["paired_bootstrap_p_value"]
 
     return f"""### Table 1: NLI Quality (Oracle Evidence)
 
@@ -99,7 +103,7 @@ def generate_table1(commit: str) -> str:
 | **VeritasCore NLI** | **{vc_halu_str}** | **{vc_fever_str}** | Oracle | 1,500 / 1,000 | **p < 0.001** (HaluEval) / **p < 0.0001** (FEVER) |
 
 *†SummaC ZS algorithm (Laban et al. 2022 §3.1) evaluated with fixed entailment index (`id2label[1] == 'entailment'`) on the exact same disjoint held-out samples in identical order.*
-*Statistical Significance: HaluEval DeLong z = {sig['halueval']['delong']['z']:.4f} (p = {halu_p_delong:.4e}), Paired Bootstrap p = {halu_p_boot:.4f}; FEVER DeLong z = {sig['fever']['delong']['z']:.4f} (p = {fever_p_delong:.4e}), Paired Bootstrap p = {fever_p_boot:.4f}.*
+*Statistical Significance: HaluEval DeLong z = {halu_sig['delong_z']:.4f} (p = {halu_p_delong:.4e}), Paired Bootstrap p = {halu_p_boot:.4f}; FEVER DeLong z = {fever_sig['delong_z']:.4f} (p = {fever_p_delong:.4e}), Paired Bootstrap p = {fever_p_boot:.4f}.*
 """
 
 
