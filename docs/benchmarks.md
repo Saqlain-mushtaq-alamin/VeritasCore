@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `d60efbee123f`).
+> All numbers generated automatically from saved raw experimental runs (commit `d0b71707b25d`).
 
 ---
 
@@ -55,7 +55,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, 2,000 resamples).
-> *Git commit:* `d60efbee123f`
+> *Git commit:* `d0b71707b25d`
 
 | Method | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:-----------------------:|:--------------------:|----------|:--------------------:|:----------------------:|
@@ -72,7 +72,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Evaluates the contribution of each signal combination on the disjoint held-out evaluation sets.
 > **All numbers are MEASURED with LIVE web retrieval** (Tavily Search API). Bootstrapped 95% CIs with 2,000 resamples.
-> *Git commit:* `d60efbee123f`
+> *Git commit:* `d0b71707b25d`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
@@ -114,25 +114,34 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 - **GPU:** NVIDIA GeForce RTX 4060 (8.0 GB VRAM)
 - **RAM:** 31.1 GB
 - **OS:** Windows 10.0.26200
-- **Software:** Python 3.11, PyTorch 2.5.1, CUDA 12.1
+- **Software:** Python 3.11.9, PyTorch 2.5.1+cu121, CUDA 12.1
 
 ### Table 5a: Per-Component Latency
 | Component | Device | Precision | Batch | Avg (ms) | P95 (ms) | Throughput (claims/s) | GPU Mem (MB) |
 |-----------|--------|:---------:|:-----:|:--------:|:--------:|:---------------------:|:------------:|
-
+| Decomposer (Rule) | cpu | -- | 1 | 0.2 | 0.2 | 5689.1 | 0 |
+| Fusion Scorer | cpu | -- | 1 | 0.1 | 0.1 | 9403.8 | 0 |
+| NLI Verifier | cuda | fp16 | 1 | 48.3 | 54.8 | 20.7 | 722 |
 
 ### Table 5b: End-to-End Pipeline Latency
 | Pipeline Mode | Device | Claims | Total (ms) | Per-Claim (ms) | GPU Mem (MB) |
 |---------------|:------:|:------:|:----------:|:--------------:|:------------:|
-
+| Grounded (RuleDecomposer + NLI) | cuda | 1 | 24.7 | 24.7 | 726 |
+| Grounded (RuleDecomposer + NLI) | cuda | 3 | 196.3 | 65.4 | 726 |
+| Grounded (RuleDecomposer + NLI) | cuda | 5 | 147.9 | 29.6 | 726 |
 
 ### Table 5c: Model Cold-Start Loading Times
 | Model | Load Time (s) | GPU Memory (MB) |
 |-------|:-------------:|:---------------:|
-
+| RuleDecomposer (CPU, no model) | 0.001 | 0 |
+| FusionScorer (CPU, no model) | 0.001 | 0 |
+| DeBERTa-v3-base (NLI) | 1.988 | 722 |
 
 ### Table 5d: NLI Batch-Size Scaling Analysis
 | Batch Size | Avg Per-Claim (ms) | Throughput (claims/s) | GPU Memory (MB) |
 |:----------:|:------------------:|:---------------------:|:---------------:|
-
+| 1 | 49.9 | 20.04 | 742 |
+| 2 | 43.4 | 23.06 | 742 |
+| 4 | 24.6 | 40.72 | 742 |
+| 8 | 24.1 | 41.58 | 742 |
 
