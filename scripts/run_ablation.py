@@ -144,7 +144,15 @@ def load_halueval_qa(n: int, seed: int = 42) -> list[dict[str, Any]]:
     """Load HaluEval QA samples from held-out evaluation split."""
     try:
         from run_benchmarks_v2 import load_halueval_split
-        return load_halueval_split(split="eval", n=n, grid_n=min(n, 500), seed=seed)
+        samples = load_halueval_split(split="eval", n=n, grid_n=min(n, 500), seed=seed)
+        return [
+            {
+                "claim_text": s["claim_text"],
+                "context": s["context"],
+                "label": 1 if s["label"] == "hallucinated" else 0,
+            }
+            for s in samples
+        ]
     except Exception:
         from datasets import load_from_disk
 
@@ -181,7 +189,15 @@ def load_fever(n: int) -> list[dict[str, Any]]:
     """Load FEVER validation samples (SUPPORTS=0, REFUTES=1), excluding NEI."""
     try:
         from run_benchmarks_v2 import load_fever_fixed
-        return load_fever_fixed(n=n)
+        samples = load_fever_fixed(n=n)
+        return [
+            {
+                "claim_text": s["claim_text"],
+                "context": s["context"],
+                "label": 1 if s["label"] == "hallucinated" else 0,
+            }
+            for s in samples
+        ]
     except Exception:
         from datasets import load_from_disk
 
