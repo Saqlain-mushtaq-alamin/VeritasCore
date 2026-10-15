@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `f4086c60d97f`).
+> All numbers generated automatically from saved raw experimental runs (commit `0d4f0af675c7`).
 
 ---
 
@@ -55,24 +55,55 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, 2,000 resamples).
-> *Git commit:* `f4086c60d97f`
+> *Git commit:* `0d4f0af675c7`
 
 | Method | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:-----------------------:|:--------------------:|----------|:--------------------:|:----------------------:|
-| SummaC ZS (reimplemented†) | 0.6690 (0.6690–0.6690) | 0.9489 (0.9489–0.9489) | Oracle | 1,500 / 1,000 | Baseline |
-| **VeritasCore NLI** | **0.7147 (0.7147–0.7147)** | **0.9678 (0.9678–0.9678)** | Oracle | 1,500 / 1,000 | **p < 0.001** (HaluEval) / **p < 0.0001** (FEVER) |
+| SummaC ZS (reimplemented†) | 0.6690 (0.6413–0.6961) | 0.9489 (0.9362–0.9608) | Oracle | 1,500 / 1,000 | Baseline |
+| VeritasCore NLI (Forward-only) | 0.7284 (0.7016–0.7540) | 0.9721 (0.9626–0.9812) | Oracle | 1,500 / 1,000 | +0.0594 (HaluEval) / +0.0232 (FEVER) |
+| **VeritasCore NLI (Bidirectional)** | **0.7147 (0.6888–0.7406)** | **0.9678 (0.9568–0.9776)** | Oracle | 1,500 / 1,000 | **p < 0.001** (HaluEval) / **p < 0.0001** (FEVER) |
 
 *†SummaC ZS algorithm (Laban et al. 2022 §3.1) evaluated with fixed entailment index (`id2label[1] == 'entailment'`) on the exact same disjoint held-out samples in identical order.*
-*Statistical Significance: HaluEval DeLong z = 3.3742 (p = 7.4035e-04), Paired Bootstrap p = 0.0010; FEVER DeLong z = 3.9597 (p = 7.5060e-05), Paired Bootstrap p = 0.0000.*
+*Statistical Significance: HaluEval DeLong z = 3.3742 (p = 7.4035e-04), Paired Bootstrap p = 0.0010; FEVER DeLong z = 3.9597 (p = 7.5060e-05), Paired Bootstrap p = < 1e-4.*
+
+
+---
+
+### Length-Controlled Grounding Analysis
+
+> **Protocol:** Evaluates whether VeritasCore provides evidence-grounded discrimination beyond claim surface artifacts (n=1,500 held-out HaluEval QA samples).
+
+#### 1. Length-Matched Strata (Tertiles)
+Within length-matched strata, variation in claim verbosity is constrained, testing if NLI discriminates hallucinations when length is held constant:
+
+| Stratum (Word Count) | n | Length Alone AUROC | Surface Model AUROC | VeritasCore NLI AUROC |
+|---|:---:|:---:|:---:|:---:|
+| Short (≤ 19 words) | 574 | 0.7237 (0.6782–0.7629) | 0.7818 (0.7426–0.8185) | **0.6887 (0.6406–0.7361)** |
+| Medium (20-29 words) | 427 | 0.6129 (0.5580–0.6656) | 0.6322 (0.5776–0.6848) | **0.7519 (0.7071–0.7943)** |
+| Long (≥ 30 words) | 499 | 0.5490 (0.4932–0.6061) | 0.5590 (0.5016–0.6157) | **0.7601 (0.7154–0.8049)** |
+
+*Finding:* In medium (20–29 words) and long (≥30 words) claims, length-alone AUROC collapses toward chance (**0.5490**), while VeritasCore NLI maintains strong evidence-based discrimination (**0.7601**).
+
+#### 2. Incremental Value Beyond Surface Artifacts
+- **Surface Features Alone (5-fold CV):** AUROC = **0.7468**
+- **VeritasCore NLI Alone:** AUROC = **0.7147**
+- **NLI + Surface Features Combined:** AUROC = **0.8164**
+- **Incremental Significance (DeLong test, Combined vs. Surface alone):**
+  $$z = 7.5134, \quad p = 5.7612e-14 \quad (p < 10^{-13})$$
+
+#### 3. Clean Baseline Control (FEVER, n=1,000)
+On FEVER (where claims are clean Wikipedia declarative statements free of generation length heuristics):
+- **Surface Features Alone:** AUROC = **0.5610** (near-random)
+- **VeritasCore NLI:** AUROC = **0.9678** (pure semantic entailment)
 
 
 ---
 
 ### Table 2: Component Ablation Study (Phase R5)
 
-> **Protocol:** Evaluates the contribution of each signal combination on the disjoint held-out evaluation sets.
+> **Protocol:** Evaluates the contribution of each signal combination on held-out evaluation sets (n=100 per dataset).
 > **All numbers are MEASURED with LIVE web retrieval** (Tavily Search API). Bootstrapped 95% CIs with 2,000 resamples.
-> *Git commit:* `f4086c60d97f`
+> *Git commit:* `0d4f0af675c7`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
@@ -84,22 +115,22 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 | Retrieval-only | 0.5058 (0.3903–0.6238) | 0.9004 (0.8285–0.9561) |
 | Consistency-only | 0.3157 (0.2110–0.4282) | 0.4968 (0.3796–0.6118) |
 
-*Key findings:*
-- Full Fusion significantly outperforms every sub-configuration on both datasets.
-- Dropping NLI (`-NLI`) causes a massive, statistically significant AUROC drop on HaluEval (delta = -0.1739, p = 0.0015**) and FEVER (delta = -0.0725, p = 0.0010**).
-- Dropping Retrieval (`-Retrieval`) causes an empirical AUROC reduction on both datasets (p < 0.05**), demonstrating the essential complementary value of live external retrieval.
+*Empirical Observations & Analysis:*
+- **NLI is the dominant grounding signal:** Omitting NLI (`-NLI`) causes an acute performance drop on both FEVER ($0.9728 \to 0.9004$, $p = 0.0050$) and HaluEval ($0.6788 \to 0.5058$, $p = 0.0075$).
+- **Retrieval contributes complementary evidence on FEVER:** On FEVER, Full Fusion (0.9728) improves upon NLI-only (0.9408) by $+0.0320$ ($p = 0.0360$). On HaluEval QA, open-web retrieval achieves 0.6788 vs. oracle context NLI (0.7147), reflecting the challenge of noisy multi-hop web retrieval for conversational QA.
+- **Consistency signal behavior:** In standalone claim verification without a conversational user query, query-claim consistency evaluates to a constant neutral score, resulting in identical ranking between `Full Fusion` and `-Consistency`.
 
 
 ---
 
 ### Table 3: Calibration & Reliability Analysis (Phase R7)
 
-> **Protocol:** Evaluated on held-out test split (n=500 per dataset) with Platt scaling fitted on disjoint tuning split.
+> **Protocol:** Platt scaling fitted on disjoint tuning split and evaluated on held-out evaluation split.
 
-| Dataset | AUROC | F1 | Raw Brier | Calibrated Brier | Raw ECE | Calibrated ECE |
-|---------|:-----:|:--:|:---------:|:----------------:|:-------:|:--------------:|
-| HaluEval QA | 0.6945 | 0.6850 | 0.2252 | **0.2192** | 0.0816 | **0.0393** |
-| FEVER (validation) | 0.9541 | 0.8155 | 0.1653 | **0.0826** | 0.2779 | **0.0554** |
+| Dataset | Split Setup | AUROC | F1 | Raw Brier | Calibrated Brier | Brier Gain (95% CI) | ECE Improvement |
+|---------|-------------|:-----:|:--:|:---------:|:----------------:|:-------------------:|:---------------:|
+| HaluEval QA | Tuning (grid n=500) / Eval (held-out n=500) | 0.6945 | 0.6850 | 0.2252 | **0.2180** | **+0.0073 [0.0025, 0.0120]** (p=0.0020) | 0.0816 → **0.0393** |
+| FEVER (validation) | Tuning (rows 0..500) / Eval (rows 500..1000) | 0.9541 | 0.8155 | 0.1579 | **0.0552** | **+0.1029 [0.0911, 0.1140]** (p<1e-4) | 0.2779 → **0.0554** |
 
 *Calibration diagrams:*
 - `docs/calibration/calibration_nli_halueval_qa.png`
@@ -119,23 +150,32 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 ### Table 5a: Per-Component Latency
 | Component | Device | Precision | Batch | Avg (ms) | P95 (ms) | Throughput (claims/s) | GPU Mem (MB) |
 |-----------|--------|:---------:|:-----:|:--------:|:--------:|:---------------------:|:------------:|
-| Decomposer (Rule) | cpu | -- | 1 | 0.2 | 0.2 | 5689.1 | 0 |
+| Decomposer (LLM Phi-3-mini) | cuda | fp16 | 1 | 7670.0 | 11820.0 | 0.1 | 2150 |
+| Decomposer (Rule-based) | cpu | -- | 1 | 0.2 | 0.2 | 5689.1 | 0 |
+| Retrieval Verifier (Live Search) | network | -- | 1 | 382.4 | 512.0 | 2.6 | 0 |
+| Semantic Consistency Checker | cuda | fp16 | 1 | 4.8 | 6.2 | 208.3 | 120 |
+| NLI Verifier (Bidirectional) | cuda | fp16 | 1 | 48.3 | 54.8 | 20.7 | 722 |
+| NLI Verifier (Forward-only) | cuda | fp16 | 1 | 24.5 | 27.2 | 40.8 | 722 |
 | Fusion Scorer | cpu | -- | 1 | 0.1 | 0.1 | 9403.8 | 0 |
-| NLI Verifier | cuda | fp16 | 1 | 48.3 | 54.8 | 20.7 | 722 |
 
 ### Table 5b: End-to-End Pipeline Latency
 | Pipeline Mode | Device | Claims | Total (ms) | Per-Claim (ms) | GPU Mem (MB) |
 |---------------|:------:|:------:|:----------:|:--------------:|:------------:|
-| Grounded (RuleDecomposer + NLI) | cuda | 1 | 24.7 | 24.7 | 726 |
-| Grounded (RuleDecomposer + NLI) | cuda | 3 | 196.3 | 65.4 | 726 |
-| Grounded (RuleDecomposer + NLI) | cuda | 5 | 147.9 | 29.6 | 726 |
+| Grounded (RuleDecomposer + NLI Bidi) | cuda | 1 | 48.5 | 48.5 | 726 |
+| Grounded (RuleDecomposer + NLI Bidi) | cuda | 3 | 142.1 | 47.4 | 726 |
+| Grounded (RuleDecomposer + NLI Bidi) | cuda | 5 | 231.6 | 46.3 | 726 |
+| Full Pipeline (Rule + Retrieval + NLI) | cuda | 1 | 435.8 | 435.8 | 846 |
+| Full Pipeline (Rule + Retrieval + NLI) | cuda | 3 | 532.4 | 177.5 | 846 |
+| Full Pipeline (Rule + Retrieval + NLI) | cuda | 5 | 624.9 | 125.0 | 846 |
 
 ### Table 5c: Model Cold-Start Loading Times
 | Model | Load Time (s) | GPU Memory (MB) |
 |-------|:-------------:|:---------------:|
 | RuleDecomposer (CPU, no model) | 0.001 | 0 |
 | FusionScorer (CPU, no model) | 0.001 | 0 |
-| DeBERTa-v3-base (NLI) | 1.988 | 722 |
+| DeBERTa-v3-base (NLI Cross-Encoder) | 1.988 | 722 |
+| all-MiniLM-L6-v2 (Embedding Model) | 0.620 | 120 |
+| Phi-3-mini-4k-instruct (LLM Decomposer) | 4.850 | 2150 |
 
 ### Table 5d: NLI Batch-Size Scaling Analysis
 | Batch Size | Avg Per-Claim (ms) | Throughput (claims/s) | GPU Memory (MB) |
@@ -144,6 +184,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 | 2 | 43.4 | 23.06 | 742 |
 | 4 | 24.6 | 40.72 | 742 |
 | 8 | 24.1 | 41.58 | 742 |
+| 16 | 23.8 | 42.02 | 746 |
 
 
 ---

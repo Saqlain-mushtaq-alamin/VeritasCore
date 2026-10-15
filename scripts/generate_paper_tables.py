@@ -42,6 +42,10 @@ def load_json(path: Path) -> dict:
         return json.load(f)
 
 
+def format_ci(mean: float, lower: float, upper: float) -> str:
+    return f"{mean:.4f} ({lower:.4f}–{upper:.4f})"
+
+
 def format_p_val(p: float) -> str:
     if p < 1e-4 or p == 0.0:
         return "< 1e-4"
@@ -161,7 +165,7 @@ def generate_table2_ablation(commit: str) -> str:
 
 def generate_table_length_control() -> str:
     """Generate Length-Controlled Strata and Incremental Grounding Analysis."""
-    path = SCRIPTS_DIR.parent / "docs" / "length_control_report.json"
+    path = ROOT / "docs" / "length_control_report.json"
     if not path.exists():
         return ""
     data = load_json(path)
