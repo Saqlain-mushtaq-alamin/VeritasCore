@@ -223,6 +223,16 @@ def _reset_gpu_peak() -> None:
         pass
 
 
+def _sync_cuda() -> None:
+    """Synchronize CUDA stream to ensure accurate wall-clock latency timing."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
+    except Exception:
+        pass
+
+
 def _detect_device() -> str:
     try:
         import torch
@@ -272,7 +282,7 @@ def benchmark_rule_decomposer(n_samples: int = 50) -> LatencyResult:
     throughput = 1000.0 / avg if avg > 0 else float("inf")
 
     result = LatencyResult(
-        component="Decomposer (Rule)",
+        component="Decomposer (Rule-based)",
         device="cpu",
         precision="--",
         batch_size=1,
@@ -343,23 +353,138 @@ def benchmark_fusion_scorer(n_samples: int = 100) -> LatencyResult:
         throughput_per_sec=throughput,
         gpu_memory_mb=0.0,
         cpu_memory_mb=_cpu_mem_mb(),
-        notes="Pure Python; no GPU/model; warm-up excluded",
+        notes="Pure Python / linear model; warm-up excluded",
     )
     print(f"    avg={result.avg_ms:.3f}ms  p95={result.p95_ms:.3f}ms  throughput={result.throughput_per_sec:.0f}/s")
+    return result
+
+
+def benchmark_consistency_checker(
+    n_samples: int = 50,
+    device: str | None = None,
+    precision: str | None = None,
+) -> LatencyResult:
+    """Benchmark SemanticConsistencyChecker (MiniLM) latency."""
+    device = device or _detect_device()
+    precision = precision or _detect_precision()
+    print(f"\n  [SemanticConsistencyChecker] Benchmarking {n_samples} claims (device={device}, precision={precision})...")
+
+    from veritascore.core.types import Claim
+    from veritascore.verifier.consistency import SemanticConsistencyChecker
+
+    _reset_gpu_peak()
+    checker = SemanticConsistencyChecker()
+    checker._load_model()
+
+    claim = Claim(
+        id="c_bench",
+        text="The Eiffel Tower is located in Paris, France.",
+        source_span=(0, 44),
+        source_text="The Eiffel Tower is located in Paris, France.",
+    )
+    query = "Where is the Eiffel Tower located?"
+
+    # Warm-up
+    _sync_cuda()
+    checker.score_claim(claim, query)
+    _sync_cuda()
+
+    gpu_mem = _gpu_mem_mb()
+    latencies: list[float] = []
+
+    for _ in range(n_samples):
+        _sync_cuda()
+        t0 = time.perf_counter()
+        checker.score_claim(claim, query)
+        _sync_cuda()
+        latencies.append((time.perf_counter() - t0) * 1000)
+
+    avg = mean(latencies)
+    throughput = 1000.0 / avg if avg > 0 else 0.0
+
+    result = LatencyResult(
+        component="Semantic Consistency Checker",
+        device=device,
+        precision=precision,
+        batch_size=1,
+        n_samples=n_samples,
+        avg_ms=avg,
+        p50_ms=_percentile(latencies, 50),
+        p95_ms=_percentile(latencies, 95),
+        p99_ms=_percentile(latencies, 99),
+        throughput_per_sec=throughput,
+        gpu_memory_mb=gpu_mem,
+        cpu_memory_mb=_cpu_mem_mb(),
+        notes="all-MiniLM-L6-v2 embeddings with torch.cuda.synchronize",
+    )
+    print(f"    avg={result.avg_ms:.1f}ms  p95={result.p95_ms:.1f}ms  throughput={result.throughput_per_sec:.1f}/s  gpu_mem={result.gpu_memory_mb:.0f}MB")
+    return result
+
+
+def benchmark_retrieval_verifier(n_samples: int = 10) -> LatencyResult:
+    """Benchmark RetrievalVerifier search latency."""
+    print(f"\n  [RetrievalVerifier] Benchmarking {n_samples} search queries...")
+    from veritascore.core.types import Claim
+    from veritascore.verifier.retrieval_verifier import RetrievalVerifier
+
+    verifier = RetrievalVerifier()
+    claim = Claim(
+        id="ret_bench",
+        text="The Eiffel Tower is located in Paris.",
+        source_span=(0, 38),
+        source_text="The Eiffel Tower is located in Paris.",
+    )
+
+    # Warm-up
+    try:
+        verifier.verify([claim])
+    except Exception:
+        pass
+
+    latencies: list[float] = []
+    for _ in range(n_samples):
+        t0 = time.perf_counter()
+        try:
+            verifier.verify([claim])
+        except Exception:
+            pass
+        latencies.append((time.perf_counter() - t0) * 1000)
+
+    avg = mean(latencies) if latencies else 0.0
+    throughput = 1000.0 / avg if avg > 0 else 0.0
+
+    result = LatencyResult(
+        component="Retrieval Verifier (Live Search)",
+        device="network",
+        precision="--",
+        batch_size=1,
+        n_samples=n_samples,
+        avg_ms=avg,
+        p50_ms=_percentile(latencies, 50),
+        p95_ms=_percentile(latencies, 95),
+        p99_ms=_percentile(latencies, 99),
+        throughput_per_sec=throughput,
+        gpu_memory_mb=0.0,
+        cpu_memory_mb=_cpu_mem_mb(),
+        notes="Live search API latency",
+    )
+    print(f"    avg={result.avg_ms:.1f}ms  p95={result.p95_ms:.1f}ms  throughput={result.throughput_per_sec:.2f}/s")
     return result
 
 
 def benchmark_nli_verifier(
     n_samples: int = 30,
     batch_size: int = 1,
+    use_bidirectional: bool = True,
     device: str | None = None,
     precision: str | None = None,
 ) -> LatencyResult:
     """Benchmark NLIVerifier latency (model loaded fresh, warm-up excluded)."""
     device = device or _detect_device()
     precision = precision or _detect_precision()
+    mode_str = "Bidirectional" if use_bidirectional else "Forward-only"
     print(
-        f"\n  [NLIVerifier] Benchmarking {n_samples} claims "
+        f"\n  [NLIVerifier - {mode_str}] Benchmarking {n_samples} claims "
         f"(device={device}, batch_size={batch_size}, precision={precision})..."
     )
 
@@ -367,7 +492,7 @@ def benchmark_nli_verifier(
     from veritascore.verifier.nli_verifier import NLIVerifier
 
     _reset_gpu_peak()
-    verifier = NLIVerifier()
+    verifier = NLIVerifier(use_bidirectional=use_bidirectional)
 
     # Warm-up (excluded from timing)
     warmup = Claim(
@@ -377,9 +502,11 @@ def benchmark_nli_verifier(
         source_text="The sky appears blue due to Rayleigh scattering.",
     )
     warmup_context = "Light from the sun scatters in the atmosphere, making the sky appear blue."
+    _sync_cuda()
     verifier.verify([warmup], context=warmup_context)
+    _sync_cuda()
 
-    # Record GPU memory after warm-up (model already resident in VRAM)
+    # Record GPU memory after warm-up
     gpu_mem_after_warmup = _gpu_mem_mb()
     _reset_gpu_peak()
 
@@ -401,8 +528,10 @@ def benchmark_nli_verifier(
     for idx, claim in enumerate(claims):
         batch_buf.append(claim)
         if len(batch_buf) == batch_size or idx == len(claims) - 1:
+            _sync_cuda()
             t0 = time.perf_counter()
             verifier.verify(batch_buf, context=context)
+            _sync_cuda()
             elapsed = (time.perf_counter() - t0) * 1000
             per_claim_ms = elapsed / len(batch_buf)
             latencies.extend([per_claim_ms] * len(batch_buf))
@@ -414,7 +543,7 @@ def benchmark_nli_verifier(
     throughput = 1000.0 / avg if avg > 0 else 0.0
 
     result = LatencyResult(
-        component="NLI Verifier",
+        component=f"NLI Verifier ({mode_str})",
         device=device,
         precision=precision,
         batch_size=batch_size,
@@ -426,7 +555,67 @@ def benchmark_nli_verifier(
         throughput_per_sec=throughput,
         gpu_memory_mb=gpu_mem_after_warmup,
         cpu_memory_mb=_cpu_mem_mb(),
-        notes="Warm-up run excluded; model loaded fresh; GPU mem measured post-warmup",
+        notes="Warm-up run excluded; torch.cuda.synchronize applied",
+    )
+    print(
+        f"    avg={result.avg_ms:.1f}ms  p95={result.p95_ms:.1f}ms  "
+        f"throughput={result.throughput_per_sec:.2f}/s  gpu_mem={result.gpu_memory_mb:.0f}MB"
+    )
+    return result
+
+
+def benchmark_llm_decomposer(
+    n_samples: int = 3,
+    device: str | None = None,
+    precision: str | None = None,
+) -> LatencyResult:
+    """Benchmark LLMDecomposer latency (Phi-3-mini)."""
+    device = device or _detect_device()
+    precision = precision or _detect_precision()
+    print(f"\n  [LLMDecomposer] Benchmarking {n_samples} decompositions (device={device}, precision={precision})...")
+
+    from veritascore.decomposer.llm_decomposer import LLMDecomposer
+
+    _reset_gpu_peak()
+    decomposer = LLMDecomposer()
+    decomposer._load_model()
+
+    text = "The Eiffel Tower is in Paris. It was built in 1889."
+    # Warm-up (1 run)
+    _sync_cuda()
+    decomposer.decompose(text)
+    _sync_cuda()
+
+    gpu_mem = _gpu_mem_mb()
+    latencies: list[float] = []
+
+    for i in range(n_samples):
+        print(f"    Running decomposition sample {i + 1}/{n_samples}...")
+        _sync_cuda()
+        t0 = time.perf_counter()
+        decomposer.decompose(text)
+        _sync_cuda()
+        latencies.append((time.perf_counter() - t0) * 1000)
+
+    decomposer.unload()
+
+    avg = mean(latencies) if latencies else 0.0
+    throughput = 1000.0 / avg if avg > 0 else 0.0
+
+    result = LatencyResult(
+        component="Decomposer (LLM Phi-3-mini)",
+        device=device,
+        precision=precision,
+        batch_size=1,
+        n_samples=n_samples,
+        avg_ms=avg,
+        p50_ms=_percentile(latencies, 50),
+        p95_ms=_percentile(latencies, 95),
+        p99_ms=_percentile(latencies, 99),
+        throughput_per_sec=throughput,
+        gpu_memory_mb=gpu_mem,
+        cpu_memory_mb=_cpu_mem_mb(),
+        notes="Generative decomposition with torch.cuda.synchronize; warm-up excluded",
     )
     print(
         f"    avg={result.avg_ms:.1f}ms  p95={result.p95_ms:.1f}ms  "
