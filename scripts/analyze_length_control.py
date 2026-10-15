@@ -107,7 +107,7 @@ def run_length_analysis() -> dict:
     _, auc_nli_len_lo, auc_nli_len_hi = bootstrap_auroc_ci(y_true, prob_nli_len, seed=42)
 
     # DeLong test: Combined vs Surface-only
-    delong_z_inc, delong_p_inc = delong_roc_test(y_true, prob_combined, prob_surface)
+    delong_z_inc, delong_p_inc = delong_test(y_true, prob_combined, prob_surface)
 
     print(f"Overall Metrics (n=1,500):")
     print(f"  Length alone AUROC:                {format_ci(auc_len, auc_len_lo, auc_len_hi)}")
