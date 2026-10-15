@@ -101,6 +101,7 @@ class ColdStartResult:
     load_time_s: float
     gpu_memory_mb: float
     cpu_memory_mb: float
+    notes: str = ""
 
 
 @dataclass
@@ -645,7 +646,9 @@ def benchmark_cold_start_nli() -> ColdStartResult:
         source_span=(0, 29),
         source_text="Paris is the capital of France.",
     )
+    _sync_cuda()
     verifier.verify([warmup], context="Paris is in France.")
+    _sync_cuda()
     load_time = time.perf_counter() - t0
 
     gpu_mem = _gpu_mem_mb()
@@ -653,10 +656,11 @@ def benchmark_cold_start_nli() -> ColdStartResult:
     verifier.unload()
 
     result = ColdStartResult(
-        model_name="DeBERTa-v3-base (NLI)",
+        model_name="DeBERTa-v3-base (NLI Cross-Encoder)",
         load_time_s=load_time,
         gpu_memory_mb=gpu_mem,
         cpu_memory_mb=max(0.0, cpu_mem),
+        notes="Cold-start loading + first forward-pass compilation",
     )
     print(f"    load_time={result.load_time_s:.2f}s  gpu_mem={result.gpu_memory_mb:.0f}MB")
     return result
@@ -679,6 +683,7 @@ def benchmark_cold_start_rule_decomposer() -> ColdStartResult:
         load_time_s=load_time,
         gpu_memory_mb=0.0,
         cpu_memory_mb=max(0.0, cpu_mem),
+        notes="Instantaneous instantiation",
     )
     print(f"    load_time={result.load_time_s:.4f}s")
     return result
@@ -701,8 +706,70 @@ def benchmark_cold_start_fusion() -> ColdStartResult:
         load_time_s=load_time,
         gpu_memory_mb=0.0,
         cpu_memory_mb=max(0.0, cpu_mem),
+        notes="Instantaneous instantiation",
     )
     print(f"    load_time={result.load_time_s:.4f}s")
+    return result
+
+
+def benchmark_cold_start_consistency() -> ColdStartResult:
+    """Measure SentenceTransformer (MiniLM) cold-start loading time."""
+    print("\n  [ColdStart] SemanticConsistencyChecker model loading...")
+    _reset_gpu_peak()
+    cpu_before = _cpu_mem_mb()
+
+    t0 = time.perf_counter()
+    from veritascore.verifier.consistency_checker import SemanticConsistencyChecker
+    checker = SemanticConsistencyChecker()
+    checker._load_model()
+    _sync_cuda()
+    checker.compute_consistency(
+        claim_text="The Eiffel Tower is in Paris.",
+        source_context="The Eiffel Tower is in Paris, France.",
+    )
+    _sync_cuda()
+    load_time = time.perf_counter() - t0
+
+    gpu_mem = _gpu_mem_mb()
+    cpu_mem = _cpu_mem_mb() - cpu_before
+    checker.unload()
+
+    result = ColdStartResult(
+        model_name="all-MiniLM-L6-v2 (Embedding Model)",
+        load_time_s=load_time,
+        gpu_memory_mb=gpu_mem,
+        cpu_memory_mb=max(0.0, cpu_mem),
+        notes="Embedding model cold-start load",
+    )
+    print(f"    load_time={result.load_time_s:.2f}s  gpu_mem={result.gpu_memory_mb:.0f}MB")
+    return result
+
+
+def benchmark_cold_start_llm_decomposer() -> ColdStartResult:
+    """Measure LLMDecomposer cold-start loading time (Phi-3-mini)."""
+    print("\n  [ColdStart] LLMDecomposer model loading...")
+    _reset_gpu_peak()
+    cpu_before = _cpu_mem_mb()
+
+    t0 = time.perf_counter()
+    from veritascore.decomposer.llm_decomposer import LLMDecomposer
+    decomposer = LLMDecomposer()
+    decomposer._load_model()
+    _sync_cuda()
+    load_time = time.perf_counter() - t0
+
+    gpu_mem = _gpu_mem_mb()
+    cpu_mem = _cpu_mem_mb() - cpu_before
+    decomposer.unload()
+
+    result = ColdStartResult(
+        model_name="Phi-3-mini-4k-instruct (LLM Decomposer)",
+        load_time_s=load_time,
+        gpu_memory_mb=gpu_mem,
+        cpu_memory_mb=max(0.0, cpu_mem),
+        notes="3.8B parameter LLM cold-start loading into VRAM",
+    )
+    print(f"    load_time={result.load_time_s:.2f}s  gpu_mem={result.gpu_memory_mb:.0f}MB")
     return result
 
 
@@ -713,14 +780,14 @@ def benchmark_cold_start_fusion() -> ColdStartResult:
 
 def benchmark_batch_scaling(
     batch_sizes: list[int] | None = None,
-    n_per_batch: int = 3,
+    n_per_batch: int = 5,
 ) -> list[BatchScaleResult]:
     """Benchmark NLI throughput across multiple batch sizes.
 
     Warm-up (1 batch at each size) is excluded from timing.
     """
     if batch_sizes is None:
-        batch_sizes = [1, 2, 4, 8]
+        batch_sizes = [1, 2, 4, 8, 16]
 
     print(f"\n  [BatchScaling] NLIVerifier throughput for batch_sizes={batch_sizes}...")
 
@@ -745,7 +812,9 @@ def benchmark_batch_scaling(
             )
             for i in range(bs)
         ]
+        _sync_cuda()
         verifier.verify(wu, context=context)
+        _sync_cuda()
         _reset_gpu_peak()
 
         batch_times: list[float] = []
@@ -759,8 +828,10 @@ def benchmark_batch_scaling(
                 )
                 for i in range(bs)
             ]
+            _sync_cuda()
             t0 = time.perf_counter()
             verifier.verify(batch, context=context)
+            _sync_cuda()
             batch_times.append((time.perf_counter() - t0) * 1000)
 
         avg_batch_ms = mean(batch_times)
@@ -791,13 +862,12 @@ def benchmark_batch_scaling(
 
 def benchmark_e2e_grounded(
     n_claims_list: list[int] | None = None,
-    n_repeats: int = 3,
+    n_repeats: int = 5,
 ) -> list[E2EResult]:
     """Measure full grounded pipeline (RuleDecomposer + NLIVerifier + FusionScorer).
 
-    Uses RuleDecomposer (not LLM) so results are reproducible without GPU for
-    decomposition. We pre-load RuleDecomposer and inject it into the engine so
-    LLMDecomposer is never instantiated. Warm-up (1 run) is excluded from timing.
+    Uses RuleDecomposer so results reflect core verification pipeline.
+    Pre-warmed before timing; torch.cuda.synchronize() ensures accurate GPU timing.
     """
     if n_claims_list is None:
         n_claims_list = [1, 3, 5]
@@ -844,17 +914,20 @@ def benchmark_e2e_grounded(
         times_ms: list[float] = []
 
         engine = VeritasCoreEngine(config=config)
-        # Inject RuleDecomposer so LLMDecomposer is never loaded (no GPU for decomp)
         engine._decomposer = RuleDecomposer()
 
         # Warm-up (excluded)
         _reset_gpu_peak()
+        _sync_cuda()
         engine.verify(response=response, context=context, mode="grounded")
+        _sync_cuda()
         _reset_gpu_peak()
 
         for _ in range(n_repeats):
+            _sync_cuda()
             t0 = time.perf_counter()
             engine.verify(response=response, context=context, mode="grounded")
+            _sync_cuda()
             times_ms.append((time.perf_counter() - t0) * 1000)
 
         gpu_mem = _gpu_mem_mb()
@@ -862,7 +935,7 @@ def benchmark_e2e_grounded(
 
         avg_total = mean(times_ms)
         r = E2EResult(
-            mode="Grounded (RuleDecomposer + NLI)",
+            mode="Grounded (RuleDecomposer + NLI Bidi)",
             device=device,
             n_claims=n_claims,
             total_ms=avg_total,
@@ -871,9 +944,92 @@ def benchmark_e2e_grounded(
         )
         e2e_results.append(r)
         print(
-            f"    n_claims={n_claims}  total={avg_total:.0f}ms  "
-            f"per_claim={r.per_claim_ms:.0f}ms  gpu_mem={gpu_mem:.0f}MB"
+            f"    n_claims={n_claims}  total={avg_total:.1f}ms  "
+            f"per_claim={r.per_claim_ms:.1f}ms  gpu_mem={gpu_mem:.0f}MB"
         )
+
+    return e2e_results
+
+
+def benchmark_e2e_ungrounded(
+    n_claims_list: list[int] | None = None,
+    n_repeats: int = 3,
+) -> list[E2EResult]:
+    """Measure full ungrounded pipeline (Rule + Retrieval + NLI Bidi)."""
+    if n_claims_list is None:
+        n_claims_list = [1, 3, 5]
+
+    device = _detect_device()
+    print(f"\n  [E2E-Ungrounded] Pipeline timing (device={device}, repeats={n_repeats})...")
+
+    from veritascore.core.engine import VeritasCoreEngine
+    from veritascore.core.config import EngineConfig, ModelConfig
+    from veritascore.decomposer.rule_decomposer import RuleDecomposer
+
+    config = EngineConfig(
+        models=ModelConfig(device=device),
+        verification_mode="ungrounded",
+    )
+
+    responses_by_count: dict[int, str] = {
+        1: "The Eiffel Tower is located in Paris.",
+        3: (
+            "The Eiffel Tower is located in Paris. "
+            "It was built for the 1889 World's Fair. "
+            "Gustave Eiffel designed the tower."
+        ),
+        5: (
+            "The Eiffel Tower is located in Paris. "
+            "It was built for the 1889 World's Fair. "
+            "Gustave Eiffel designed the tower. "
+            "The tower stands 330 metres tall. "
+            "It is visited by millions of tourists annually."
+        ),
+    }
+
+    e2e_results: list[E2EResult] = []
+
+    for n_claims in n_claims_list:
+        response = responses_by_count.get(n_claims, responses_by_count[3])
+        times_ms: list[float] = []
+
+        try:
+            engine = VeritasCoreEngine(config=config)
+            engine._decomposer = RuleDecomposer()
+
+            # Warm-up (excluded)
+            _reset_gpu_peak()
+            _sync_cuda()
+            engine.verify(response=response, context=None, mode="ungrounded")
+            _sync_cuda()
+            _reset_gpu_peak()
+
+            for _ in range(n_repeats):
+                _sync_cuda()
+                t0 = time.perf_counter()
+                engine.verify(response=response, context=None, mode="ungrounded")
+                _sync_cuda()
+                times_ms.append((time.perf_counter() - t0) * 1000)
+
+            gpu_mem = _gpu_mem_mb()
+            engine.unload()
+
+            avg_total = mean(times_ms)
+            r = E2EResult(
+                mode="Full Pipeline (Rule + Retrieval + NLI)",
+                device=device,
+                n_claims=n_claims,
+                total_ms=avg_total,
+                per_claim_ms=avg_total / max(n_claims, 1),
+                gpu_memory_mb=gpu_mem,
+            )
+            e2e_results.append(r)
+            print(
+                f"    n_claims={n_claims}  total={avg_total:.1f}ms  "
+                f"per_claim={r.per_claim_ms:.1f}ms  gpu_mem={gpu_mem:.0f}MB"
+            )
+        except Exception as e:
+            print(f"    Skipping ungrounded n_claims={n_claims} due to: {e}")
 
     return e2e_results
 
