@@ -719,14 +719,18 @@ def benchmark_cold_start_consistency() -> ColdStartResult:
     cpu_before = _cpu_mem_mb()
 
     t0 = time.perf_counter()
-    from veritascore.verifier.consistency_checker import SemanticConsistencyChecker
+    from veritascore.core.types import Claim
+    from veritascore.verifier.consistency import SemanticConsistencyChecker
     checker = SemanticConsistencyChecker()
     checker._load_model()
-    _sync_cuda()
-    checker.compute_consistency(
-        claim_text="The Eiffel Tower is in Paris.",
-        source_context="The Eiffel Tower is in Paris, France.",
+    claim = Claim(
+        id="cs_claim",
+        text="The Eiffel Tower is in Paris.",
+        source_span=(0, 29),
+        source_text="The Eiffel Tower is in Paris.",
     )
+    _sync_cuda()
+    checker.score_claim(claim, "The Eiffel Tower is in Paris, France.")
     _sync_cuda()
     load_time = time.perf_counter() - t0
 
@@ -1232,8 +1236,20 @@ def main() -> None:
         report.component_results.append(fusion_result)
 
         if not quick:
-            nli_result = benchmark_nli_verifier(n_samples=n, batch_size=1)
-            report.component_results.append(nli_result)
+            consistency_result = benchmark_consistency_checker(n_samples=n)
+            report.component_results.append(consistency_result)
+
+            retrieval_result = benchmark_retrieval_verifier(n_samples=min(n, 10))
+            report.component_results.append(retrieval_result)
+
+            nli_bidi = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True)
+            report.component_results.append(nli_bidi)
+
+            nli_fwd = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=False)
+            report.component_results.append(nli_fwd)
+
+            llm_decomp = benchmark_llm_decomposer(n_samples=min(n, 3))
+            report.component_results.append(llm_decomp)
 
         print_component_table(report.component_results)
 
@@ -1250,14 +1266,24 @@ def main() -> None:
             cs_nli = benchmark_cold_start_nli()
             report.cold_start_results.append(cs_nli)
 
+            cs_consistency = benchmark_cold_start_consistency()
+            report.cold_start_results.append(cs_consistency)
+
+            cs_llm = benchmark_cold_start_llm_decomposer()
+            report.cold_start_results.append(cs_llm)
+
         print_cold_start_table(report.cold_start_results)
 
     # End-to-end
     if run_all or args.mode == "e2e":
         if not quick:
             print("\n>>> STEP 8.2: End-to-End Pipeline Latency")
-            e2e = benchmark_e2e_grounded(n_claims_list=[1, 3, 5], n_repeats=3)
-            report.e2e_results.extend(e2e)
+            e2e_g = benchmark_e2e_grounded(n_claims_list=[1, 3, 5], n_repeats=5)
+            report.e2e_results.extend(e2e_g)
+
+            e2e_u = benchmark_e2e_ungrounded(n_claims_list=[1, 3, 5], n_repeats=3)
+            report.e2e_results.extend(e2e_u)
+
             print_e2e_table(report.e2e_results)
         else:
             print("\n  [E2E] Skipped in --quick mode (requires NLI model load)")
@@ -1266,7 +1292,7 @@ def main() -> None:
     if run_all or args.mode == "batch-scaling":
         if not quick:
             print("\n>>> STEP 8.4: Batch-Size Scaling Analysis")
-            batch_results = benchmark_batch_scaling(batch_sizes=[1, 2, 4, 8], n_per_batch=3)
+            batch_results = benchmark_batch_scaling(batch_sizes=[1, 2, 4, 8, 16], n_per_batch=5)
             report.batch_scale_results.extend(batch_results)
             print_batch_scaling_table(report.batch_scale_results)
         else:
