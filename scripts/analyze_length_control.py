@@ -33,7 +33,7 @@ from sklearn.metrics import roc_auc_score
 from scipy import stats
 
 from run_benchmarks_v2 import load_fever_fixed, load_halueval_split
-from stats_utils import bootstrap_auroc_ci, format_ci, delong_roc_test
+from stats_utils import bootstrap_auroc_ci, format_ci, delong_test
 
 _PROPER_NOUN_PATTERN = re.compile(r"\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)*\b")
 _NUMBER_PATTERN = re.compile(r"\d+")
