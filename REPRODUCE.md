@@ -126,13 +126,13 @@ mypy src/ --ignore-missing-imports
 
 | Component | Specification |
 |-----------|---------------|
-| GPU | NVIDIA RTX 4060 (8 GB VRAM) |
-| CPU | Intel Core i7-12th Gen |
-| RAM | 16 GB DDR5 |
-| OS | Windows 11 / Ubuntu 22.04 |
+| GPU | NVIDIA GeForce RTX 4060 (8.0 GB VRAM) |
+| CPU | AMD64 (12 physical cores, 24 logical threads) |
+| RAM | 31.1 GB |
+| OS | Windows (compatible with Linux / Ubuntu 22.04) |
 | Python | 3.11.x |
-| CUDA | 12.x |
-| PyTorch | See `requirements-lock.txt` |
+| CUDA | 12.1 |
+| PyTorch | 2.5.1+cu121 (see `requirements-lock.txt`) |
 
 ## Model Revisions Used
 
