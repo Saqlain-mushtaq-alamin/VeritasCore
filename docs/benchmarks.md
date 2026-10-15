@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `0d4f0af675c7`).
+> All numbers generated automatically from saved raw experimental runs (commit `a77453953d3f`).
 
 ---
 
@@ -55,7 +55,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, 2,000 resamples).
-> *Git commit:* `0d4f0af675c7`
+> *Git commit:* `a77453953d3f`
 
 | Method | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:-----------------------:|:--------------------:|----------|:--------------------:|:----------------------:|
@@ -103,7 +103,7 @@ On FEVER (where claims are clean Wikipedia declarative statements free of genera
 
 > **Protocol:** Evaluates the contribution of each signal combination on held-out evaluation sets (n=100 per dataset).
 > **All numbers are MEASURED with LIVE web retrieval** (Tavily Search API). Bootstrapped 95% CIs with 2,000 resamples.
-> *Git commit:* `0d4f0af675c7`
+> *Git commit:* `a77453953d3f`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
@@ -150,41 +150,41 @@ On FEVER (where claims are clean Wikipedia declarative statements free of genera
 ### Table 5a: Per-Component Latency
 | Component | Device | Precision | Batch | Avg (ms) | P95 (ms) | Throughput (claims/s) | GPU Mem (MB) |
 |-----------|--------|:---------:|:-----:|:--------:|:--------:|:---------------------:|:------------:|
-| Decomposer (LLM Phi-3-mini) | cuda | fp16 | 1 | 7670.0 | 11820.0 | 0.1 | 2150 |
-| Decomposer (Rule-based) | cpu | -- | 1 | 0.2 | 0.2 | 5689.1 | 0 |
-| Retrieval Verifier (Live Search) | network | -- | 1 | 382.4 | 512.0 | 2.6 | 0 |
-| Semantic Consistency Checker | cuda | fp16 | 1 | 4.8 | 6.2 | 208.3 | 120 |
-| NLI Verifier (Bidirectional) | cuda | fp16 | 1 | 48.3 | 54.8 | 20.7 | 722 |
-| NLI Verifier (Forward-only) | cuda | fp16 | 1 | 24.5 | 27.2 | 40.8 | 722 |
-| Fusion Scorer | cpu | -- | 1 | 0.1 | 0.1 | 9403.8 | 0 |
+| Decomposer (Rule-based) | cpu | -- | 1 | 0.2 | 0.2 | 5659.7 | 0 |
+| Fusion Scorer | cpu | -- | 1 | 0.1 | 0.1 | 9120.9 | 0 |
+| Semantic Consistency Checker | cuda | fp16 | 1 | 6.4 | 8.4 | 156.5 | 96 |
+| Retrieval Verifier (Live Search) | network | -- | 1 | 87.3 | 89.0 | 11.5 | 0 |
+| NLI Verifier (Bidirectional) | cuda | fp16 | 1 | 28.5 | 49.9 | 35.1 | 723 |
+| NLI Verifier (Forward-only) | cuda | fp16 | 1 | 13.0 | 14.4 | 77.1 | 723 |
+| Decomposer (LLM Phi-3-mini) | cuda | fp16 | 1 | 12364.5 | 12879.0 | 0.1 | 7588 |
 
 ### Table 5b: End-to-End Pipeline Latency
 | Pipeline Mode | Device | Claims | Total (ms) | Per-Claim (ms) | GPU Mem (MB) |
 |---------------|:------:|:------:|:----------:|:--------------:|:------------:|
-| Grounded (RuleDecomposer + NLI Bidi) | cuda | 1 | 48.5 | 48.5 | 726 |
-| Grounded (RuleDecomposer + NLI Bidi) | cuda | 3 | 142.1 | 47.4 | 726 |
-| Grounded (RuleDecomposer + NLI Bidi) | cuda | 5 | 231.6 | 46.3 | 726 |
-| Full Pipeline (Rule + Retrieval + NLI) | cuda | 1 | 435.8 | 435.8 | 846 |
-| Full Pipeline (Rule + Retrieval + NLI) | cuda | 3 | 532.4 | 177.5 | 846 |
-| Full Pipeline (Rule + Retrieval + NLI) | cuda | 5 | 624.9 | 125.0 | 846 |
+| Grounded (RuleDecomposer + NLI Bidi) | cuda | 1 | 25.4 | 25.4 | 732 |
+| Grounded (RuleDecomposer + NLI Bidi) | cuda | 3 | 101.2 | 33.7 | 732 |
+| Grounded (RuleDecomposer + NLI Bidi) | cuda | 5 | 152.3 | 30.5 | 732 |
+| Full Pipeline (Rule + Retrieval + NLI) | cuda | 1 | 81.0 | 81.0 | 771 |
+| Full Pipeline (Rule + Retrieval + NLI) | cuda | 3 | 331.5 | 110.5 | 776 |
+| Full Pipeline (Rule + Retrieval + NLI) | cuda | 5 | 528.4 | 105.7 | 796 |
 
 ### Table 5c: Model Cold-Start Loading Times
 | Model | Load Time (s) | GPU Memory (MB) |
 |-------|:-------------:|:---------------:|
 | RuleDecomposer (CPU, no model) | 0.001 | 0 |
 | FusionScorer (CPU, no model) | 0.001 | 0 |
-| DeBERTa-v3-base (NLI Cross-Encoder) | 1.988 | 722 |
-| all-MiniLM-L6-v2 (Embedding Model) | 0.620 | 120 |
-| Phi-3-mini-4k-instruct (LLM Decomposer) | 4.850 | 2150 |
+| DeBERTa-v3-base (NLI Cross-Encoder) | 1.833 | 728 |
+| all-MiniLM-L6-v2 (Embedding Model) | 2.160 | 106 |
+| Phi-3-mini-4k-instruct (LLM Decomposer) | 4.660 | 5909 |
 
 ### Table 5d: NLI Batch-Size Scaling Analysis
 | Batch Size | Avg Per-Claim (ms) | Throughput (claims/s) | GPU Memory (MB) |
 |:----------:|:------------------:|:---------------------:|:---------------:|
-| 1 | 49.9 | 20.04 | 742 |
-| 2 | 43.4 | 23.06 | 742 |
-| 4 | 24.6 | 40.72 | 742 |
-| 8 | 24.1 | 41.58 | 742 |
-| 16 | 23.8 | 42.02 | 746 |
+| 1 | 34.5 | 28.99 | 747 |
+| 2 | 34.7 | 28.82 | 747 |
+| 4 | 32.7 | 30.56 | 747 |
+| 8 | 28.7 | 34.79 | 747 |
+| 16 | 25.6 | 39.11 | 747 |
 
 
 ---
