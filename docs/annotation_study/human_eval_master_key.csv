@@ -1,0 +1,116 @@
+item_id,sample_id,source,category,decomposer,claim_num,original_text,claim_text
+ANN-0001,H001,halueval,who,rule,1,Python was created by Guido van Rossum.,Python was created by Guido van Rossum.
+ANN-0002,H002,halueval,when,rule,1,Python was first released in 1991.,Python was first released in 1991.
+ANN-0003,H003,halueval,what,rule,1,"Python is an interpreted, high-level programming language.","Python is an interpreted, high-level programming language."
+ANN-0004,H004,halueval,where,rule,1,"The Python Software Foundation is headquartered in Delaware, USA.","The Python Software Foundation is headquartered in Delaware, USA."
+ANN-0005,H005,halueval,when,rule,1,"Python 3.0 was released on December 3, 2008.","Python 3.0 was released on December 3, 2008."
+ANN-0006,H006,halueval,how-many,rule,1,"The Great Wall of China stretches approximately 21,196 kilometers.","The Great Wall of China stretches approximately 21,196 kilometers."
+ANN-0007,H007,halueval,where,rule,1,"Albert Einstein was born in Ulm, Germany, in 1879.","Albert Einstein was born in Ulm, Germany, in 1879."
+ANN-0008,H008,halueval,how-many,rule,1,"The speed of light in a vacuum is approximately 299,792 kilometers per second.","The speed of light in a vacuum is approximately 299,792 kilometers per second."
+ANN-0009,H009,halueval,how-many,rule,1,Shakespeare wrote approximately 37 plays.,Shakespeare wrote approximately 37 plays.
+ANN-0010,H010,halueval,what,rule,1,The Amazon River is the largest river by discharge volume in the world.,The Amazon River is the largest river by discharge volume in the world.
+ANN-0011,H011,halueval,what,rule,1,Marie Curie was born in Warsaw and later moved to Paris to study physics.,Marie Curie was born in Warsaw and later moved to Paris to study physics.
+ANN-0012,H012,halueval,when,rule,1,The moon orbits Earth and takes approximately 27 days to complete one orbit.,The moon orbits Earth
+ANN-0013,H012,halueval,when,rule,2,The moon orbits Earth and takes approximately 27 days to complete one orbit.,takes approximately 27 days to complete one orbit.
+ANN-0014,H013,halueval,who,rule,1,"DNA was first described by Watson and Crick in 1953, building on X-ray data from Rosalind Franklin.",DNA was first described by Watson
+ANN-0015,H013,halueval,who,rule,2,"DNA was first described by Watson and Crick in 1953, building on X-ray data from Rosalind Franklin.","Crick in 1953, building on X-ray data from Rosalind Franklin."
+ANN-0016,H014,halueval,who,rule,1,Nikola Tesla was a Serbian-American inventor who held over 300 patents.,Nikola Tesla was a Serbian-American inventor who held over 300 patents.
+ANN-0017,H015,halueval,how-many,rule,1,The human brain contains approximately 86 billion neurons and weighs about 1.4 kilograms.,The human brain contains approximately 86 billion neurons and weighs about 1.4 kilograms.
+ANN-0018,H016,halueval,when,rule,1,Isaac Newton formulated the laws of motion and universal gravitation in the 17th century.,Isaac Newton formulated the laws of motion and universal gravitation in the 17th century.
+ANN-0019,H017,halueval,when,rule,1,The Eiffel Tower was designed by Gustave Eiffel and completed in 1889 for the World's Fair.,The Eiffel Tower was designed by Gustave Eiffel and completed in 1889 for the World's Fair.
+ANN-0020,H018,halueval,when,rule,1,"Charles Darwin published On the Origin of Species in 1859, introducing the theory of evolution by natural selection.","Charles Darwin published On the Origin of Species in 1859, introducing the theory of evolution by natural selection."
+ANN-0021,H019,halueval,when,rule,1,"The Berlin Wall fell on November 9, 1989, ending the division of East and West Germany.","The Berlin Wall fell on November 9, 1989, ending the division of East and West Germany."
+ANN-0022,H020,halueval,who,rule,1,Jeff Bezos founded Amazon in 1994 and it became the world's largest online retailer.,Jeff Bezos founded Amazon in 1994
+ANN-0023,H020,halueval,who,rule,2,Jeff Bezos founded Amazon in 1994 and it became the world's largest online retailer.,it became the world's largest online retailer.
+ANN-0024,H021,halueval,what,rule,1,The Earth revolves around the Sun once per year.,The Earth revolves around the Sun once per year.
+ANN-0025,H022,halueval,who,rule,1,Penicillin was discovered by Alexander Fleming in 1928.,Penicillin was discovered by Alexander Fleming in 1928.
+ANN-0026,H023,halueval,when,rule,1,"The United States declared independence on July 4, 1776.","The United States declared independence on July 4, 1776."
+ANN-0027,H024,halueval,what,rule,1,Water consists of two hydrogen atoms and one oxygen atom.,Water consists of two hydrogen atoms and one oxygen atom.
+ANN-0028,H025,halueval,who,rule,1,The Mona Lisa was painted by Leonardo da Vinci.,The Mona Lisa was painted by Leonardo da Vinci.
+ANN-0029,H026,halueval,where,rule,1,"Mount Kilimanjaro is the highest peak in Africa at 5,895 meters.","Mount Kilimanjaro is the highest peak in Africa at 5,895 meters."
+ANN-0030,H027,halueval,when,rule,1,The French Revolution began in 1789.,The French Revolution began in 1789.
+ANN-0031,H028,halueval,when,rule,1,"The first iPhone was released by Apple on June 29, 2007.","The first iPhone was released by Apple on June 29, 2007."
+ANN-0032,H029,halueval,who,rule,1,"Neil Armstrong became the first human to walk on the Moon on July 20, 1969.","Neil Armstrong became the first human to walk on the Moon on July 20, 1969."
+ANN-0033,H030,halueval,what,rule,1,The Pythagorean theorem states that a² + b² = c² for a right triangle.,The Pythagorean theorem states that a² + b² = c² for a right triangle.
+ANN-0034,H031,halueval,what,rule,1,TCP/IP is the foundational protocol suite of the Internet.,TCP/IP is the foundational protocol suite of the Internet.
+ANN-0035,H032,halueval,who,rule,1,SQL was developed by IBM researchers Donald Chamberlin and Raymond Boyce.,SQL was developed by IBM researchers Donald Chamberlin and Raymond Boyce.
+ANN-0036,H033,halueval,when,rule,1,"Linux was first released on September 17, 1991, by Linus Torvalds.","Linux was first released on September 17, 1991, by Linus Torvalds."
+ANN-0037,H034,halueval,who,rule,1,The CRISPR-Cas9 gene editing technique was developed by Jennifer Doudna and Emmanuelle Charpentier.,The CRISPR-Cas9 gene editing technique was developed by Jennifer Doudna
+ANN-0038,H034,halueval,who,rule,2,The CRISPR-Cas9 gene editing technique was developed by Jennifer Doudna and Emmanuelle Charpentier.,Emmanuelle Charpentier.
+ANN-0039,H035,halueval,when,rule,1,The Higgs boson was confirmed experimentally at CERN in 2012.,The Higgs boson was confirmed experimentally at CERN in 2012.
+ANN-0040,H036,halueval,what,rule,1,HTTPS encrypts data using TLS (Transport Layer Security).,HTTPS encrypts data using TLS (Transport Layer Security).
+ANN-0041,H037,halueval,when,rule,1,The first computer bug was a literal moth found in a Harvard Mark II relay in 1947.,The first computer bug was a literal moth found in a Harvard Mark II relay in 1947.
+ANN-0042,H038,halueval,who,rule,1,Rust programming language was created by Graydon Hoare and first released in 2015.,Rust programming language was created by Graydon Hoare and first released in 2015.
+ANN-0043,H039,halueval,how-many,rule,1,The GPS system consists of at least 24 operational satellites.,The GPS system consists of at least 24 operational satellites.
+ANN-0044,H040,halueval,what,rule,1,Moore's Law predicts that transistor count doubles roughly every two years.,Moore's Law predicts that transistor count doubles roughly every two years.
+ANN-0045,H041,halueval,what,rule,1,Pluto is not classified as a planet.,Pluto is not classified as a planet.
+ANN-0046,H042,halueval,how-many,rule,1,The temperature of the Sun's core is estimated to be approximately 15 million degrees Celsius.,The temperature of the Sun's core is estimated to be approximately 15 million degrees Celsius.
+ANN-0047,H043,halueval,when,rule,1,"The Treaty of Versailles was signed on June 28, 1919.","The Treaty of Versailles was signed on June 28, 1919."
+ANN-0048,H044,halueval,what,rule,1,"Arguably, Einstein's greatest achievement was the theory of general relativity.","Arguably, Einstein's greatest achievement was the theory of general relativity."
+ANN-0049,H045,halueval,when,rule,1,The Olympics were held in Tokyo in both 1964 and 2021.,The Olympics were held in Tokyo in both 1964 and 2021.
+ANN-0050,H046,halueval,who,rule,1,"Wikipedia, founded in 2001 by Jimmy Wales and Larry Sanger, has over 6 million English articles.","Wikipedia, founded in 2001 by Jimmy Wales"
+ANN-0051,H046,halueval,who,rule,2,"Wikipedia, founded in 2001 by Jimmy Wales and Larry Sanger, has over 6 million English articles.","Larry Sanger, has over 6 million English articles."
+ANN-0052,H047,halueval,what,rule,1,Carbon dioxide has the chemical formula CO₂.,Carbon dioxide has the chemical formula CO₂.
+ANN-0053,H048,halueval,how-many,rule,1,The population of China exceeded 1.4 billion in 2020.,The population of China exceeded 1.4 billion in 2020.
+ANN-0054,H049,halueval,when,rule,1,"Shakespeare was born and died on the same date: April 23, in 1564 and 1616 respectively.","Shakespeare was born and died on the same date: April 23, in 1564 and 1616 respectively."
+ANN-0055,H050,halueval,where,rule,1,The International Space Station orbits Earth at an altitude of approximately 408 kilometers.,The International Space Station orbits Earth at an altitude of approximately 408 kilometers.
+ANN-0056,F001,fever,single-fact,rule,1,The Titanic sank in the North Atlantic Ocean in 1912.,The Titanic sank in the North Atlantic Ocean in 1912.
+ANN-0057,F002,fever,single-fact,rule,1,Adolf Hitler was born in Austria.,Adolf Hitler was born in Austria.
+ANN-0058,F003,fever,single-fact,rule,1,Barack Obama served as the 44th President of the United States.,Barack Obama served as the 44th President of the United States.
+ANN-0059,F004,fever,single-fact,rule,1,The Battle of Waterloo was fought in 1815.,The Battle of Waterloo was fought in 1815.
+ANN-0060,F005,fever,single-fact,rule,1,Oxygen has an atomic number of 8.,Oxygen has an atomic number of 8.
+ANN-0061,F006,fever,single-fact,rule,1,The currency of Japan is the yen.,The currency of Japan is the yen.
+ANN-0062,F007,fever,single-fact,rule,1,The Pacific Ocean is the largest ocean on Earth.,The Pacific Ocean is the largest ocean on Earth.
+ANN-0063,F008,fever,single-fact,rule,1,Romeo and Juliet was written by William Shakespeare.,Romeo and Juliet was written by William Shakespeare.
+ANN-0064,F009,fever,single-fact,rule,1,Nelson Mandela was released from prison in 1990.,Nelson Mandela was released from prison in 1990.
+ANN-0065,F010,fever,single-fact,rule,1,The speed of sound in air at sea level is approximately 343 meters per second.,The speed of sound in air at sea level is approximately 343 meters per second.
+ANN-0066,F011,fever,multi-fact,rule,1,Mahatma Gandhi led India's non-violent independence movement and was assassinated in 1948.,Mahatma Gandhi led India's non-violent independence movement
+ANN-0067,F011,fever,multi-fact,rule,2,Mahatma Gandhi led India's non-violent independence movement and was assassinated in 1948.,was assassinated in 1948.
+ANN-0068,F012,fever,multi-fact,rule,1,The Roman Empire fell in 476 AD when Romulus Augustulus was deposed by Odoacer.,The Roman Empire fell in 476 AD when Romulus Augustulus was deposed by Odoacer.
+ANN-0069,F013,fever,multi-fact,rule,1,"Alexander Graham Bell invented the telephone and received his patent on March 7, 1876.","Alexander Graham Bell invented the telephone and received his patent on March 7, 1876."
+ANN-0070,F014,fever,multi-fact,rule,1,"The Chernobyl nuclear disaster occurred in April 1986 and resulted in the evacuation of over 350,000 people.","The Chernobyl nuclear disaster occurred in April 1986 and resulted in the evacuation of over 350,000 people."
+ANN-0071,F015,fever,multi-fact,rule,1,"Apollo 11 landed on the Moon in July 1969, with Neil Armstrong and Buzz Aldrin walking on the surface.","Apollo 11 landed on the Moon in July 1969, with Neil Armstrong"
+ANN-0072,F015,fever,multi-fact,rule,2,"Apollo 11 landed on the Moon in July 1969, with Neil Armstrong and Buzz Aldrin walking on the surface.",Buzz Aldrin walking on the surface.
+ANN-0073,F016,fever,multi-fact,rule,1,Florence Nightingale founded modern nursing and reduced hospital mortality rates by improving sanitation.,Florence Nightingale founded modern nursing and reduced hospital mortality rates by improving sanitation.
+ANN-0074,F017,fever,multi-fact,rule,1,The Hubble Space Telescope was launched in 1990 and has provided images from over 13 billion light-years away.,The Hubble Space Telescope was launched in 1990
+ANN-0075,F017,fever,multi-fact,rule,2,The Hubble Space Telescope was launched in 1990 and has provided images from over 13 billion light-years away.,has provided images from over 13 billion light-years away.
+ANN-0076,F018,fever,multi-fact,rule,1,The Treaty of Versailles ended World War I and imposed heavy reparations on Germany.,The Treaty of Versailles ended World War I and imposed heavy reparations on Germany.
+ANN-0077,F019,fever,multi-fact,rule,1,Bill Gates co-founded Microsoft with Paul Allen in 1975 and later became the world's richest person.,Bill Gates co-founded Microsoft with Paul Allen in 1975 and later became the world's richest person.
+ANN-0078,F020,fever,multi-fact,rule,1,"The ozone layer blocks harmful UV radiation and is found in the stratosphere, 15–35 kilometers above Earth's surface.",The ozone layer blocks harmful UV radiation
+ANN-0079,F020,fever,multi-fact,rule,2,"The ozone layer blocks harmful UV radiation and is found in the stratosphere, 15–35 kilometers above Earth's surface.","is found in the stratosphere, 15–35 kilometers above Earth's surface."
+ANN-0080,F021,fever,with-negation,rule,1,The Great Wall of China is not visible from space with the naked eye.,The Great Wall of China is not visible from space with the naked eye.
+ANN-0081,F022,fever,with-negation,rule,1,Humans do not share 99% of their DNA with chimpanzees.,Humans do not share 99% of their DNA with chimpanzees.
+ANN-0082,F023,fever,with-negation,rule,1,Napoleon Bonaparte was not short by the standards of his time.,Napoleon Bonaparte was not short by the standards of his time.
+ANN-0083,F024,fever,with-negation,rule,1,Lightning does not always strike the tallest object in an area.,Lightning does not always strike the tallest object in an area.
+ANN-0084,F025,fever,with-negation,rule,1,Albert Einstein did not fail mathematics in school.,Albert Einstein did not fail mathematics in school.
+ANN-0085,F026,fever,numerical,rule,1,World War II resulted in an estimated 70–85 million fatalities.,World War II resulted in an estimated 70–85 million fatalities.
+ANN-0086,F027,fever,numerical,rule,1,The human genome contains approximately 3 billion base pairs.,The human genome contains approximately 3 billion base pairs.
+ANN-0087,F028,fever,numerical,rule,1,The Burj Khalifa in Dubai stands at 828 meters tall.,The Burj Khalifa in Dubai stands at 828 meters tall.
+ANN-0088,F029,fever,numerical,rule,1,Light from the Sun takes approximately 8 minutes and 20 seconds to reach Earth.,Light from the Sun takes approximately 8 minutes and 20 seconds to reach Earth.
+ANN-0089,F030,fever,numerical,rule,1,The average adult human body contains approximately 5 liters of blood.,The average adult human body contains approximately 5 liters of blood.
+ANN-0090,F031,fever,multi-hop,rule,1,"Marie Curie, who won two Nobel Prizes, died in 1934 from aplastic anemia caused by radiation exposure.","Marie Curie, who won two Nobel Prizes, died in 1934 from aplastic anemia caused by radiation exposure."
+ANN-0091,F032,fever,multi-hop,rule,1,"Winston Churchill, who led Britain through World War II, won the Nobel Prize in Literature in 1953.","Winston Churchill, who led Britain through World War II, won the Nobel Prize in Literature in 1953."
+ANN-0092,F033,fever,multi-hop,rule,1,"Cleopatra, who ruled Egypt, lived closer in time to the Moon landing than to the construction of the Great Pyramid.","Cleopatra, who ruled Egypt, lived closer in time to the Moon landing than to the construction of the Great Pyramid."
+ANN-0093,F034,fever,multi-hop,rule,1,"James Watson and Francis Crick, who discovered the double-helix structure of DNA, won the Nobel Prize in Physiology or Medicine in 1962.","James Watson and Francis Crick, who discovered the double-helix structure of DNA, won the Nobel Prize in Physiology or Medicine in 1962."
+ANN-0094,F035,fever,multi-hop,rule,1,"Aristotle, who was a student of Plato, later became the tutor of Alexander the Great.","Aristotle, who was a student of Plato, later became the tutor of Alexander the Great."
+ANN-0095,F036,fever,hedging,rule,1,The universe is approximately 13.8 billion years old according to current scientific consensus.,The universe is approximately 13.8 billion years old according to current scientific consensus.
+ANN-0096,F037,fever,hedging,rule,1,The extinction of the dinosaurs was most likely caused by an asteroid impact approximately 66 million years ago.,The extinction of the dinosaurs was most likely caused by an asteroid impact approximately 66 million years ago.
+ANN-0097,F038,fever,hedging,rule,1,It is widely accepted that Christopher Columbus was not the first European to reach the Americas.,It is widely accepted that Christopher Columbus was not the first European to reach the Americas.
+ANN-0098,F039,fever,hedging,rule,1,Scientists believe dark matter makes up approximately 27% of the universe's total mass-energy content.,Scientists believe dark matter makes up approximately 27% of the universe's total mass-energy content.
+ANN-0099,F040,fever,hedging,rule,1,Evidence suggests that Neanderthals and modern humans interbred at some point.,Evidence suggests that Neanderthals and modern humans interbred at some point.
+ANN-0100,F041,fever,shared-subject,rule,1,Beethoven composed the Ninth Symphony and lost his hearing before its premiere.,Beethoven composed the Ninth Symphony and lost his hearing before its premiere.
+ANN-0101,F042,fever,shared-subject,rule,1,The Amazon rainforest produces about 20% of the world's oxygen and covers approximately 5.5 million square kilometers.,The Amazon rainforest produces about 20% of the world's oxygen
+ANN-0102,F042,fever,shared-subject,rule,2,The Amazon rainforest produces about 20% of the world's oxygen and covers approximately 5.5 million square kilometers.,covers approximately 5.5 million square kilometers.
+ANN-0103,F043,fever,shared-subject,rule,1,The Sahara Desert is the world's largest hot desert and covers about 9.2 million square kilometers.,The Sahara Desert is the world's largest hot desert
+ANN-0104,F043,fever,shared-subject,rule,2,The Sahara Desert is the world's largest hot desert and covers about 9.2 million square kilometers.,covers about 9.2 million square kilometers.
+ANN-0105,F044,fever,shared-subject,rule,1,Isaac Newton developed calculus independently and also formulated the law of universal gravitation.,Isaac Newton developed calculus independently
+ANN-0106,F044,fever,shared-subject,rule,2,Isaac Newton developed calculus independently and also formulated the law of universal gravitation.,also formulated the law of universal gravitation.
+ANN-0107,F045,fever,shared-subject,rule,1,The International Space Station was launched in 1998 and has been continuously inhabited since November 2000.,The International Space Station was launched in 1998
+ANN-0108,F045,fever,shared-subject,rule,2,The International Space Station was launched in 1998 and has been continuously inhabited since November 2000.,has been continuously inhabited since November 2000.
+ANN-0109,F046,fever,list,rule,1,"The five permanent members of the UN Security Council are the USA, UK, France, Russia, and China.","The five permanent members of the UN Security Council are the USA, UK, France, Russia, and China."
+ANN-0110,F047,fever,list,rule,1,"The planets in our solar system, in order from the Sun, are Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune.","Venus, Earth, Mars, Jupiter, Saturn, Uranus,"
+ANN-0111,F048,fever,list,rule,1,"The primary colors of light are red, green, and blue.","The primary colors of light are red, green, and blue."
+ANN-0112,F049,fever,list,rule,1,"The four fundamental forces of nature are gravity, electromagnetism, the strong nuclear force, and the weak nuclear force.","electromagnetism, the strong nuclear force,"
+ANN-0113,F049,fever,list,rule,2,"The four fundamental forces of nature are gravity, electromagnetism, the strong nuclear force, and the weak nuclear force.",the weak nuclear force
+ANN-0114,F050,fever,list,rule,1,"DNA is composed of four bases: adenine, thymine, cytosine, and guanine.",is composed of four bases: adenine
+ANN-0115,F050,fever,list,rule,2,"DNA is composed of four bases: adenine, thymine, cytosine, and guanine.","thymine, cytosine,"
