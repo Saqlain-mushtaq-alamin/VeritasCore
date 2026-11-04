@@ -22,10 +22,11 @@ A 5-fold cross-validated logistic regression model was trained strictly on surfa
 
 | Dataset | Surface Features Only 5-Fold CV AUROC | Leakage Assessment |
 |---|:---:|:---:|
-| **HaluEval QA** | 0.7445 | **No artifact leakage (<0.60)** |
-| **FEVER** | 0.5549 | **No artifact leakage (<0.60)** |
+| **HaluEval QA** | 0.7468 | **Artifact leakage detected (>0.60)** — controlled via length tertiles |
+| **FEVER** | 0.5610 | **No artifact leakage (<0.60)** — near-random clean control |
 
 Features evaluated: `claim_length`, `claim_word_count`, `has_numbers`, `has_proper_nouns`, `num_entities`.
+*Finding:* HaluEval hallucinations exhibit systematic length bias (ChatGPT-generated hallucinations are systematically more verbose than human ground truth answers). Under length-matched tertiles (`docs/length_control_report.json`), length-alone AUROC collapses to 0.5490 for long claims while VeritasCore NLI maintains strong discrimination (0.7503). On FEVER, surface heuristics achieve only 0.5610, confirming declarative claims do not leak truth value.
 
 ---
 
