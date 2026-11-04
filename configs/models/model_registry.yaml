@@ -24,8 +24,8 @@ models:
     id: "microsoft/Phi-3-mini-4k-instruct"
     revision: "f39ac1d28e925b323eae81227eaba4464caced4e"
     type: "causal-lm"
-    vram_gb: 4.0
-    dtype: "float16"        # Load in float16 to halve VRAM usage
+    vram_gb: 7.6
+    dtype: "float16"        # Model weights in float16 occupy ~7.6 GB VRAM
     trust_remote_code: true
 
   # Alternative lighter decomposer (use if VRAM is tight):
