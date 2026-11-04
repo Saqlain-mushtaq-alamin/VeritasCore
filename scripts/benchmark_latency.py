@@ -422,9 +422,67 @@ def benchmark_consistency_checker(
     return result
 
 
-def benchmark_retrieval_verifier(n_samples: int = 10) -> LatencyResult:
-    """Benchmark RetrievalVerifier search latency."""
-    print(f"\n  [RetrievalVerifier] Benchmarking {n_samples} search queries...")
+def benchmark_retrieval_verifier_cold(n_samples: int = 5) -> LatencyResult:
+    """Benchmark RetrievalVerifier cold (live network uncached) latency."""
+    print(f"\n  [RetrievalVerifier] Benchmarking {n_samples} COLD (live API) search queries...")
+    from veritascore.core.types import Claim
+    from veritascore.retriever.cache import SearchCache
+    from veritascore.verifier.retrieval_verifier import RetrievalVerifier
+
+    verifier = RetrievalVerifier()
+    verifier.retriever.cache = SearchCache(enabled=False)
+
+    test_queries = [
+        "What year was the Hubble Space Telescope launched into orbit",
+        "Who wrote the novel One Hundred Years of Solitude in literature",
+        "What is the deepest point in Earth oceans named Challenger Deep",
+        "Which country has the longest coastline in the world geographically",
+        "When was the steam engine invented by James Watt during the industrial revolution",
+        "What is the molecular structure of deoxyribonucleic acid discovered in 1953",
+        "Who was the first woman to win a Nobel Prize in two different scientific fields",
+        "What is the capital and largest city of Australia located inland",
+        "When did the Roman Empire officially fall in Western Europe in 476 AD",
+        "What is the distance between the Earth and the Sun in astronomical units",
+    ]
+
+    latencies: list[float] = []
+    for i in range(min(n_samples, len(test_queries))):
+        q = test_queries[i]
+        c = Claim(id=f"cold_{i}", text=q, source_span=(0, len(q)), source_text=q)
+        t0 = time.perf_counter()
+        try:
+            verifier.verify([c])
+            dt = (time.perf_counter() - t0) * 1000
+            latencies.append(dt)
+            print(f"    Cold query {i+1}: {dt:.1f}ms")
+        except Exception as e:
+            print(f"    Cold retrieval query {i} error: {e}")
+
+    avg = mean(latencies) if latencies else 0.0
+    throughput = 1000.0 / avg if avg > 0 else 0.0
+
+    result = LatencyResult(
+        component="Retrieval Verifier (Live Search - Cold)",
+        device="network",
+        precision="--",
+        batch_size=1,
+        n_samples=len(latencies),
+        avg_ms=avg,
+        p50_ms=_percentile(latencies, 50),
+        p95_ms=_percentile(latencies, 95),
+        p99_ms=_percentile(latencies, 99),
+        throughput_per_sec=throughput,
+        gpu_memory_mb=0.0,
+        cpu_memory_mb=_cpu_mem_mb(),
+        notes="Live Tavily REST API network latency (uncached)",
+    )
+    print(f"    avg={result.avg_ms:.1f}ms  p50={result.p50_ms:.1f}ms  p95={result.p95_ms:.1f}ms  throughput={result.throughput_per_sec:.2f}/s")
+    return result
+
+
+def benchmark_retrieval_verifier_warm(n_samples: int = 10) -> LatencyResult:
+    """Benchmark RetrievalVerifier warm (cached disk hit) latency."""
+    print(f"\n  [RetrievalVerifier] Benchmarking {n_samples} WARM (cached) search queries...")
     from veritascore.core.types import Claim
     from veritascore.verifier.retrieval_verifier import RetrievalVerifier
 
@@ -455,7 +513,7 @@ def benchmark_retrieval_verifier(n_samples: int = 10) -> LatencyResult:
     throughput = 1000.0 / avg if avg > 0 else 0.0
 
     result = LatencyResult(
-        component="Retrieval Verifier (Live Search)",
+        component="Retrieval Verifier (Warm Cache Hit)",
         device="network",
         precision="--",
         batch_size=1,
@@ -467,10 +525,15 @@ def benchmark_retrieval_verifier(n_samples: int = 10) -> LatencyResult:
         throughput_per_sec=throughput,
         gpu_memory_mb=0.0,
         cpu_memory_mb=_cpu_mem_mb(),
-        notes="Live search API latency",
+        notes="Disk cache hit + MiniLM relevance rerank latency",
     )
-    print(f"    avg={result.avg_ms:.1f}ms  p95={result.p95_ms:.1f}ms  throughput={result.throughput_per_sec:.2f}/s")
+    print(f"    avg={result.avg_ms:.1f}ms  p50={result.p50_ms:.1f}ms  p95={result.p95_ms:.1f}ms  throughput={result.throughput_per_sec:.2f}/s")
     return result
+
+
+def benchmark_retrieval_verifier(n_samples: int = 10) -> LatencyResult:
+    """Benchmark RetrievalVerifier search latency (compatibility wrapper)."""
+    return benchmark_retrieval_verifier_warm(n_samples)
 
 
 def benchmark_nli_verifier(
@@ -1239,8 +1302,11 @@ def main() -> None:
             consistency_result = benchmark_consistency_checker(n_samples=n)
             report.component_results.append(consistency_result)
 
-            retrieval_result = benchmark_retrieval_verifier(n_samples=min(n, 10))
-            report.component_results.append(retrieval_result)
+            retrieval_cold = benchmark_retrieval_verifier_cold(n_samples=min(n, 5))
+            report.component_results.append(retrieval_cold)
+
+            retrieval_warm = benchmark_retrieval_verifier_warm(n_samples=min(n, 10))
+            report.component_results.append(retrieval_warm)
 
             nli_bidi = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True)
             report.component_results.append(nli_bidi)

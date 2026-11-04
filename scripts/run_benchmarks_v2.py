@@ -139,6 +139,8 @@ def load_halueval_qa_all(max_n: int = 10000) -> list[dict[str, Any]]:
         samples.append({
             "context": context,
             "claim_text": claim_text,
+            "question": question,
+            "answer": answer,
             "label": "hallucinated" if hallucination == "yes" else "supported",
         })
 

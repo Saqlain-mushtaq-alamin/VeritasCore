@@ -149,6 +149,8 @@ def load_halueval_qa(n: int, seed: int = 42) -> list[dict[str, Any]]:
             {
                 "claim_text": s["claim_text"],
                 "context": s["context"],
+                "question": s.get("question"),
+                "answer": s.get("answer"),
                 "label": 1 if s["label"] == "hallucinated" else 0,
             }
             for s in samples
@@ -180,6 +182,8 @@ def load_halueval_qa(n: int, seed: int = 42) -> list[dict[str, Any]]:
             samples.append({
                 "claim_text": claim_text,
                 "context": knowledge,
+                "question": question,
+                "answer": answer,
                 "label": label,
             })
         return samples
@@ -194,6 +198,8 @@ def load_fever(n: int) -> list[dict[str, Any]]:
             {
                 "claim_text": s["claim_text"],
                 "context": s["context"],
+                "question": None,
+                "answer": None,
                 "label": 1 if s["label"] == "hallucinated" else 0,
             }
             for s in samples
@@ -284,21 +290,33 @@ def run_consistency_verification(
     samples: list[dict[str, Any]],
     consistency_checker: Any,
 ) -> list[dict[str, Any]]:
-    """Run consistency checker for all samples."""
+    """Run consistency checker for samples that have an actual user query.
+
+    For QA datasets (e.g. HaluEval), checks query-answer consistency using
+    the actual question as query and answer as claim.
+    For datasets without a query (e.g. FEVER fact verification), consistency is
+    explicitly None (not measured).
+    """
     print("  Running consistency verification...")
     t0 = time.time()
     results = []
     for i, sample in enumerate(samples):
-        claim = Claim(
-            id=f"c{i}",
-            text=sample["claim_text"],
-            source_span=(0, len(sample["claim_text"])),
-            source_text=sample["claim_text"],
-        )
-        try:
-            query = sample["claim_text"]  # use claim text as query proxy
-            score = consistency_checker.score_claim(claim, query)
-        except Exception:
+        query = sample.get("question")
+        if query and str(query).strip():
+            # For QA pairs, evaluate semantic relevance of the answer to the question
+            eval_text = sample.get("answer") or sample["claim_text"]
+            claim = Claim(
+                id=f"c{i}",
+                text=eval_text,
+                source_span=(0, len(eval_text)),
+                source_text=eval_text,
+            )
+            try:
+                score = consistency_checker.score_claim(claim, query)
+            except Exception:
+                score = None
+        else:
+            # Explicitly None for datasets without a query (e.g. FEVER)
             score = None
 
         results.append({
@@ -340,9 +358,12 @@ def simulate_retrieval_signal(
 
 def run_retrieval_verification(
     samples: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Run real RetrievalVerifier if API key is available, else simulate."""
-    # Check for API key
+    nli_verifier: Any = None,
+) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    """Run real RetrievalVerifier if API key is available, else simulate.
+
+    Returns (samples_with_retrieval, cache_stats).
+    """
     tavily_key = os.environ.get("TAVILY_API_KEY", "")
     brave_key = os.environ.get("BRAVE_API_KEY", "")
     has_api_key = bool(tavily_key and not tavily_key.startswith("tvly-xxx")) or bool(
@@ -352,37 +373,51 @@ def run_retrieval_verification(
     if has_api_key:
         print("  Running LIVE retrieval verification (API key detected)...")
         try:
-            from veritascore.verifier.nli_verifier import NLIVerifier
             from veritascore.verifier.retrieval_verifier import RetrievalVerifier
-            nli = NLIVerifier()
-            ret = RetrievalVerifier(nli_verifier=nli)
+            ret = RetrievalVerifier(nli_verifier=nli_verifier)
             if ret.is_available():
                 results = []
                 t0 = time.time()
-                for i, sample in enumerate(samples):
-                    claim = Claim(
-                        id=f"rc{i}",
-                        text=sample["claim_text"],
-                        source_span=(0, len(sample["claim_text"])),
-                        source_text=sample["claim_text"],
-                    )
+                batch_size = 25
+                initial_hits = getattr(ret.retriever.cache, "hits", 0)
+                initial_misses = getattr(ret.retriever.cache, "misses", 0)
+
+                for b_start in range(0, len(samples), batch_size):
+                    b_samples = samples[b_start : b_start + batch_size]
+                    b_claims = [
+                        Claim(
+                            id=f"rc{b_start + idx}",
+                            text=s["claim_text"],
+                            source_span=(0, len(s["claim_text"])),
+                            source_text=s["claim_text"],
+                        )
+                        for idx, s in enumerate(b_samples)
+                    ]
                     try:
-                        verdict = ret.verify([claim])[0]
-                        retrieval_score = verdict.retrieval_score
-                    except Exception:
-                        retrieval_score = None
-                    results.append({**sample, "retrieval_score": retrieval_score})
-                    if (i + 1) % 20 == 0:
-                        print(f"    Retrieval: {i + 1}/{len(samples)} done ({time.time() - t0:.1f}s)")
-                nli.unload()
-                print(f"    Live retrieval complete: {len(results)} samples")
-                return results
+                        b_verdicts = ret.verify(b_claims)
+                        for s, v in zip(b_samples, b_verdicts):
+                            results.append({**s, "retrieval_score": v.retrieval_score})
+                    except Exception as e:
+                        print(f"    Batch retrieval error at {b_start}: {e}")
+                        for s in b_samples:
+                            results.append({**s, "retrieval_score": None})
+                    print(f"    Retrieval: {len(results)}/{len(samples)} done ({time.time() - t0:.1f}s)")
+
+                cur_hits = getattr(ret.retriever.cache, "hits", 0) - initial_hits
+                cur_misses = getattr(ret.retriever.cache, "misses", 0) - initial_misses
+                stats = {
+                    "cache_hits": cur_hits,
+                    "cache_misses": cur_misses,
+                    "actual_tavily_calls": cur_misses,
+                }
+                print(f"    Live retrieval complete: {len(results)} samples (hits={cur_hits}, misses={cur_misses}, calls={cur_misses})")
+                return results, stats
         except Exception as e:
             print(f"    Live retrieval failed ({e}), falling back to simulation.")
 
     print("  Simulating retrieval signal (no valid API key configured).")
     print("  NOTE: retrieval_score = NLI + Gaussian noise(sigma=0.15). Documented in output.")
-    return simulate_retrieval_signal(samples)
+    return simulate_retrieval_signal(samples), {"cache_hits": 0, "cache_misses": 0, "actual_tavily_calls": 0}
 
 
 # ---------------------------------------------------------------------------
@@ -637,14 +672,29 @@ def run_ablation_on_dataset(
     for i, cfg in enumerate(ABLATION_CONFIGS):
         print(f"  [{i + 1}/7] {cfg['short']}...", end=" ", flush=True)
         t0 = time.time()
-        scores, _ = compute_config_scores(samples, scorer, cfg)
-        metrics = compute_metrics(labels, scores, n_bootstrap=n_bootstrap)
-        elapsed = time.time() - t0
-        print(
-            f"AUROC={metrics['auroc']:.4f} "
-            f"({metrics['auroc_ci_lower']:.4f}-{metrics['auroc_ci_upper']:.4f}) "
-            f"[{elapsed:.1f}s]"
-        )
+        # If configuration relies only on consistency, but dataset lacks queries (e.g. FEVER):
+        if cfg["short"] == "Consistency-only" and all(s.get("consistency_score") is None for s in samples):
+            scores = np.full(len(samples), 0.5)
+            metrics = {
+                "auroc": float("nan"),
+                "auroc_ci_lower": float("nan"),
+                "auroc_ci_upper": float("nan"),
+                "f1": float("nan"),
+                "precision": float("nan"),
+                "recall": float("nan"),
+                "note": "N/A - dataset has no query",
+            }
+            elapsed = time.time() - t0
+            print(f"N/A (no query in dataset) [{elapsed:.1f}s]")
+        else:
+            scores, _ = compute_config_scores(samples, scorer, cfg)
+            metrics = compute_metrics(labels, scores, n_bootstrap=n_bootstrap)
+            elapsed = time.time() - t0
+            print(
+                f"AUROC={metrics['auroc']:.4f} "
+                f"({metrics['auroc_ci_lower']:.4f}-{metrics['auroc_ci_upper']:.4f}) "
+                f"[{elapsed:.1f}s]"
+            )
         if i == 0:
             full_scores = scores
         config_results.append({"config": cfg, "metrics": metrics, "scores": scores})
@@ -656,9 +706,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Phase R5: Real Ablation Study")
     parser.add_argument(
         "--datasets", nargs="+", choices=["halueval", "fever"],
-        default=["halueval"], help="Datasets to evaluate on"
+        default=["halueval", "fever"], help="Datasets to evaluate on"
     )
-    parser.add_argument("--n", type=int, default=200, help="Number of samples per dataset")
+    parser.add_argument("--n", type=int, default=500, help="Number of samples per dataset")
     parser.add_argument("--n-bootstrap", type=int, default=2000, help="Bootstrap resamples")
     parser.add_argument(
         "--no-retrieval", action="store_true",
@@ -723,6 +773,7 @@ def main() -> None:
     # ── Collect per-dataset signals ────────────────────────────────────────
     print("\n[Step 4] Collecting verification signals...")
     dataset_samples: dict[str, list[dict[str, Any]]] = {}
+    dataset_cache_stats: dict[str, dict[str, int]] = {}
     retrieval_is_simulated = False
 
     for ds_name in args.datasets:
@@ -746,9 +797,11 @@ def main() -> None:
             for s in consistency_results:
                 s["retrieval_score"] = None
             print("  Retrieval signal: SKIPPED (--no-retrieval)")
+            dataset_cache_stats[ds_name] = {"cache_hits": 0, "cache_misses": 0, "actual_tavily_calls": 0}
         else:
-            retrieval_results = run_retrieval_verification(consistency_results)
+            retrieval_results, stats = run_retrieval_verification(consistency_results, nli_verifier=nli_verifier)
             consistency_results = retrieval_results
+            dataset_cache_stats[ds_name] = stats
             # Check if simulated
             if not (
                 os.environ.get("TAVILY_API_KEY", "").strip()
@@ -783,20 +836,51 @@ def main() -> None:
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    # Paired significance tests
+    paired_significance: dict[str, list[dict[str, Any]]] = {}
+    for ds, full_scores in full_fusion_scores.items():
+        full_labels = full_fusion_labels[ds]
+        paired_significance[ds] = []
+        for i, cfg in enumerate(ABLATION_CONFIGS[1:], 1):
+            cfg_scores = dataset_results[ds][i]["scores"]
+            try:
+                delta, p = paired_bootstrap_test(
+                    full_labels, full_scores, cfg_scores, n_bootstrap=args.n_bootstrap
+                )
+                paired_significance[ds].append({
+                    "config": cfg["name"],
+                    "short": cfg["short"],
+                    "delta_auroc": float(delta),
+                    "p_value": float(p),
+                })
+            except Exception as e:
+                paired_significance[ds].append({
+                    "config": cfg["name"],
+                    "short": cfg["short"],
+                    "error": str(e),
+                })
+
     # JSON results
     json_output: dict[str, Any] = {
         "metadata": {
             "n_samples_per_dataset": args.n,
+            "sample_counts": {ds: len(s_list) for ds, s_list in dataset_samples.items()},
             "n_bootstrap": args.n_bootstrap,
             "datasets": args.datasets,
             "retrieval_is_simulated": retrieval_is_simulated,
             "retrieval_simulation_method": (
                 "NLI score + Gaussian noise (sigma=0.15)" if retrieval_is_simulated
-                else "live web search"
+                else "live web search (Tavily REST API)"
             ),
             "seed": args.seed,
+            "cache_statistics": dataset_cache_stats,
+            "sample_ids": {
+                ds: [f"{ds}_eval_{idx}" for idx in range(len(s_list))]
+                for ds, s_list in dataset_samples.items()
+            },
         },
         "ablation_results": {},
+        "paired_significance": paired_significance,
         "feature_importance": importance,
     }
     for ds_name, results in dataset_results.items():
