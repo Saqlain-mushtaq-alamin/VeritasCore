@@ -181,7 +181,7 @@ class LLMDecomposer(BaseDecomposer):
         backend: str = "transformers",
         fallback_on_error: bool = True,
         prompt_version: str = DECOMPOSITION_VERSION,
-        timeout_per_sample: float = 15.0,
+        timeout_per_sample: float = 30.0,
     ) -> None:
         if backend not in ("transformers", "ollama"):
             raise ValueError(f"backend must be 'transformers' or 'ollama', got '{backend}'")
@@ -213,11 +213,11 @@ class LLMDecomposer(BaseDecomposer):
         """Load model via HuggingFace Transformers.
 
         GPU strategy:
-          - If CUDA is available AND free VRAM >= 4 GB, load all weights onto
-            cuda:0 with float16. This keeps 100% GPU utilisation and avoids the
-            PCIe bottleneck from CPU offloading (which causes ~50% GPU util).
-          - If VRAM is tight, fall back to device_map='auto' which splits across
-            GPU+CPU.  Slower, but prevents OOM.
+          - If CUDA is available AND free VRAM >= 7.5 GB, load all weights onto
+            cuda:0 with float16. Phi-3-mini-4k-instruct in float16 requires
+            ~7.6 GB VRAM during inference (5.9 GB static weights + 1.7 GB KV cache/activations).
+          - If VRAM is tight (< 7.5 GB), fall back to device_map='auto' which splits
+            across GPU+CPU. Slower, but prevents OOM.
           - CPU-only: float32, no device_map.
 
         Attention implementation:
@@ -246,8 +246,7 @@ class LLMDecomposer(BaseDecomposer):
             if self._device != "cpu":
                 load_kwargs["torch_dtype"] = torch.float16
 
-                # Check free VRAM — if ≥ 4 GB available, load entirely on GPU
-                # to avoid the CPU offload that throttles utilisation to ~50%.
+                # Check free VRAM — if ≥ 7.5 GB available, load entirely on GPU
                 free_vram_gb = 0.0
                 try:
                     free_bytes, _ = torch.cuda.mem_get_info(0)
@@ -255,7 +254,7 @@ class LLMDecomposer(BaseDecomposer):
                 except Exception:
                     pass
 
-                if free_vram_gb >= 4.0:
+                if free_vram_gb >= 7.5:
                     # All layers on GPU — fastest path, 100% GPU utilisation
                     load_kwargs["device_map"] = {"": 0}
                     logger.info("Forcing full GPU load (%.1f GB free VRAM)", free_vram_gb)

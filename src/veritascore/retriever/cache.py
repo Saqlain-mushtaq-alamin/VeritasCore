@@ -43,6 +43,8 @@ class SearchCache:
     def __init__(self, cache_dir: str = ".cache/search", enabled: bool = True) -> None:
         self.cache_dir = Path(cache_dir)
         self.enabled = enabled
+        self.hits: int = 0
+        self.misses: int = 0
         if enabled:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -66,12 +68,15 @@ class SearchCache:
 
         path = self.cache_dir / f"{self._key(query)}.json"
         if not path.exists():
+            self.misses += 1
             return None
 
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
+            self.hits += 1
             return [SearchResult(**item) for item in data]
         except (json.JSONDecodeError, ValueError, TypeError) as e:
+            self.misses += 1
             logger.warning("Corrupted cache entry for query (treating as miss): %s", e)
             return None
 
