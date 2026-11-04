@@ -64,12 +64,12 @@ def run_length_analysis() -> dict:
     print("Running Length-Controlled Empirical Analysis on HaluEval QA (n=1,500)")
     print("=" * 70)
 
-    # 1. Load HaluEval data and saved NLI scores
+    # 1. Load HaluEval data and canonical forward-only NLI scores
     halu_samples = load_halueval_split(split="eval", n=1500, grid_n=500, seed=42)
-    halu_v2 = json.load(open(SCRIPTS_DIR.parent / "tests" / "benchmarks" / "results" / "halueval_results_v2.json"))
+    fwd_results = json.load(open(SCRIPTS_DIR.parent / "tests" / "benchmarks" / "results" / "forward_only_nli_results.json"))
 
-    y_true = np.array(halu_v2["y_true"], dtype=int)
-    nli_scores = np.array(halu_v2["y_score"], dtype=float)
+    y_true = np.array(fwd_results["halueval"]["y_true"], dtype=int)
+    nli_scores = np.array(fwd_results["halueval"]["y_score"], dtype=float)
 
     # Extract surface features
     feature_keys = ["claim_length", "claim_word_count", "has_numbers", "has_proper_nouns", "num_entities"]
@@ -170,10 +170,9 @@ def run_length_analysis() -> dict:
 
     # 3. FEVER Comparison (Clean Benchmark)
     print("\n--- FEVER Surface Feature Control Comparison ---")
-    fever_v2 = json.load(open(SCRIPTS_DIR.parent / "tests" / "benchmarks" / "results" / "fever_results_v2.json"))
     fever_samples = load_fever_fixed(n=1000)
-    y_fever = np.array(fever_v2["y_true"], dtype=int)
-    nli_fever = np.array(fever_v2["y_score"], dtype=float)
+    y_fever = np.array(fwd_results["fever"]["y_true"], dtype=int)
+    nli_fever = np.array(fwd_results["fever"]["y_score"], dtype=float)
 
     X_fever_surf = np.array([
         [extract_surface_features(s["claim_text"])[k] for k in feature_keys]
