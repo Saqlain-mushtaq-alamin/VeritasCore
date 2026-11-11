@@ -673,6 +673,13 @@ def benchmark_llm_decomposer(
     precision = precision or _detect_precision()
     print(f"\n  [LLMDecomposer] Benchmarking {n_samples} decompositions (device={device}, precision={precision})...")
 
+    import gc
+    import torch
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+
     from veritascore.decomposer.llm_decomposer import LLMDecomposer
 
     _reset_gpu_peak()
