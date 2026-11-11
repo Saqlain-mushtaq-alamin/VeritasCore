@@ -883,6 +883,15 @@ def main() -> None:
         full_labels = full_fusion_labels[ds]
         paired_significance[ds] = []
         for i, cfg in enumerate(ABLATION_CONFIGS[1:], 1):
+            if cfg.get("artifact_consistency") and all(s.get("consistency_score") is None for s in dataset_samples[ds]):
+                paired_significance[ds].append({
+                    "config": cfg["name"],
+                    "short": cfg["short"],
+                    "delta_auroc": float("nan"),
+                    "p_value": float("nan"),
+                    "note": "N/A - dataset has no query",
+                })
+                continue
             cfg_scores = dataset_results[ds][i]["scores"]
             try:
                 delta, p = paired_bootstrap_test(
