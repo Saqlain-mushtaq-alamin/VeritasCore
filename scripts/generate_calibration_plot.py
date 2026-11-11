@@ -28,6 +28,9 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 import re
 import sys
 import time
@@ -887,6 +890,25 @@ def main() -> None:  # noqa: C901
 
     # Real datasets
     if not args.synthetic:
+        # Step 1: Fit Platt scaling calibrator exclusively on HaluEval QA grid split (500 samples)
+        # to ensure true zero-shot out-of-domain transfer on FEVER (reconciling with Control 7).
+        print("\n[Platt] Fitting Platt calibrator on HaluEval QA grid-search split...")
+        from run_benchmarks_v2 import load_halueval_split
+        from sklearn.linear_model import LogisticRegression
+        grid_samples = load_halueval_split(split="grid", n=min(args.n, 500), grid_n=min(args.n, 500), seed=args.seed)
+
+        if args.mode == "fusion":
+            from veritascore.scorer.fusion import FusionScorer
+            calib_scorer = FusionScorer()
+            calib_scorer.load()
+            y_true_grid, y_score_grid, _ = score_samples_fusion(grid_samples, "HaluEval QA (grid split)", calib_scorer)
+        else:
+            y_true_grid, y_score_grid, _ = score_samples_nli(grid_samples, "HaluEval QA (grid split)")
+
+        platt = LogisticRegression(C=1.0, solver="lbfgs")
+        platt.fit(np.asarray(y_score_grid).reshape(-1, 1), np.asarray(y_true_grid))
+        print(f"  Platt calibrator fitted on grid split (slope={platt.coef_[0][0]:.3f}, intercept={platt.intercept_[0]:.3f}).")
+
         for dataset in args.datasets:
             print(f"\n[{dataset.upper()}] Loading {args.n} samples...")
             try:
@@ -908,28 +930,8 @@ def main() -> None:  # noqa: C901
                     y_true, y_score_raw, y_pred = score_samples_nli(samples, ds_label)
                 print(f"  {args.mode.upper()} scoring: {time.perf_counter() - t0:.1f}s")
 
-                y_score_calib: list[float] | None = None
-                try:
-                    from sklearn.linear_model import LogisticRegression
-                    print(f"  [Platt] Fitting Platt scaling on {dataset} tuning split...")
-                    if dataset == "halueval":
-                        from run_benchmarks_v2 import load_halueval_split
-                        grid_samples = load_halueval_split(split="grid", n=min(args.n, 500), grid_n=min(args.n, 500), seed=args.seed)
-                    else:
-                        from baseline_summac import load_fever
-                        grid_samples = load_fever(min(args.n, 500))
-
-                    if args.mode == "fusion":
-                        y_true_grid, y_score_grid, _ = score_samples_fusion(grid_samples, f"{ds_label} (tuning split)", scorer)
-                    else:
-                        y_true_grid, y_score_grid, _ = score_samples_nli(grid_samples, f"{ds_label} (tuning split)")
-
-                    platt = LogisticRegression(C=1.0, solver="lbfgs")
-                    platt.fit(np.asarray(y_score_grid).reshape(-1, 1), np.asarray(y_true_grid))
-                    y_score_calib = platt.predict_proba(np.asarray(y_score_raw).reshape(-1, 1))[:, 1].tolist()
-                    print(f"  Platt calibrator fitted on tuning split (slope={platt.coef_[0][0]:.3f}, intercept={platt.intercept_[0]:.3f}).")
-                except Exception as exc:
-                    print(f"  [WARN] Tuning split calibration failed ({exc}) — falling back to raw scores.")
+                # Apply the grid-split fitted calibrator to unseen evaluation splits
+                y_score_calib = platt.predict_proba(np.asarray(y_score_raw).reshape(-1, 1))[:, 1].tolist()
 
                 res = run_dataset_pipeline(
                     dataset_name=ds_label,
