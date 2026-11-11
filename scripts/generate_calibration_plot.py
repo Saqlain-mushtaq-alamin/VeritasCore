@@ -1148,9 +1148,11 @@ def main() -> None:  # noqa: C901
                     generate_plots=generate_plots,
                     mode=args.mode,
                 )
-                res["threshold_selection_rule"] = f"F1-maximizing decision threshold fitted strictly on HaluEval QA grid split (tau = {best_tau:.2f}, Grid F1 = {best_grid_f1:.4f})"
+                res["threshold_selection_rule"] = f"F1-maximizing decision threshold fitted strictly on held-out HaluEval QA calibration split (tau = {best_tau:.2f}, Calib F1 = {best_calib_f1:.4f})"
                 res["decision_threshold"] = best_tau
-                res["grid_f1"] = best_grid_f1
+                res["grid_f1"] = best_calib_f1
+                res["calib_f1"] = best_calib_f1
+                res["calibration_split_info"] = "Platt scaling fitted on HaluEval QA calib_set (held out from fusion training). Zero-shot transfer to FEVER."
                 all_results.append(res)
 
             except FileNotFoundError as exc:
