@@ -743,6 +743,10 @@ def main() -> None:
         help="Skip retrieval signal entirely (use NLI+Consistency only)"
     )
     parser.add_argument(
+        "--simulate-retrieval", action="store_true",
+        help="Simulate retrieval signal (NLI + noise) rather than querying live web API"
+    )
+    parser.add_argument(
         "--retrain-fusion", action="store_true",
         help="Retrain fusion model on a small synthetic dataset before ablation"
     )
