@@ -3,128 +3,139 @@
     "dataset_name": "HaluEval QA",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T10:41:47.728380+00:00",
-    "auroc": 0.9469343965669085,
-    "f1": 0.8704453441295547,
-    "precision": 0.8565737051792829,
-    "recall": 0.8847736625514403,
-    "brier_raw": 0.0990480499994153,
-    "ece_raw": 0.08609151412833976,
-    "brier_calibrated": 0.09373345591603505,
-    "ece_calibrated": 0.06865935545607786,
+    "timestamp": "2026-11-11T13:39:55.183750+00:00",
+    "auroc": 0.7523498422763446,
+    "f1": 0.7115384615384616,
+    "precision": 0.6678700361010831,
+    "recall": 0.7613168724279835,
+    "brier_raw": 0.2092367788713914,
+    "ece_raw": 0.07816326585152089,
+    "brier_calibrated": 0.20597049658793207,
+    "ece_calibrated": 0.06825820497179894,
     "plot_path": "docs\\calibration\\calibration_fusion_halueval_qa.png",
     "error_analysis": {
       "category_counts": {
         "complex_sentence": {
-          "fp": 1,
-          "fn": 1
+          "fp": 2,
+          "fn": 0
         },
         "temporal": {
           "fp": 0,
-          "fn": 1
-        },
-        "short_answer": {
-          "fp": 17,
           "fn": 3
         },
-        "numerical": {
-          "fp": 15,
-          "fn": 16
+        "negation": {
+          "fp": 1,
+          "fn": 0
         },
         "other": {
           "fp": 3,
-          "fn": 7
+          "fn": 16
         },
-        "negation": {
-          "fp": 0,
-          "fn": 0
+        "numerical": {
+          "fp": 32,
+          "fn": 36
+        },
+        "short_answer": {
+          "fp": 54,
+          "fn": 3
         }
       },
       "gallery": {
         "complex_sentence": [
           {
-            "index": 137,
-            "claim_text": "Q: Which American film, The Country Bears or Bambi, is based on a book by the Austrian author Felix Salten?  A: The Country Bears is inspired by a Disney theme park attraction.",
-            "context_snippet": "Bambi is a 1942 American animated film directed by David Hand (supervising a team of sequence directors), produced by Walt Disney and based on the book \"Bambi, a Life in the Woods\" by Austrian author ",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.4166,
+            "index": 352,
+            "claim_text": "Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an American radio personality who is also a representative of Philadelphia's folk music scene, what was he called by \"The Philadelphia inquirer\"?  A: The Grandf",
+            "context_snippet": "Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a representative of Philadelphia's folk music scene. A founder of the annual Philadelp",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.8032,
             "category": "complex_sentence"
           }
         ],
         "temporal": [
           {
-            "index": 289,
-            "claim_text": "Q: What was the name of the musical group with which the career of the singer of \"Shikva\" began?  A: Faakhir Mehmood began his career with Vital Signs.",
-            "context_snippet": "\"Shikva\" (Urdu: \u200e ; lit. \"Querulousness\" or \"Complain\" ) is a song by Pakistani recording artist Faakhir Mehmood from his fourth studio album \"Jee Chahay\" (2011).Faakhir Mehmood (Urdu: \u200e ) is a Pakist",
+            "index": 276,
+            "claim_text": "Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.",
+            "context_snippet": "Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet, and filmmaker.Ali Ahmad Said Esber , romanised: \"\u02bfAl\u012b A\u1e25mad Sa\u02bf\u012bd 'Isbar\" (bor",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": 0.4929,
+            "score": 0.3018,
             "category": "temporal"
           }
         ],
-        "short_answer": [
+        "negation": [
           {
-            "index": 31,
-            "claim_text": "Q: What was the company orginally named first?  A: EMC Corporation",
-            "context_snippet": "Dell Technologies Inc. is an American multinational information technology corporation based in Round Rock, Texas.Dell EMC (EMC Corporation until 2016) is an American multinational corporation headqua",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2925,
-            "category": "short_answer"
-          }
-        ],
-        "numerical": [
-          {
-            "index": 53,
-            "claim_text": "Q: William Stanley, 3rd Baron Monteagle resided in a castle located in what valley?  A: the Hornby Valley",
-            "context_snippet": "William Stanley, 3rd Baron Monteagle (1528\u20131581), of Hornby Castle, Lancashire, was an English politician.Hornby Castle is a country house, developed from a medieval castle, standing to the east of th",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.1766,
-            "category": "numerical"
+            "index": 435,
+            "claim_text": "Q: Fir and Imperata, are a type of tree?  A: no",
+            "context_snippet": "Firs (Abies) are a genus of 48\u201356 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but widespread genus of tropical and subtropical grasses, commonly known as satintail",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.68,
+            "category": "negation"
           }
         ],
         "other": [
           {
-            "index": 17,
-            "claim_text": "Q: Dravid Brook co-wrote a song with this American singer, songwriter and record producer with who?  A: Charles Otto Puth Jr. himself.",
-            "context_snippet": " He is best known for co-writing Eminem's Legacy, Jason Derulo's \"Broke\" featuring Stevie Wonder and Keith Urban, and Charlie Puth's \"Some Type of Love\".Charles Otto Puth Jr. ( ) (born December 2, 199",
+            "index": 129,
+            "claim_text": "Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.",
+            "context_snippet": "Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour from 1970\u20131987 reaching the final of the singles Australian Open in 1980.Matt Lucen",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": 0.1701,
+            "score": 0.2705,
             "category": "other"
+          }
+        ],
+        "numerical": [
+          {
+            "index": 97,
+            "claim_text": "Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.",
+            "context_snippet": " This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater auto-racing formula that ran in different series in various regions around the wor",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2552,
+            "category": "numerical"
+          }
+        ],
+        "short_answer": [
+          {
+            "index": 300,
+            "claim_text": "Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry",
+            "context_snippet": "Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the National Basketball Association (NBA).Wardell Stephen Curry II (born March 14, 198",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.4221,
+            "category": "short_answer"
           }
         ]
       },
-      "total_errors": 64,
+      "total_errors": 150,
       "total_samples": 500,
-      "error_rate": 0.128
+      "error_rate": 0.3
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.8875502008032129,
-        "recall": 0.8599221789883269,
-        "f1-score": 0.8735177865612648,
+        "precision": 0.7399103139013453,
+        "recall": 0.642023346303502,
+        "f1-score": 0.6875,
         "support": 257.0
       },
       "hallucinated": {
-        "precision": 0.8565737051792829,
-        "recall": 0.8847736625514403,
-        "f1-score": 0.8704453441295547,
+        "precision": 0.6678700361010831,
+        "recall": 0.7613168724279835,
+        "f1-score": 0.7115384615384616,
         "support": 243.0
       },
-      "accuracy": 0.872,
+      "accuracy": 0.7,
       "macro avg": {
-        "precision": 0.8720619529912479,
-        "recall": 0.8723479207698837,
-        "f1-score": 0.8719815653454097,
+        "precision": 0.7038901750012142,
+        "recall": 0.7016701093657427,
+        "f1-score": 0.6995192307692308,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.8724956239299829,
-        "recall": 0.872,
-        "f1-score": 0.8720245795394536,
+        "precision": 0.7048987388904179,
+        "recall": 0.7,
+        "f1-score": 0.6991826923076924,
         "support": 500.0
       }
     }
@@ -133,15 +144,15 @@
     "dataset_name": "FEVER (validation)",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T10:42:04.481258+00:00",
-    "auroc": 0.9296314102564103,
-    "f1": 0.0,
-    "precision": 0.0,
-    "recall": 0.0,
-    "brier_raw": 0.36861375764889875,
-    "ece_raw": 0.35522574003599144,
-    "brier_calibrated": 0.2463618063427575,
-    "ece_calibrated": 1.6708236130202891e-06,
+    "timestamp": "2026-11-11T13:40:05.873099+00:00",
+    "auroc": 0.9067788461538462,
+    "f1": 0.8400852878464818,
+    "precision": 0.9425837320574163,
+    "recall": 0.7576923076923077,
+    "brier_raw": 0.16737676956978928,
+    "ece_raw": 0.2477005155078839,
+    "brier_calibrated": 0.15470910971767307,
+    "ece_calibrated": 0.22823683715108123,
     "plot_path": "docs\\calibration\\calibration_fusion_fever_validation.png",
     "error_analysis": {
       "category_counts": {
@@ -150,58 +161,36 @@
           "fn": 0
         },
         "temporal": {
+          "fp": 1,
+          "fn": 0
+        },
+        "negation": {
           "fp": 0,
-          "fn": 3
+          "fn": 4
+        },
+        "other": {
+          "fp": 11,
+          "fn": 22
+        },
+        "numerical": {
+          "fp": 0,
+          "fn": 37
         },
         "short_answer": {
           "fp": 0,
           "fn": 0
-        },
-        "numerical": {
-          "fp": 0,
-          "fn": 52
-        },
-        "other": {
-          "fp": 0,
-          "fn": 178
-        },
-        "negation": {
-          "fp": 0,
-          "fn": 27
         }
       },
       "gallery": {
         "temporal": [
           {
-            "index": 321,
-            "claim_text": "The Bloods was founded in Los Angeles, Massachusetts.",
-            "context_snippet": "The Bloods are a primarily , though not exclusively , African American street gang founded in Los Angeles , California .",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.171,
+            "index": 158,
+            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
+            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.6269,
             "category": "temporal"
-          }
-        ],
-        "numerical": [
-          {
-            "index": 339,
-            "claim_text": "Rob Sheridan finished college in 1979.",
-            "context_snippet": "Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known for his extensive work with the band Nine Inch Nails .",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.1558,
-            "category": "numerical"
-          }
-        ],
-        "other": [
-          {
-            "index": 441,
-            "claim_text": "Dan O'Bannon died.",
-            "context_snippet": "Daniel Thomas `` Dan '' O'Bannon -LRB- September 30 , 1946 -- December 17 , 2009 -RRB- was an American film screenwriter , director , visual effects supervisor , and occasional actor , usually in the ",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.1551,
-            "category": "other"
           }
         ],
         "negation": [
@@ -211,39 +200,61 @@
             "context_snippet": "It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern corner of Colorado . California -LRB- -LSB- k\u00e6l\u1d7b\u02c8f\u0254\u02d0rnj\u0259 , _ - ni.\u0259 -RSB- , -RR",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": 0.1566,
+            "score": 0.3622,
             "category": "negation"
+          }
+        ],
+        "other": [
+          {
+            "index": 188,
+            "claim_text": "Bhagat Singh was murdered.",
+            "context_snippet": "Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justification or valid excuse , especially the unlawful killing of another human bein",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2719,
+            "category": "other"
+          }
+        ],
+        "numerical": [
+          {
+            "index": 339,
+            "claim_text": "Rob Sheridan finished college in 1979.",
+            "context_snippet": "Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known for his extensive work with the band Nine Inch Nails .",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2738,
+            "category": "numerical"
           }
         ]
       },
-      "total_errors": 260,
+      "total_errors": 75,
       "total_samples": 500,
-      "error_rate": 0.52
+      "error_rate": 0.15
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.48,
-        "recall": 1.0,
-        "f1-score": 0.6486486486486487,
+        "precision": 0.7835051546391752,
+        "recall": 0.95,
+        "f1-score": 0.8587570621468926,
         "support": 240.0
       },
       "hallucinated": {
-        "precision": 0.0,
-        "recall": 0.0,
-        "f1-score": 0.0,
+        "precision": 0.9425837320574163,
+        "recall": 0.7576923076923077,
+        "f1-score": 0.8400852878464818,
         "support": 260.0
       },
-      "accuracy": 0.48,
+      "accuracy": 0.85,
       "macro avg": {
-        "precision": 0.24,
-        "recall": 0.5,
-        "f1-score": 0.32432432432432434,
+        "precision": 0.8630444433482958,
+        "recall": 0.8538461538461538,
+        "f1-score": 0.8494211749966872,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.23039999999999997,
-        "recall": 0.48,
-        "f1-score": 0.31135135135135134,
+        "precision": 0.8662260148966605,
+        "recall": 0.85,
+        "f1-score": 0.8490477395106791,
         "support": 500.0
       }
     }

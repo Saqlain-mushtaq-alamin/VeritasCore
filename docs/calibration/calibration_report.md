@@ -1,6 +1,6 @@
 # Phase R7: Calibration Plots & Error Analysis
 
-> Generated: 2026-11-11 10:42 UTC
+> Generated: 2026-11-11 13:40 UTC
 
 ---
 
@@ -8,18 +8,18 @@
 
 ### HaluEval QA
 
-- **Brier Score (raw)**: 0.0990
-- **Brier Score (Platt-scaled)**: 0.0937
-- **Improvement after calibration**: +0.0053
-- **AUROC**: 0.9469
+- **Brier Score (raw)**: 0.2092
+- **Brier Score (Platt-scaled)**: 0.2060
+- **Improvement after calibration**: +0.0033
+- **AUROC**: 0.7523
 - **Plot**: `docs\calibration\calibration_fusion_halueval_qa.png`
 
 ### FEVER (validation)
 
-- **Brier Score (raw)**: 0.3686
-- **Brier Score (Platt-scaled)**: 0.2464
-- **Improvement after calibration**: +0.1223
-- **AUROC**: 0.9296
+- **Brier Score (raw)**: 0.1674
+- **Brier Score (Platt-scaled)**: 0.1547
+- **Improvement after calibration**: +0.0127
+- **AUROC**: 0.9068
 - **Plot**: `docs\calibration\calibration_fusion_fever_validation.png`
 
 ---
@@ -30,179 +30,187 @@
 
 #### HaluEval QA
 
-**Total errors**: 64 / 500 (12.8% error rate)
+**Total errors**: 150 / 500 (30.0% error rate)
 
 | Error Category | FP | FN | Total | % of Errors |
 |---------------|:--:|:--:|:-----:|:-----------:|
-| Short answers (NLI struggles with near-empty hypothesis) | 17 | 3 | 20 | 31.2% |
-| Numerical claims (NLI may not distinguish exact numbers) | 15 | 16 | 31 | 48.4% |
-| Negation (NLI negation handling is a known weakness) | 0 | 0 | 0 | 0.0% |
-| Multi-hop / complex (single NLI pass insufficient) | 1 | 1 | 2 | 3.1% |
-| Temporal (evidence may be outdated or ambiguous) | 0 | 1 | 1 | 1.6% |
-| Other / unknown | 3 | 7 | 10 | 15.6% |
+| Short answers (NLI struggles with near-empty hypothesis) | 54 | 3 | 57 | 38.0% |
+| Numerical claims (NLI may not distinguish exact numbers) | 32 | 36 | 68 | 45.3% |
+| Negation (NLI negation handling is a known weakness) | 1 | 0 | 1 | 0.7% |
+| Multi-hop / complex (single NLI pass insufficient) | 2 | 0 | 2 | 1.3% |
+| Temporal (evidence may be outdated or ambiguous) | 0 | 3 | 3 | 2.0% |
+| Other / unknown | 3 | 16 | 19 | 12.7% |
 
 ### Failure Case Gallery
 
 
 #### Complex Sentence Examples
 
-**FN** (score=0.417)  
-- **Claim**: `Q: Which American film, The Country Bears or Bambi, is based on a book by the Austrian author Felix Salten?  A: The Country Bears is inspired by a Dis`  
-- **Context**: _Bambi is a 1942 American animated film directed by David Hand (supervising a team of sequence directors), produced by Wa_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FP** (score=0.888)  
+**FP** (score=0.803)  
 - **Claim**: `Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an America`  
 - **Context**: _Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a repr_  
+- **True**: supported  **Predicted**: hallucinated
+
+**FP** (score=0.651)  
+- **Claim**: `Q: While both singer-songwriters have displayed incredible talent, what sets Robert Palmer apart from Wayne Coyne, causing him to gain populatiry in t`  
+- **Context**: _ He is the lead singer, occasional backing vocalist, guitarist, keyboardist, theremin player and songwriter for the band_  
 - **True**: supported  **Predicted**: hallucinated
 
 
 #### Temporal Examples
 
-**FN** (score=0.493)  
-- **Claim**: `Q: What was the name of the musical group with which the career of the singer of "Shikva" began?  A: Faakhir Mehmood began his career with Vital Signs`  
-- **Context**: _"Shikva" (Urdu: ‎ ; lit. "Querulousness" or "Complain" ) is a song by Pakistani recording artist Faakhir Mehmood from hi_  
+**FN** (score=0.302)  
+- **Claim**: `Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.`  
+- **Context**: _Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.412)  
+- **Claim**: `Q: Who was born Earlier, Jon Amiel or Michael Ritchie?  A: Jon Amiel was born earlier.`  
+- **Context**: _Michael Brunswick Ritchie (November 28, 1938 – April 16, 2001) was an American film director of films with comical or sa_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.480)  
+- **Claim**: `Q: Which magazine was founded first, The General or XXL?  A: XXL was founded before The General.`  
+- **Context**: _The General (1964–1998) was a bi-monthly periodical devoted to supporting Avalon Hill's line of wargames, with articles _  
 - **True**: hallucinated  **Predicted**: supported
 
 
-#### Short Answer Examples
+#### Negation Examples
 
-**FN** (score=0.292)  
-- **Claim**: `Q: What was the company orginally named first?  A: EMC Corporation`  
-- **Context**: _Dell Technologies Inc. is an American multinational information technology corporation based in Round Rock, Texas.Dell E_  
+**FP** (score=0.680)  
+- **Claim**: `Q: Fir and Imperata, are a type of tree?  A: no`  
+- **Context**: _Firs (Abies) are a genus of 48–56 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but w_  
+- **True**: supported  **Predicted**: hallucinated
+
+
+#### Other Examples
+
+**FN** (score=0.271)  
+- **Claim**: `Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.`  
+- **Context**: _Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour fro_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.322)  
-- **Claim**: `Q: Paul Di'Anno and Joe Gooch participated in what band position?  A: guitarist and songwriter.`  
-- **Context**: _Paul Andrews (born 17 May 1958), better known by his stage name Paul Di'Anno, is a British singer best known as the firs_  
+**FN** (score=0.305)  
+- **Claim**: `Q: Patrick MacLeamy is the chairman and former CEO of which American architecture, engineering and planning firm?  A: Patrick MacLeamy used to work at`  
+- **Context**: _Patrick MacLeamy, FAIA, LEED AP, (born October 2, 1942, in Alton, Illinois) is an American architect who is chairman and_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.485)  
-- **Claim**: `Q: What do Hedley Mascot Mine and Ruth Mine have in common?  A: They were both abandoned.`  
-- **Context**: _The Hedley Mascot Mine was a gold mine in Hedley, British Columbia, Canada.The Ruth Mine was a small gold producer about_  
+**FN** (score=0.309)  
+- **Claim**: `Q: Ares and Right On!, is which type of publication?  A: Ares and Right On! are publications.`  
+- **Context**: _Ares was a science fiction wargame magazine published by Simulations Publications, Inc. (SPI), and then TSR, Inc., betwe_  
 - **True**: hallucinated  **Predicted**: supported
 
 
 #### Numerical Examples
 
-**FN** (score=0.177)  
-- **Claim**: `Q: William Stanley, 3rd Baron Monteagle resided in a castle located in what valley?  A: the Hornby Valley`  
-- **Context**: _William Stanley, 3rd Baron Monteagle (1528–1581), of Hornby Castle, Lancashire, was an English politician.Hornby Castle _  
+**FN** (score=0.255)  
+- **Claim**: `Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.`  
+- **Context**: _ This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater au_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.195)  
-- **Claim**: `Q: What was the number one single by the band that features a lead singer who won the season finale of a television reality game show that premiered i`  
-- **Context**: _The Celebrity Apprentice 3 (also known as The Apprentice 9) is the ninth installment of the reality game show, "Celebrit_  
+**FN** (score=0.284)  
+- **Claim**: `Q: Eugene Isaac Meyer was the father of a publisher whose memoir won what in 1998?  A: Eugene Isaac Meyer was the father of a publisher whose memoir w`  
+- **Context**: _Eugene Isaac Meyer (October 31, 1875 – July 17, 1959) was an American financier, public official, and newspaper publishe_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.205)  
-- **Claim**: `Q: When was the American microbiologist who developed MMR vaccine born?  A: Maurice Ralph Hilleman was born on August 31, 1919.`  
-- **Context**: _The MMR vaccine (also known as the MPR vaccine after the Latin names of the diseases) is an immunization vaccine against_  
+**FN** (score=0.311)  
+- **Claim**: `Q: When was the Russian librettist whose work was used in the opera Dubrovsky born?  A: Modest Ilyich Tchaikovsky was born in the mid-1800s.`  
+- **Context**: _Dubrovsky (Russian: "Дубровский" ) is an opera in four acts (5 scenes) Op. 58, by Eduard Nápravník, to a Russian librett_  
 - **True**: hallucinated  **Predicted**: supported
 
 
-#### Other Examples
+#### Short Answer Examples
 
-**FN** (score=0.170)  
-- **Claim**: `Q: Dravid Brook co-wrote a song with this American singer, songwriter and record producer with who?  A: Charles Otto Puth Jr. himself.`  
-- **Context**: _ He is best known for co-writing Eminem's Legacy, Jason Derulo's "Broke" featuring Stevie Wonder and Keith Urban, and Ch_  
+**FN** (score=0.422)  
+- **Claim**: `Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry`  
+- **Context**: _Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the Na_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.194)  
-- **Claim**: `Q: Which architect designed a church near President Grant's tomb?  A: Henry C. Pelton designed an immigrant settlement.`  
-- **Context**: _ It was designed by architect Henry C. Pelton (architect of Riverside Church) in the American Perpendicular Style and co_  
+**FN** (score=0.426)  
+- **Claim**: `Q: What was the company orginally named first?  A: EMC Corporation`  
+- **Context**: _Dell Technologies Inc. is an American multinational information technology corporation based in Round Rock, Texas.Dell E_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.231)  
-- **Claim**: `Q: What English lyricist wrote the lyrics for the Doug Henning inspired musical Merlin?  A: Don Black is a lyrist.`  
-- **Context**: _Merlin was a musical based on a concept by popular illusionist Doug Henning and Barbara De Angelis, written by Richard L_  
+**FN** (score=0.428)  
+- **Claim**: `Q: Paul Di'Anno and Joe Gooch participated in what band position?  A: guitarist and songwriter.`  
+- **Context**: _Paul Andrews (born 17 May 1958), better known by his stage name Paul Di'Anno, is a British singer best known as the firs_  
 - **True**: hallucinated  **Predicted**: supported
 
 #### FEVER (validation)
 
-**Total errors**: 260 / 500 (52.0% error rate)
+**Total errors**: 75 / 500 (15.0% error rate)
 
 | Error Category | FP | FN | Total | % of Errors |
 |---------------|:--:|:--:|:-----:|:-----------:|
 | Short answers (NLI struggles with near-empty hypothesis) | 0 | 0 | 0 | 0.0% |
-| Numerical claims (NLI may not distinguish exact numbers) | 0 | 52 | 52 | 20.0% |
-| Negation (NLI negation handling is a known weakness) | 0 | 27 | 27 | 10.4% |
+| Numerical claims (NLI may not distinguish exact numbers) | 0 | 37 | 37 | 49.3% |
+| Negation (NLI negation handling is a known weakness) | 0 | 4 | 4 | 5.3% |
 | Multi-hop / complex (single NLI pass insufficient) | 0 | 0 | 0 | 0.0% |
-| Temporal (evidence may be outdated or ambiguous) | 0 | 3 | 3 | 1.2% |
-| Other / unknown | 0 | 178 | 178 | 68.5% |
+| Temporal (evidence may be outdated or ambiguous) | 1 | 0 | 1 | 1.3% |
+| Other / unknown | 11 | 22 | 33 | 44.0% |
 
 ### Failure Case Gallery
 
 
 #### Temporal Examples
 
-**FN** (score=0.171)  
-- **Claim**: `The Bloods was founded in Los Angeles, Massachusetts.`  
-- **Context**: _The Bloods are a primarily , though not exclusively , African American street gang founded in Los Angeles , California ._  
+**FP** (score=0.627)  
+- **Claim**: `San Diego Comic-Con was founded by Richard Alf.`  
+- **Context**: _It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Ric_  
+- **True**: supported  **Predicted**: hallucinated
+
+
+#### Negation Examples
+
+**FN** (score=0.362)  
+- **Claim**: `Arizona is not in the United States.`  
+- **Context**: _It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.176)  
-- **Claim**: `Due Date is only a television show.`  
-- **Context**: _The film was released on November 5 , 2010 ._  
+**FN** (score=0.374)  
+- **Claim**: `Leslie is not the middle name of Neil Diamond.`  
+- **Context**: _Neil Leslie Diamond -LRB- born January 24 , 1941 -RRB- is an American singer-songwriter , musician and actor ._  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.179)  
-- **Claim**: `Peking University was founded in the eighteenth century.`  
-- **Context**: _It is the first modern national university established in China , founded as the Imperial University of Peking in 1898 a_  
-- **True**: hallucinated  **Predicted**: supported
-
-
-#### Numerical Examples
-
-**FN** (score=0.156)  
-- **Claim**: `Rob Sheridan finished college in 1979.`  
-- **Context**: _Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.156)  
-- **Claim**: `Alice Cooper graduated college on February 4th, 1948.`  
-- **Context**: _Alice Cooper -LRB- born Vincent Damon Furnier ; February 4 , 1948 -RRB- is an American singer , songwriter , and actor w_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.156)  
-- **Claim**: `Janelle Monáe was conceived on December 1st, 1985.`  
-- **Context**: _Janelle Monáe Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- dʒəˈnɛl_moʊˈneɪ -RSB- -RRB- is an American singer _  
+**FN** (score=0.375)  
+- **Claim**: `The Faroe Islands are no longer part of the Kingdom of Mercia.`  
+- **Context**: _Between 1035 and 1814 , the Faeroes were part of the Hereditary Kingdom of Norway ._  
 - **True**: hallucinated  **Predicted**: supported
 
 
 #### Other Examples
 
-**FN** (score=0.155)  
-- **Claim**: `Dan O'Bannon died.`  
-- **Context**: _Daniel Thomas `` Dan '' O'Bannon -LRB- September 30 , 1946 -- December 17 , 2009 -RRB- was an American film screenwriter_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.155)  
-- **Claim**: `Recovery is an Eminem song.`  
-- **Context**: _To promote the album , he performed the album 's songs live on televised shows , at award ceremonies , musical events an_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.155)  
+**FN** (score=0.272)  
 - **Claim**: `Bhagat Singh was murdered.`  
 - **Context**: _Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justi_  
 - **True**: hallucinated  **Predicted**: supported
 
-
-#### Negation Examples
-
-**FN** (score=0.157)  
-- **Claim**: `Arizona is not in the United States.`  
-- **Context**: _It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern_  
+**FN** (score=0.298)  
+- **Claim**: `Recovery is an Eminem song.`  
+- **Context**: _To promote the album , he performed the album 's songs live on televised shows , at award ceremonies , musical events an_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.157)  
-- **Claim**: `The Faroe Islands are no longer part of the Kingdom of Mercia.`  
-- **Context**: _Between 1035 and 1814 , the Faeroes were part of the Hereditary Kingdom of Norway ._  
+**FN** (score=0.309)  
+- **Claim**: `Kuching is a province of Taiwan.`  
+- **Context**: _The Japanese government set up a Batu Lintang camp near Kuching to hold prisoners of war and civilian internees . Batu L_  
 - **True**: hallucinated  **Predicted**: supported
 
-**FN** (score=0.157)  
-- **Claim**: `Leslie is not the middle name of Neil Diamond.`  
-- **Context**: _Neil Leslie Diamond -LRB- born January 24 , 1941 -RRB- is an American singer-songwriter , musician and actor ._  
+
+#### Numerical Examples
+
+**FN** (score=0.274)  
+- **Claim**: `Rob Sheridan finished college in 1979.`  
+- **Context**: _Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.288)  
+- **Claim**: `Alice Cooper graduated college on February 4th, 1948.`  
+- **Context**: _Alice Cooper -LRB- born Vincent Damon Furnier ; February 4 , 1948 -RRB- is an American singer , songwriter , and actor w_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.288)  
+- **Claim**: `Janelle Monáe was conceived on December 1st, 1985.`  
+- **Context**: _Janelle Monáe Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- dʒəˈnɛl_moʊˈneɪ -RSB- -RRB- is an American singer _  
 - **True**: hallucinated  **Predicted**: supported
 
 
@@ -214,17 +222,17 @@
 
 | Class | Precision | Recall | F1 | Support |
 |-------|:---------:|:------:|:--:|:-------:|
-| supported | 0.888 | 0.860 | 0.874 | 257 |
-| hallucinated | 0.857 | 0.885 | 0.870 | 243 |
-| **macro avg** | 0.872 | 0.872 | 0.872 | 500 |
+| supported | 0.740 | 0.642 | 0.688 | 257 |
+| hallucinated | 0.668 | 0.761 | 0.712 | 243 |
+| **macro avg** | 0.704 | 0.702 | 0.700 | 500 |
 
 ### FEVER (validation)
 
 | Class | Precision | Recall | F1 | Support |
 |-------|:---------:|:------:|:--:|:-------:|
-| supported | 0.480 | 1.000 | 0.649 | 240 |
-| hallucinated | 0.000 | 0.000 | 0.000 | 260 |
-| **macro avg** | 0.240 | 0.500 | 0.324 | 500 |
+| supported | 0.784 | 0.950 | 0.859 | 240 |
+| hallucinated | 0.943 | 0.758 | 0.840 | 260 |
+| **macro avg** | 0.863 | 0.854 | 0.849 | 500 |
 
 
 ---
