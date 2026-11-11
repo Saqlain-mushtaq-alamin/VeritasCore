@@ -662,7 +662,10 @@ def write_markdown_table(
     for ds in datasets:
         if "halueval" in ds.lower():
             full_auc = dataset_results[ds][0]["metrics"]["auroc"]
-            nli_auc = next(r["metrics"]["auroc"] for r in dataset_results[ds] if r["config"]["short"] == "NLI-only")
+            nli_auc = next(
+                r["metrics"]["auroc"] for r in dataset_results[ds]
+                if r["config"]["short"] in ("-Retrieval", "NLI-only")
+            )
             if full_auc < nli_auc:
                 lines.append("")
                 lines.append(f"> **Negative Result Finding on HaluEval:** Multi-signal Full Fusion (AUROC = {full_auc:.4f}) does not outperform standalone NLI (AUROC = {nli_auc:.4f}). This occurs because query-answer lexical and semantic consistency is negatively correlated with factual grounding in QA dialogues (ChatGPT hallucinations parrot question entities), causing naive fusion to degrade evidence-based discrimination.")
