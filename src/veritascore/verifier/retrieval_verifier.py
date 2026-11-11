@@ -147,6 +147,7 @@ class RetrievalVerifier(BaseVerifier):
             RuntimeError: If called from within a running event loop. Use
                 `await verify_async(...)` directly in that case.
         """
+        print("ENTERED VERIFY METHOD", flush=True)
         if not claims:
             return []
 
@@ -177,12 +178,13 @@ class RetrievalVerifier(BaseVerifier):
         Returns:
             List of ClaimVerdict, one per claim, in input order.
         """
+        print("ENTERED VERIFY METHOD", flush=True)
         if not claims:
             return []
 
-        print("DEBUG 1: inside verify_async")
+        print("DEBUG 1: inside verify_async", flush=True)
         self.nli_verifier._load_model()
-        print("DEBUG 2: nli model loaded")
+        print("DEBUG 2: nli model loaded", flush=True)
 
         semaphore = asyncio.Semaphore(self.max_concurrent_claims)
 
