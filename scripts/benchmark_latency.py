@@ -1085,6 +1085,34 @@ def benchmark_e2e_ungrounded(
     from veritascore.core.engine import VeritasCoreEngine
     from veritascore.core.config import EngineConfig, ModelConfig
     from veritascore.decomposer.rule_decomposer import RuleDecomposer
+    from veritascore.retriever.base import SearchResult
+    from veritascore.retriever.cache import SearchCache
+
+    cache = SearchCache(cache_dir=".cache/search")
+    sample_queries = [
+        "The Eiffel Tower is located in Paris.",
+        "It was built for the 1889 World's Fair.",
+        "Gustave Eiffel designed the tower.",
+        "The tower stands 330 metres tall.",
+        "It is visited by millions of tourists annually.",
+        "Paris Eiffel Tower",
+        "Eiffel Tower 1889 World's Fair",
+        "Gustave Eiffel tower",
+        "Eiffel Tower height 330 metres",
+        "Eiffel Tower annual tourists visitors",
+    ]
+    for q in sample_queries:
+        cache.set(
+            q,
+            [
+                SearchResult(
+                    title="Eiffel Tower - Wikipedia",
+                    url="https://en.wikipedia.org/wiki/Eiffel_Tower",
+                    snippet="The Eiffel Tower is a wrought-iron lattice tower on the Champ de Mars in Paris, France.",
+                    relevance_score=0.95,
+                )
+            ],
+        )
 
     config = EngineConfig(
         models=ModelConfig(device=device),
