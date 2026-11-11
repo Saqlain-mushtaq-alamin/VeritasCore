@@ -98,6 +98,49 @@ def compute_ece(y_true: np.ndarray, y_prob: np.ndarray, n_bins: int = 10) -> flo
     return float(ece)
 
 
+def compute_brier_ece_cis(
+    y_true: list[int] | np.ndarray,
+    y_prob: list[float] | np.ndarray,
+    n_bootstrap: int = 10000,
+    seed: int = 42,
+    n_bins: int = 10,
+) -> dict[str, list[float]]:
+    """Compute 95% bootstrap confidence intervals for Brier score and ECE (n_bootstrap >= 10000)."""
+    y_t = np.asarray(y_true, dtype=float)
+    y_p = np.clip(np.asarray(y_prob, dtype=float), 0.0, 1.0)
+    n = len(y_t)
+    rng = np.random.default_rng(seed)
+
+    brier_vals = np.empty(n_bootstrap, dtype=float)
+    ece_vals = np.empty(n_bootstrap, dtype=float)
+
+    bin_boundaries = np.linspace(0.0, 1.0, n_bins + 1)
+    sq_errs = (y_t - y_p) ** 2
+    bin_indices = np.digitize(y_p, bin_boundaries[1:-1])
+
+    for b in range(n_bootstrap):
+        idx = rng.integers(0, n, size=n)
+        brier_vals[b] = np.mean(sq_errs[idx])
+
+        sample_bins = bin_indices[idx]
+        sample_yt = y_t[idx]
+        sample_yp = y_p[idx]
+        ece = 0.0
+        for i in range(n_bins):
+            mask = (sample_bins == i)
+            count = np.sum(mask)
+            if count > 0:
+                ece += (count / n) * abs(np.mean(sample_yt[mask]) - np.mean(sample_yp[mask]))
+        ece_vals[b] = ece
+
+    brier_ci = [round(float(np.percentile(brier_vals, 2.5)), 4), round(float(np.percentile(brier_vals, 97.5)), 4)]
+    ece_ci = [round(float(np.percentile(ece_vals, 2.5)), 4), round(float(np.percentile(ece_vals, 97.5)), 4)]
+    return {
+        "brier_ci": brier_ci,
+        "ece_ci": ece_ci,
+    }
+
+
 def plot_reliability_diagram(
     y_true: list[int],
     y_score_raw: list[float],
@@ -126,9 +169,12 @@ def plot_reliability_diagram(
     else:
         raw_arr = np.clip(raw_np, 0.0, 1.0)
 
-    metrics: dict[str, float] = {}
+    metrics: dict[str, Any] = {}
     metrics["brier_raw"] = float(brier_score_loss(y_true_arr, raw_arr))
     metrics["ece_raw"] = compute_ece(y_true_arr, raw_arr, n_bins=n_bins)
+    raw_cis = compute_brier_ece_cis(y_true_arr, raw_arr, n_bins=n_bins)
+    metrics["brier_raw_ci"] = raw_cis["brier_ci"]
+    metrics["ece_raw_ci"] = raw_cis["ece_ci"]
 
     if not _HAS_MPL:
         print(f"  [WARN] matplotlib not installed — skipping plot: {output_path.name}")
@@ -136,6 +182,9 @@ def plot_reliability_diagram(
             cal_arr = np.clip(np.asarray(y_score_calibrated, dtype=float), 0.0, 1.0)
             metrics["brier_calibrated"] = float(brier_score_loss(y_true_arr, cal_arr))
             metrics["ece_calibrated"] = compute_ece(y_true_arr, cal_arr, n_bins=n_bins)
+            cal_cis = compute_brier_ece_cis(y_true_arr, cal_arr, n_bins=n_bins)
+            metrics["brier_calibrated_ci"] = cal_cis["brier_ci"]
+            metrics["ece_calibrated_ci"] = cal_cis["ece_ci"]
         return metrics
 
     has_calib = y_score_calibrated is not None
@@ -149,6 +198,9 @@ def plot_reliability_diagram(
         calib_arr = np.clip(np.asarray(y_score_calibrated, dtype=float), 0.0, 1.0)
         metrics["brier_calibrated"] = float(brier_score_loss(y_true_arr, calib_arr))
         metrics["ece_calibrated"] = compute_ece(y_true_arr, calib_arr, n_bins=n_bins)
+        cal_cis = compute_brier_ece_cis(y_true_arr, calib_arr, n_bins=n_bins)
+        metrics["brier_calibrated_ci"] = cal_cis["brier_ci"]
+        metrics["ece_calibrated_ci"] = cal_cis["ece_ci"]
         panels.append((axes[1], calib_arr, "After Platt Scaling"))
 
     for ax, scores, label in panels:
@@ -791,9 +843,17 @@ def run_dataset_pipeline(
     else:
         raw_arr = np.clip(np.asarray(y_score_raw, dtype=float), 0.0, 1.0)
         result["brier_raw"] = float(brier_score_loss(np.asarray(y_true), raw_arr))
+        result["ece_raw"] = compute_ece(np.asarray(y_true), raw_arr, n_bins=10)
+        raw_cis = compute_brier_ece_cis(y_true, raw_arr, n_bins=10)
+        result["brier_raw_ci"] = raw_cis["brier_ci"]
+        result["ece_raw_ci"] = raw_cis["ece_ci"]
         if y_score_calibrated is not None:
             cal_arr = np.clip(np.asarray(y_score_calibrated, dtype=float), 0.0, 1.0)
             result["brier_calibrated"] = float(brier_score_loss(np.asarray(y_true), cal_arr))
+            result["ece_calibrated"] = compute_ece(np.asarray(y_true), cal_arr, n_bins=10)
+            cal_cis = compute_brier_ece_cis(y_true, cal_arr, n_bins=10)
+            result["brier_calibrated_ci"] = cal_cis["brier_ci"]
+            result["ece_calibrated_ci"] = cal_cis["ece_ci"]
 
     # Part B — error analysis
     print(f"  [R7-B] Categorising errors for {dataset_name}...")
@@ -909,6 +969,18 @@ def main() -> None:  # noqa: C901
         platt.fit(np.asarray(y_score_grid).reshape(-1, 1), np.asarray(y_true_grid))
         print(f"  Platt calibrator fitted on grid split (slope={platt.coef_[0][0]:.3f}, intercept={platt.intercept_[0]:.3f}).")
 
+        # Select decision threshold tau that maximizes F1 strictly on grid split
+        candidate_taus = np.linspace(0.05, 0.95, 91)
+        best_tau = 0.5
+        best_grid_f1 = -1.0
+        for cand_tau in candidate_taus:
+            cand_pred = (np.asarray(y_score_grid) >= cand_tau).astype(int)
+            cand_f1 = float(f1_score(y_true_grid, cand_pred, zero_division=0))
+            if cand_f1 > best_grid_f1:
+                best_grid_f1 = cand_f1
+                best_tau = float(cand_tau)
+        print(f"  F1 decision threshold fitted on grid split: tau = {best_tau:.2f} (Grid F1 = {best_grid_f1:.4f})")
+
         for dataset in args.datasets:
             print(f"\n[{dataset.upper()}] Loading {args.n} samples...")
             try:
@@ -925,10 +997,13 @@ def main() -> None:  # noqa: C901
                     from veritascore.scorer.fusion import FusionScorer
                     scorer = FusionScorer()
                     scorer.load()
-                    y_true, y_score_raw, y_pred = score_samples_fusion(samples, ds_label, scorer)
+                    y_true, y_score_raw, _ = score_samples_fusion(samples, ds_label, scorer)
                 else:
-                    y_true, y_score_raw, y_pred = score_samples_nli(samples, ds_label)
+                    y_true, y_score_raw, _ = score_samples_nli(samples, ds_label)
                 print(f"  {args.mode.upper()} scoring: {time.perf_counter() - t0:.1f}s")
+
+                # Apply grid-fitted F1 threshold to evaluation predictions
+                y_pred = [1 if s >= best_tau else 0 for s in y_score_raw]
 
                 # Apply the grid-split fitted calibrator to unseen evaluation splits
                 y_score_calib = platt.predict_proba(np.asarray(y_score_raw).reshape(-1, 1))[:, 1].tolist()
@@ -944,6 +1019,9 @@ def main() -> None:  # noqa: C901
                     generate_plots=generate_plots,
                     mode=args.mode,
                 )
+                res["threshold_selection_rule"] = f"F1-maximizing decision threshold fitted strictly on HaluEval QA grid split (tau = {best_tau:.2f}, Grid F1 = {best_grid_f1:.4f})"
+                res["decision_threshold"] = best_tau
+                res["grid_f1"] = best_grid_f1
                 all_results.append(res)
 
             except FileNotFoundError as exc:

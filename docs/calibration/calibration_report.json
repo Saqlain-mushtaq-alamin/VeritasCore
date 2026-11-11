@@ -3,66 +3,41 @@
     "dataset_name": "HaluEval QA",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T13:39:55.183750+00:00",
+    "timestamp": "2026-11-11T14:36:47.560512+00:00",
     "auroc": 0.7523498422763446,
     "f1": 0.7115384615384616,
     "precision": 0.6678700361010831,
     "recall": 0.7613168724279835,
     "brier_raw": 0.2092367788713914,
-    "ece_raw": 0.07816326585152089,
     "brier_calibrated": 0.20597049658793207,
-    "ece_calibrated": 0.06825820497179894,
-    "plot_path": "docs\\calibration\\calibration_fusion_halueval_qa.png",
     "error_analysis": {
       "category_counts": {
-        "complex_sentence": {
-          "fp": 2,
-          "fn": 0
-        },
-        "temporal": {
-          "fp": 0,
-          "fn": 3
-        },
         "negation": {
           "fp": 1,
           "fn": 0
-        },
-        "other": {
-          "fp": 3,
-          "fn": 16
         },
         "numerical": {
           "fp": 32,
           "fn": 36
         },
+        "temporal": {
+          "fp": 0,
+          "fn": 3
+        },
         "short_answer": {
           "fp": 54,
           "fn": 3
+        },
+        "other": {
+          "fp": 3,
+          "fn": 16
+        },
+        "complex_sentence": {
+          "fp": 2,
+          "fn": 0
         }
       },
       "gallery": {
-        "complex_sentence": [
-          {
-            "index": 352,
-            "claim_text": "Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an American radio personality who is also a representative of Philadelphia's folk music scene, what was he called by \"The Philadelphia inquirer\"?  A: The Grandf",
-            "context_snippet": "Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a representative of Philadelphia's folk music scene. A founder of the annual Philadelp",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.8032,
-            "category": "complex_sentence"
-          }
-        ],
-        "temporal": [
-          {
-            "index": 276,
-            "claim_text": "Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.",
-            "context_snippet": "Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet, and filmmaker.Ali Ahmad Said Esber , romanised: \"\u02bfAl\u012b A\u1e25mad Sa\u02bf\u012bd 'Isbar\" (bor",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.3018,
-            "category": "temporal"
-          }
-        ],
         "negation": [
           {
             "index": 435,
@@ -72,17 +47,6 @@
             "pred_label": "hallucinated",
             "score": 0.68,
             "category": "negation"
-          }
-        ],
-        "other": [
-          {
-            "index": 129,
-            "claim_text": "Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.",
-            "context_snippet": "Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour from 1970\u20131987 reaching the final of the singles Australian Open in 1980.Matt Lucen",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2705,
-            "category": "other"
           }
         ],
         "numerical": [
@@ -96,6 +60,17 @@
             "category": "numerical"
           }
         ],
+        "temporal": [
+          {
+            "index": 276,
+            "claim_text": "Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.",
+            "context_snippet": "Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet, and filmmaker.Ali Ahmad Said Esber , romanised: \"\u02bfAl\u012b A\u1e25mad Sa\u02bf\u012bd 'Isbar\" (bor",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.3018,
+            "category": "temporal"
+          }
+        ],
         "short_answer": [
           {
             "index": 300,
@@ -105,6 +80,28 @@
             "pred_label": "supported",
             "score": 0.4221,
             "category": "short_answer"
+          }
+        ],
+        "other": [
+          {
+            "index": 129,
+            "claim_text": "Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.",
+            "context_snippet": "Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour from 1970\u20131987 reaching the final of the singles Australian Open in 1980.Matt Lucen",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2705,
+            "category": "other"
+          }
+        ],
+        "complex_sentence": [
+          {
+            "index": 352,
+            "claim_text": "Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an American radio personality who is also a representative of Philadelphia's folk music scene, what was he called by \"The Philadelphia inquirer\"?  A: The Grandf",
+            "context_snippet": "Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a representative of Philadelphia's folk music scene. A founder of the annual Philadelp",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.8032,
+            "category": "complex_sentence"
           }
         ]
       },
@@ -144,55 +141,41 @@
     "dataset_name": "FEVER (validation)",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T13:40:05.873099+00:00",
+    "timestamp": "2026-11-11T14:36:56.975318+00:00",
     "auroc": 0.9067788461538462,
     "f1": 0.8400852878464818,
     "precision": 0.9425837320574163,
     "recall": 0.7576923076923077,
     "brier_raw": 0.16737676956978928,
-    "ece_raw": 0.2477005155078839,
     "brier_calibrated": 0.15470910971767307,
-    "ece_calibrated": 0.22823683715108123,
-    "plot_path": "docs\\calibration\\calibration_fusion_fever_validation.png",
     "error_analysis": {
       "category_counts": {
-        "complex_sentence": {
-          "fp": 0,
-          "fn": 0
-        },
-        "temporal": {
-          "fp": 1,
-          "fn": 0
-        },
         "negation": {
           "fp": 0,
           "fn": 4
-        },
-        "other": {
-          "fp": 11,
-          "fn": 22
         },
         "numerical": {
           "fp": 0,
           "fn": 37
         },
+        "temporal": {
+          "fp": 1,
+          "fn": 0
+        },
         "short_answer": {
+          "fp": 0,
+          "fn": 0
+        },
+        "other": {
+          "fp": 11,
+          "fn": 22
+        },
+        "complex_sentence": {
           "fp": 0,
           "fn": 0
         }
       },
       "gallery": {
-        "temporal": [
-          {
-            "index": 158,
-            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
-            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.6269,
-            "category": "temporal"
-          }
-        ],
         "negation": [
           {
             "index": 361,
@@ -204,17 +187,6 @@
             "category": "negation"
           }
         ],
-        "other": [
-          {
-            "index": 188,
-            "claim_text": "Bhagat Singh was murdered.",
-            "context_snippet": "Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justification or valid excuse , especially the unlawful killing of another human bein",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2719,
-            "category": "other"
-          }
-        ],
         "numerical": [
           {
             "index": 339,
@@ -224,6 +196,28 @@
             "pred_label": "supported",
             "score": 0.2738,
             "category": "numerical"
+          }
+        ],
+        "temporal": [
+          {
+            "index": 158,
+            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
+            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.6269,
+            "category": "temporal"
+          }
+        ],
+        "other": [
+          {
+            "index": 188,
+            "claim_text": "Bhagat Singh was murdered.",
+            "context_snippet": "Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justification or valid excuse , especially the unlawful killing of another human bein",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2719,
+            "category": "other"
           }
         ]
       },

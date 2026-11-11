@@ -1,6 +1,6 @@
 # Phase R7: Calibration Plots & Error Analysis
 
-> Generated: 2026-11-11 13:40 UTC
+> Generated: 2026-11-11 14:36 UTC
 
 ---
 
@@ -12,7 +12,6 @@
 - **Brier Score (Platt-scaled)**: 0.2060
 - **Improvement after calibration**: +0.0033
 - **AUROC**: 0.7523
-- **Plot**: `docs\calibration\calibration_fusion_halueval_qa.png`
 
 ### FEVER (validation)
 
@@ -20,7 +19,6 @@
 - **Brier Score (Platt-scaled)**: 0.1547
 - **Improvement after calibration**: +0.0127
 - **AUROC**: 0.9068
-- **Plot**: `docs\calibration\calibration_fusion_fever_validation.png`
 
 ---
 
@@ -44,61 +42,12 @@
 ### Failure Case Gallery
 
 
-#### Complex Sentence Examples
-
-**FP** (score=0.803)  
-- **Claim**: `Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an America`  
-- **Context**: _Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a repr_  
-- **True**: supported  **Predicted**: hallucinated
-
-**FP** (score=0.651)  
-- **Claim**: `Q: While both singer-songwriters have displayed incredible talent, what sets Robert Palmer apart from Wayne Coyne, causing him to gain populatiry in t`  
-- **Context**: _ He is the lead singer, occasional backing vocalist, guitarist, keyboardist, theremin player and songwriter for the band_  
-- **True**: supported  **Predicted**: hallucinated
-
-
-#### Temporal Examples
-
-**FN** (score=0.302)  
-- **Claim**: `Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.`  
-- **Context**: _Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.412)  
-- **Claim**: `Q: Who was born Earlier, Jon Amiel or Michael Ritchie?  A: Jon Amiel was born earlier.`  
-- **Context**: _Michael Brunswick Ritchie (November 28, 1938 – April 16, 2001) was an American film director of films with comical or sa_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.480)  
-- **Claim**: `Q: Which magazine was founded first, The General or XXL?  A: XXL was founded before The General.`  
-- **Context**: _The General (1964–1998) was a bi-monthly periodical devoted to supporting Avalon Hill's line of wargames, with articles _  
-- **True**: hallucinated  **Predicted**: supported
-
-
 #### Negation Examples
 
 **FP** (score=0.680)  
 - **Claim**: `Q: Fir and Imperata, are a type of tree?  A: no`  
 - **Context**: _Firs (Abies) are a genus of 48–56 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but w_  
 - **True**: supported  **Predicted**: hallucinated
-
-
-#### Other Examples
-
-**FN** (score=0.271)  
-- **Claim**: `Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.`  
-- **Context**: _Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour fro_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.305)  
-- **Claim**: `Q: Patrick MacLeamy is the chairman and former CEO of which American architecture, engineering and planning firm?  A: Patrick MacLeamy used to work at`  
-- **Context**: _Patrick MacLeamy, FAIA, LEED AP, (born October 2, 1942, in Alton, Illinois) is an American architect who is chairman and_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.309)  
-- **Claim**: `Q: Ares and Right On!, is which type of publication?  A: Ares and Right On! are publications.`  
-- **Context**: _Ares was a science fiction wargame magazine published by Simulations Publications, Inc. (SPI), and then TSR, Inc., betwe_  
-- **True**: hallucinated  **Predicted**: supported
 
 
 #### Numerical Examples
@@ -119,6 +68,24 @@
 - **True**: hallucinated  **Predicted**: supported
 
 
+#### Temporal Examples
+
+**FN** (score=0.302)  
+- **Claim**: `Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.`  
+- **Context**: _Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.412)  
+- **Claim**: `Q: Who was born Earlier, Jon Amiel or Michael Ritchie?  A: Jon Amiel was born earlier.`  
+- **Context**: _Michael Brunswick Ritchie (November 28, 1938 – April 16, 2001) was an American film director of films with comical or sa_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.480)  
+- **Claim**: `Q: Which magazine was founded first, The General or XXL?  A: XXL was founded before The General.`  
+- **Context**: _The General (1964–1998) was a bi-monthly periodical devoted to supporting Avalon Hill's line of wargames, with articles _  
+- **True**: hallucinated  **Predicted**: supported
+
+
 #### Short Answer Examples
 
 **FN** (score=0.422)  
@@ -136,6 +103,37 @@
 - **Context**: _Paul Andrews (born 17 May 1958), better known by his stage name Paul Di'Anno, is a British singer best known as the firs_  
 - **True**: hallucinated  **Predicted**: supported
 
+
+#### Other Examples
+
+**FN** (score=0.271)  
+- **Claim**: `Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.`  
+- **Context**: _Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour fro_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.305)  
+- **Claim**: `Q: Patrick MacLeamy is the chairman and former CEO of which American architecture, engineering and planning firm?  A: Patrick MacLeamy used to work at`  
+- **Context**: _Patrick MacLeamy, FAIA, LEED AP, (born October 2, 1942, in Alton, Illinois) is an American architect who is chairman and_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.309)  
+- **Claim**: `Q: Ares and Right On!, is which type of publication?  A: Ares and Right On! are publications.`  
+- **Context**: _Ares was a science fiction wargame magazine published by Simulations Publications, Inc. (SPI), and then TSR, Inc., betwe_  
+- **True**: hallucinated  **Predicted**: supported
+
+
+#### Complex Sentence Examples
+
+**FP** (score=0.803)  
+- **Claim**: `Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an America`  
+- **Context**: _Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a repr_  
+- **True**: supported  **Predicted**: hallucinated
+
+**FP** (score=0.651)  
+- **Claim**: `Q: While both singer-songwriters have displayed incredible talent, what sets Robert Palmer apart from Wayne Coyne, causing him to gain populatiry in t`  
+- **Context**: _ He is the lead singer, occasional backing vocalist, guitarist, keyboardist, theremin player and songwriter for the band_  
+- **True**: supported  **Predicted**: hallucinated
+
 #### FEVER (validation)
 
 **Total errors**: 75 / 500 (15.0% error rate)
@@ -150,14 +148,6 @@
 | Other / unknown | 11 | 22 | 33 | 44.0% |
 
 ### Failure Case Gallery
-
-
-#### Temporal Examples
-
-**FP** (score=0.627)  
-- **Claim**: `San Diego Comic-Con was founded by Richard Alf.`  
-- **Context**: _It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Ric_  
-- **True**: supported  **Predicted**: hallucinated
 
 
 #### Negation Examples
@@ -178,24 +168,6 @@
 - **True**: hallucinated  **Predicted**: supported
 
 
-#### Other Examples
-
-**FN** (score=0.272)  
-- **Claim**: `Bhagat Singh was murdered.`  
-- **Context**: _Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justi_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.298)  
-- **Claim**: `Recovery is an Eminem song.`  
-- **Context**: _To promote the album , he performed the album 's songs live on televised shows , at award ceremonies , musical events an_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.309)  
-- **Claim**: `Kuching is a province of Taiwan.`  
-- **Context**: _The Japanese government set up a Batu Lintang camp near Kuching to hold prisoners of war and civilian internees . Batu L_  
-- **True**: hallucinated  **Predicted**: supported
-
-
 #### Numerical Examples
 
 **FN** (score=0.274)  
@@ -211,6 +183,32 @@
 **FN** (score=0.288)  
 - **Claim**: `Janelle Monáe was conceived on December 1st, 1985.`  
 - **Context**: _Janelle Monáe Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- dʒəˈnɛl_moʊˈneɪ -RSB- -RRB- is an American singer _  
+- **True**: hallucinated  **Predicted**: supported
+
+
+#### Temporal Examples
+
+**FP** (score=0.627)  
+- **Claim**: `San Diego Comic-Con was founded by Richard Alf.`  
+- **Context**: _It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Ric_  
+- **True**: supported  **Predicted**: hallucinated
+
+
+#### Other Examples
+
+**FN** (score=0.272)  
+- **Claim**: `Bhagat Singh was murdered.`  
+- **Context**: _Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justi_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.298)  
+- **Claim**: `Recovery is an Eminem song.`  
+- **Context**: _To promote the album , he performed the album 's songs live on televised shows , at award ceremonies , musical events an_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.309)  
+- **Claim**: `Kuching is a province of Taiwan.`  
+- **Context**: _The Japanese government set up a Batu Lintang camp near Kuching to hold prisoners of war and civilian internees . Batu L_  
 - **True**: hallucinated  **Predicted**: supported
 
 
