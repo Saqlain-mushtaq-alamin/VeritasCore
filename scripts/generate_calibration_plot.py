@@ -898,8 +898,15 @@ def main() -> None:  # noqa: C901
                     ds_label = "FEVER (validation)"
 
                 t0 = time.perf_counter()
-                y_true, y_score_raw, y_pred = score_samples_nli(samples, ds_label)
-                print(f"  NLI scoring: {time.perf_counter() - t0:.1f}s")
+                scorer = None
+                if args.mode == "fusion":
+                    from veritascore.scorer.fusion import FusionScorer
+                    scorer = FusionScorer()
+                    scorer.load()
+                    y_true, y_score_raw, y_pred = score_samples_fusion(samples, ds_label, scorer)
+                else:
+                    y_true, y_score_raw, y_pred = score_samples_nli(samples, ds_label)
+                print(f"  {args.mode.upper()} scoring: {time.perf_counter() - t0:.1f}s")
 
                 y_score_calib: list[float] | None = None
                 try:
@@ -912,7 +919,11 @@ def main() -> None:  # noqa: C901
                         from baseline_summac import load_fever
                         grid_samples = load_fever(min(args.n, 500))
 
-                    y_true_grid, y_score_grid, _ = score_samples_nli(grid_samples, f"{ds_label} (tuning split)")
+                    if args.mode == "fusion":
+                        y_true_grid, y_score_grid, _ = score_samples_fusion(grid_samples, f"{ds_label} (tuning split)", scorer)
+                    else:
+                        y_true_grid, y_score_grid, _ = score_samples_nli(grid_samples, f"{ds_label} (tuning split)")
+
                     platt = LogisticRegression(C=1.0, solver="lbfgs")
                     platt.fit(np.asarray(y_score_grid).reshape(-1, 1), np.asarray(y_true_grid))
                     y_score_calib = platt.predict_proba(np.asarray(y_score_raw).reshape(-1, 1))[:, 1].tolist()
@@ -929,7 +940,7 @@ def main() -> None:  # noqa: C901
                     y_score_calibrated=y_score_calib,
                     output_dir=args.output,
                     generate_plots=generate_plots,
-                    mode="nli",
+                    mode=args.mode,
                 )
                 all_results.append(res)
 
