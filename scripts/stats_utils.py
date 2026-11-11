@@ -280,21 +280,22 @@ def paired_bootstrap_test(
     y_score_b: list[float] | np.ndarray,
     n_bootstrap: int = 10000,
     seed: int = 42,
+    two_sided: bool = True,
 ) -> tuple[float, float]:
-    """Paired bootstrap test for AUROC difference (one-sided: is A > B?).
+    """Paired bootstrap test for AUROC difference.
 
-    Null hypothesis: AUROC_A ≤ AUROC_B
-    Rejects H0 when p_value < α (e.g. 0.05).
+    Null hypothesis: AUROC_A == AUROC_B (two-sided by default).
 
     Args:
         y_true:      Shared binary labels.
-        y_score_a:   Scores for method A (hypothesised to be better).
-        y_score_b:   Scores for method B (baseline).
+        y_score_a:   Scores for method A.
+        y_score_b:   Scores for method B.
         n_bootstrap: Number of bootstrap resamples.
         seed:        Random seed for reproducibility.
+        two_sided:   Whether to compute a two-sided p-value (default True).
 
     Returns:
-        (mean_delta_auroc, p_value)  — p_value is one-sided (A > B).
+        (mean_delta_auroc, p_value)
     """
     rng = np.random.RandomState(seed)
     y_true = np.asarray(y_true)
@@ -311,8 +312,13 @@ def paired_bootstrap_test(
         delta_aurocs.append(auroc_a - auroc_b)
 
     arr = np.array(delta_aurocs)
-    # One-sided p-value: fraction of resamples where A is NOT better than B
-    p_value = float(np.mean(arr <= 0))
+    if two_sided:
+        p_less = float(np.mean(arr <= 0))
+        p_greater = float(np.mean(arr >= 0))
+        p_value = min(1.0, 2.0 * min(p_less, p_greater))
+    else:
+        p_value = float(np.mean(arr <= 0))
+
     return float(np.mean(arr)), p_value
 
 
