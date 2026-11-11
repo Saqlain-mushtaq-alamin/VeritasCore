@@ -196,6 +196,13 @@ class TestDeLongTest:
         assert abs(actual_z - expected_z) < 1e-10
         assert abs(actual_p - expected_p) < 1e-10
 
+    def test_delong_with_ci(self, binary_data):
+        y_true, y_score_a, y_score_b, _ = binary_data
+        from stats_utils import delong_test_with_ci
+        z, p, delta, lo, hi = delong_test_with_ci(y_true, y_score_a, y_score_b)
+        assert lo <= delta <= hi
+        assert abs(z - (delta / ((hi - delta) / 1.959963984540054))) < 1e-4
+
 
 # ---------------------------------------------------------------------------
 # paired_bootstrap_test
