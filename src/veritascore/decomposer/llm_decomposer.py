@@ -853,10 +853,13 @@ class LLMDecomposer(BaseDecomposer):
         self._loaded = False
 
         try:
+            import gc
             import torch
 
+            gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                torch.cuda.reset_peak_memory_stats()
                 logger.info(
                     "GPU memory after unload: %.0f MB allocated",
                     torch.cuda.memory_allocated() / 1e6,
