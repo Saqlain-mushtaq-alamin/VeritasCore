@@ -117,7 +117,7 @@ def generate_table1(commit: str) -> str:
 
 | Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:----------------------:|
-| SummaC ZS (chunk + ent-only, tuned†) | $\\max_c \\text{ent}(s_i, c)$ | {sc_halu_str} | {sc_fever_str} | Oracle | 1,500 / 1,000 | Baseline |
+| SummaC ZS (chunk + ent-only, tuned†) | $\\max_c \\text{{ent}}(s_i, c)$ | {sc_halu_str} | {sc_fever_str} | Oracle | 1,500 / 1,000 | Baseline |
 | **VeritasCore NLI (a) Forward-only (Default)** | $\\text{fwd}_c - \\text{fwd}_e$ | **{fa_halu_str}** | **{fa_fever_str}** | Oracle | 1,500 / 1,000 | DeLong p={halu_p_delong:.4f} (HaluEval) / **p={fever_p_delong:.2e}** (FEVER) |
 | VeritasCore NLI (b) Forward-only (asymmetric) | $\\text{fwd}_c - 0.2\\text{fwd}_e$ | {fb_halu_str} | {fb_fever_str} | Oracle | 1,500 / 1,000 | DeLong p=0.0361 (HaluEval) / **p=3.60e-05** (FEVER) |
 | VeritasCore NLI (c) Bidirectional | $\\text{fwd}_c - 0.2\\text{fwd}_e - 0.6\\text{rev}_e$ | {fc_halu_str} | {fc_fever_str} | Oracle | 1,500 / 1,000 | Ablation baseline |
