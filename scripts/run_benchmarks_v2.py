@@ -804,8 +804,9 @@ def main() -> None:
     # -----------------------------------------------------------------------
     if "fever" in args.datasets:
         try:
-            print("\n[FEVER] Loading samples (collecting exactly n non-NEI)...")
-            samples = load_fever_fixed(n=args.n)
+            fever_n = min(args.n, 1000) if args.n >= 1000 else args.n
+            print(f"\n[FEVER] Loading samples (collecting exactly {fever_n} non-NEI)...")
+            samples = load_fever_fixed(n=fever_n)
             result = run_nli_benchmark(
                 samples,
                 "FEVER (validation)",
