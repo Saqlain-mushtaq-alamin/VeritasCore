@@ -91,6 +91,14 @@ class VeritasCoreEngine:
         decomposer = self._get_decomposer()
         claims = decomposer.decompose(response, query=query)
 
+        # Unload LLM decomposer to free GPU VRAM before verification
+        if isinstance(self._decomposer, LLMDecomposer):
+            try:
+                self._decomposer.unload()
+            except Exception as e:
+                logger.warning("Failed to unload decomposer: %s", e)
+            self._decomposer = None
+
         if not claims:
             return self._empty_report(response, query, resolved_mode, domain, start_time)
 
@@ -225,6 +233,13 @@ class VeritasCoreEngine:
 
     def _get_nli_verifier(self) -> NLIVerifier:
         if self._nli_verifier is None:
+            # Unload decomposer before loading NLI to prevent GPU OOM (e.g. on 8GB GPU)
+            if isinstance(self._decomposer, LLMDecomposer):
+                try:
+                    self._decomposer.unload()
+                except Exception as e:
+                    logger.warning("Failed to unload decomposer: %s", e)
+                self._decomposer = None
             self._nli_verifier = NLIVerifier(config=self.config)
         return self._nli_verifier
 
