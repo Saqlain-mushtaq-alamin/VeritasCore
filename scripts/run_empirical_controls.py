@@ -432,6 +432,18 @@ def generate_empirical_controls_report() -> None:
         f.write(report_content)
     print(f"\n[DONE] Empirical controls report written to: {OUTPUT_REPORT}")
 
+    json_path = OUTPUT_REPORT.with_suffix(".json")
+    controls_json = {
+        "shuffled_labels": shuffled_res,
+        "hypothesis_only": hypo_res,
+        "fever_audit": fever_audit,
+        "determinism": det_res,
+        "holm_bonferroni": holm_res,
+    }
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(controls_json, f, indent=2)
+    print(f"[DONE] Empirical controls JSON written to: {json_path}")
+
 
 if __name__ == "__main__":
     generate_empirical_controls_report()
