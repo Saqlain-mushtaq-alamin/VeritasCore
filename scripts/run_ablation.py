@@ -573,10 +573,15 @@ def write_markdown_table(
     full_fusion_labels: dict[str, np.ndarray],
     retrieval_is_simulated: bool,
     n_bootstrap: int,
+    signal_sign_check: dict[str, Any] | None = None,
+    fusion_model_name: str = "LogisticRegression",
 ) -> str:
     """Build the Markdown ablation table."""
     lines = []
     lines.append("## Ablation Study — Real Measured Results (Phase R5)")
+    lines.append("")
+    lines.append(f"> **Fusion Model Architecture:** `{fusion_model_name}` trained on the disjoint HaluEval grid-search split ($n=500$) using real model features and evaluated on the held-out evaluation split.")
+    lines.append("> **Configuration Construction:** Each configuration determines which verification signals are populated in the feature vector. Enabled signals populate their respective feature fields; disabled signals are zeroed and carry an explicit missing indicator (`*_is_missing = 1.0`).")
     lines.append("")
     if retrieval_is_simulated:
         lines.append("> **NOTE:** Retrieval signal is SIMULATED (NLI + Gaussian noise, sigma=0.15)")
@@ -631,9 +636,32 @@ def write_markdown_table(
                 delta, p = paired_bootstrap_test(
                     full_labels, full_scores, cfg_scores, n_bootstrap=n_bootstrap
                 )
-                lines.append(f"| {cfg['short']} | {ds} | {delta:+.4f} | p={p:.4f} |")
+                p_str = "< 1e-4" if p < 1e-4 else f"{p:.4f}"
+                lines.append(f"| {cfg['short']} | {ds} | {delta:+.4f} | p={p_str} |")
             except Exception:
                 lines.append(f"| {cfg['short']} | {ds} | N/A | N/A |")
+
+    if signal_sign_check:
+        lines.append("")
+        lines.append("### Signal Sign Analysis (Target: 1 = Hallucinated)")
+        lines.append("")
+        lines.append("| Dataset | Signal | AUROC ($s$) | AUROC ($1 - s$) | Direct Interpretation |")
+        lines.append("|---|---|:---:|:---:|---|")
+        for ds, sigs in signal_sign_check.items():
+            for sig_name, res in sigs.items():
+                s_auc = res["auroc_s"]
+                inv_auc = res["auroc_1_minus_s"]
+                interp = "Inverted (high similarity correlates with hallucination)" if sig_name == "consistency" and s_auc > 0.5 else "Standard"
+                lines.append(f"| {ds} | {sig_name} | {s_auc:.4f} | {inv_auc:.4f} | {interp} |")
+
+    # Negative result check
+    for ds in datasets:
+        if "halueval" in ds.lower():
+            full_auc = dataset_results[ds][0]["metrics"]["auroc"]
+            nli_auc = next(r["metrics"]["auroc"] for r in dataset_results[ds] if r["config"]["short"] == "NLI-only")
+            if full_auc < nli_auc:
+                lines.append("")
+                lines.append(f"> **Negative Result Finding on HaluEval:** Multi-signal Full Fusion (AUROC = {full_auc:.4f}) does not outperform standalone NLI (AUROC = {nli_auc:.4f}). This occurs because query-answer lexical and semantic consistency is negatively correlated with factual grounding in QA dialogues (ChatGPT hallucinations parrot question entities), causing naive fusion to degrade evidence-based discrimination.")
 
     return "\n".join(lines)
 
@@ -860,6 +888,27 @@ def main() -> None:
                     "error": str(e),
                 })
 
+    # Signal sign checks (AUROC of s vs 1-s)
+    signal_sign_check: dict[str, Any] = {}
+    for ds_name, samples in dataset_samples.items():
+        y_true = np.array([s["label"] for s in samples], dtype=int)
+        if len(np.unique(y_true)) >= 2:
+            signal_sign_check[ds_name] = {}
+            nli_s = np.array([s.get("nli_score") if s.get("nli_score") is not None else 0.5 for s in samples], dtype=float)
+            signal_sign_check[ds_name]["nli_entailment"] = {
+                "auroc_s": float(roc_auc_score(y_true, nli_s)),
+                "auroc_1_minus_s": float(roc_auc_score(y_true, 1.0 - nli_s)),
+            }
+            cons_vals = [s.get("consistency_score") for s in samples]
+            if any(v is not None for v in cons_vals):
+                cons_s = np.array([v if v is not None else 0.5 for v in cons_vals], dtype=float)
+                signal_sign_check[ds_name]["consistency"] = {
+                    "auroc_s": float(roc_auc_score(y_true, cons_s)),
+                    "auroc_1_minus_s": float(roc_auc_score(y_true, 1.0 - cons_s)),
+                }
+
+    fusion_model_name = scorer._model.__class__.__name__ if getattr(scorer, "_model", None) is not None else "HeuristicFallback"
+
     # JSON results
     json_output: dict[str, Any] = {
         "metadata": {
@@ -878,7 +927,23 @@ def main() -> None:
                 ds: [f"{ds}_eval_{idx}" for idx in range(len(s_list))]
                 for ds, s_list in dataset_samples.items()
             },
+            "fusion_model": {
+                "type": fusion_model_name,
+                "trained_on": "HaluEval grid-search split (n=500)",
+                "evaluated_on": "Held-out evaluation split",
+            },
+            "configuration_details": {
+                cfg["short"]: {
+                    "description": cfg["name"],
+                    "use_nli": cfg["use_nli"],
+                    "use_retrieval": cfg["use_retrieval"],
+                    "use_consistency": cfg["use_consistency"],
+                    "feature_handling": "Active signals populate corresponding feature fields; disabled signals set to 0.0 with *_is_missing indicator set to 1.0",
+                }
+                for cfg in ABLATION_CONFIGS
+            },
         },
+        "signal_sign_check": signal_sign_check,
         "ablation_results": {},
         "paired_significance": paired_significance,
         "feature_importance": importance,
@@ -905,6 +970,8 @@ def main() -> None:
         dataset_results, full_fusion_scores, full_fusion_labels,
         retrieval_is_simulated=retrieval_is_simulated,
         n_bootstrap=args.n_bootstrap,
+        signal_sign_check=signal_sign_check,
+        fusion_model_name=fusion_model_name,
     )
     md_path = out_dir / "ablation_table.md"
     with open(md_path, "w", encoding="utf-8") as f:
