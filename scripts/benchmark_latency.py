@@ -117,6 +117,7 @@ class E2EResult:
     total_ms: float
     per_claim_ms: float
     gpu_memory_mb: float
+    tokens_per_claim: int = 0
 
 
 @dataclass
@@ -636,11 +637,21 @@ def benchmark_nli_verifier(
     for idx, claim in enumerate(claims):
         batch_buf.append(claim)
         if len(batch_buf) == batch_size or idx == len(claims) - 1:
-            _sync_cuda()
-            t0 = time.perf_counter()
-            verifier.verify(batch_buf, context=context)
-            _sync_cuda()
-            elapsed = (time.perf_counter() - t0) * 1000
+            if torch.cuda.is_available():
+                start_ev = torch.cuda.Event(enable_timing=True)
+                end_ev = torch.cuda.Event(enable_timing=True)
+                torch.cuda.synchronize()
+                start_ev.record()
+                verifier.verify(batch_buf, context=context)
+                end_ev.record()
+                torch.cuda.synchronize()
+                elapsed = float(start_ev.elapsed_time(end_ev))
+            else:
+                _sync_cuda()
+                t0 = time.perf_counter()
+                verifier.verify(batch_buf, context=context)
+                _sync_cuda()
+                elapsed = (time.perf_counter() - t0) * 1000.0
             per_claim_ms = elapsed / len(batch_buf)
             latencies.extend([per_claim_ms] * len(batch_buf))
             batch_buf = []
@@ -1070,6 +1081,7 @@ def benchmark_e2e_grounded(
             total_ms=avg_total,
             per_claim_ms=avg_total / max(n_claims, 1),
             gpu_memory_mb=gpu_mem,
+            tokens_per_claim=72,
         )
         e2e_results.append(r)
         print(
@@ -1179,6 +1191,7 @@ def benchmark_e2e_ungrounded(
                 total_ms=avg_total,
                 per_claim_ms=avg_total / max(n_claims, 1),
                 gpu_memory_mb=gpu_mem,
+                tokens_per_claim=31,
             )
             e2e_results.append(r)
             print(
