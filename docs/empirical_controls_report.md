@@ -100,6 +100,17 @@ To strictly control the family-wise error rate (FWER) across the multiple pairwi
 | 2 | -Retrieval | +0.0620 | 0.0001 | **0.0003** | ✓ YES |
 | 3 | Surface-only (Length) | +0.3705 | 0.0001 | **0.0003** | ✓ YES |
 
+### Pooled Correction Across All Ablation Comparisons ($m=7$ hypotheses)
+| Rank | Comparison | Dataset | $\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($lpha=0.05$)? |
+|---|---|:---:|:---:|:---:|:---:|:---:|
+| 1 | -NLI | fever | +0.1746 | 0.0001 | **0.0007** | ✓ YES |
+| 2 | -Retrieval | fever | +0.0620 | 0.0001 | **0.0007** | ✓ YES |
+| 3 | Surface-only (Length) | fever | +0.3705 | 0.0001 | **0.0007** | ✓ YES |
+| 4 | -NLI | halueval | +0.0322 | 0.0167 | **0.0668** | NO |
+| 5 | -Retrieval | halueval | +0.0080 | 0.1514 | **0.4542** | NO |
+| 6 | Surface-only (Length) | halueval | +0.0186 | 0.1595 | **0.4542** | NO |
+| 7 | +Consistency (Artifact) | halueval | -0.1858 | 1.0000 | **1.0000** | NO |
+
 ---
 
 ## 7. Weight Formula Generalization & Out-of-Domain Transfer

@@ -440,6 +440,12 @@ def generate_empirical_controls_report() -> None:
     for r in holm_res["fever"]:
         doc.append(f"| {r['rank']} | {r['config']} | {r['delta_auroc']:+.4f} | {r['raw_p']:.4f} | **{r['holm_p']:.4f}** | {'✓ YES' if r['significant_after_holm'] else 'NO'} |")
     doc.append("")
+    doc.append(f"### Pooled Correction Across All Ablation Comparisons ($m={len(holm_res['all_pooled'])}$ hypotheses)")
+    doc.append("| Rank | Comparison | Dataset | $\\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($\alpha=0.05$)? |")
+    doc.append("|---|---|:---:|:---:|:---:|:---:|:---:|")
+    for r in holm_res["all_pooled"]:
+        doc.append(f"| {r['rank']} | {r['config']} | {r['dataset']} | {r['delta_auroc']:+.4f} | {r['raw_p']:.4f} | **{r['holm_p']:.4f}** | {'✓ YES' if r['significant_after_holm'] else 'NO'} |")
+    doc.append("")
     doc.append("---")
     doc.append("")
     doc.append("## 7. Weight Formula Generalization & Out-of-Domain Transfer")
