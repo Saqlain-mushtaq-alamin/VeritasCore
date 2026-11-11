@@ -216,6 +216,60 @@ def delong_test(
     return float(z), p_value
 
 
+def delong_test_with_ci(
+    y_true: list[int] | np.ndarray,
+    y_score_a: list[float] | np.ndarray,
+    y_score_b: list[float] | np.ndarray,
+    ci: float = 0.95,
+) -> tuple[float, float, float, float, float]:
+    """DeLong's test comparing two correlated AUROCs on the same dataset with CI on the difference.
+
+    Returns:
+        (z_statistic, p_value, delta_auroc, ci_lower, ci_upper)
+    """
+    from scipy import stats
+
+    y_true = np.asarray(y_true)
+    y_score_a = np.asarray(y_score_a)
+    y_score_b = np.asarray(y_score_b)
+
+    if len(np.unique(y_true)) < 2:
+        raise ValueError("y_true must contain both positive and negative samples.")
+
+    n1 = int((y_true == 1).sum())
+    n0 = int((y_true == 0).sum())
+
+    V10_a, V01_a, auc_a = _delong_structural_components(y_true, y_score_a)
+    V10_b, V01_b, auc_b = _delong_structural_components(y_true, y_score_b)
+
+    S10 = np.array([
+        [np.var(V10_a, ddof=1), np.cov(V10_a, V10_b)[0, 1]],
+        [np.cov(V10_a, V10_b)[0, 1], np.var(V10_b, ddof=1)],
+    ])
+    S01 = np.array([
+        [np.var(V01_a, ddof=1), np.cov(V01_a, V01_b)[0, 1]],
+        [np.cov(V01_a, V01_b)[0, 1], np.var(V01_b, ddof=1)],
+    ])
+
+    cov_matrix = S10 / n1 + S01 / n0
+    delta = float(auc_a - auc_b)
+    var_delta = float(cov_matrix[0, 0] + cov_matrix[1, 1] - 2 * cov_matrix[0, 1])
+
+    if var_delta <= 0:
+        return 0.0, 1.0, delta, delta, delta
+
+    se_delta = np.sqrt(var_delta)
+    z = delta / se_delta
+    p_value = float(2 * stats.norm.sf(abs(z)))
+
+    alpha = 1.0 - ci
+    z_crit = float(stats.norm.ppf(1.0 - alpha / 2.0))
+    ci_lower = float(delta - z_crit * se_delta)
+    ci_upper = float(delta + z_crit * se_delta)
+
+    return float(z), p_value, delta, ci_lower, ci_upper
+
+
 # ---------------------------------------------------------------------------
 # Paired bootstrap test
 # ---------------------------------------------------------------------------
