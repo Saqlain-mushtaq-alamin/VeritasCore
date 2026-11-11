@@ -44,6 +44,9 @@ from __future__ import annotations
 import argparse
 import io
 import json
+import os
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 import platform
 import sys
 import time
