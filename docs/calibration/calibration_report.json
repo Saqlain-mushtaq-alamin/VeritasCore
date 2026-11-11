@@ -1,249 +1,249 @@
 [
   {
     "dataset_name": "HaluEval QA",
-    "mode": "nli",
+    "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-10-14T19:25:45.985759+00:00",
-    "auroc": 0.6944680305676156,
-    "f1": 0.684971098265896,
-    "precision": 0.5473441108545035,
-    "recall": 0.915057915057915,
-    "brier_raw": 0.2252100584167418,
-    "ece_raw": 0.08155173998918129,
-    "brier_calibrated": 0.21924045673717543,
-    "ece_calibrated": 0.03930742983834978,
-    "plot_path": "docs\\calibration\\calibration_nli_halueval_qa.png",
+    "timestamp": "2026-11-11T10:41:47.728380+00:00",
+    "auroc": 0.9469343965669085,
+    "f1": 0.8704453441295547,
+    "precision": 0.8565737051792829,
+    "recall": 0.8847736625514403,
+    "brier_raw": 0.0990480499994153,
+    "ece_raw": 0.08609151412833976,
+    "brier_calibrated": 0.09373345591603505,
+    "ece_calibrated": 0.06865935545607786,
+    "plot_path": "docs\\calibration\\calibration_fusion_halueval_qa.png",
     "error_analysis": {
       "category_counts": {
         "complex_sentence": {
-          "fp": 2,
-          "fn": 2
-        },
-        "numerical": {
-          "fp": 77,
-          "fn": 6
+          "fp": 1,
+          "fn": 1
         },
         "temporal": {
           "fp": 0,
-          "fn": 2
+          "fn": 1
         },
         "short_answer": {
-          "fp": 108,
-          "fn": 0
+          "fp": 17,
+          "fn": 3
         },
-        "negation": {
-          "fp": 4,
-          "fn": 0
+        "numerical": {
+          "fp": 15,
+          "fn": 16
         },
         "other": {
-          "fp": 5,
-          "fn": 12
+          "fp": 3,
+          "fn": 7
+        },
+        "negation": {
+          "fp": 0,
+          "fn": 0
         }
       },
       "gallery": {
         "complex_sentence": [
           {
-            "index": 417,
-            "claim_text": "Q: The NBC-affiliated television station, owned by an American telecommunications company whose founder is Julian Sinclair Smith, called WJAR is more commonly known as what?  A: The Sinclair Broadcast Group-owned Rhode Island NBC affiliate is called WJAR.",
-            "context_snippet": "WJAR (more commonly known as NBC 10) is the NBC-affiliated television station for the state of Rhode Island and Bristol County, Massachusetts licensed to Providence. Owned by Sinclair Broadcast Group,",
+            "index": 137,
+            "claim_text": "Q: Which American film, The Country Bears or Bambi, is based on a book by the Austrian author Felix Salten?  A: The Country Bears is inspired by a Disney theme park attraction.",
+            "context_snippet": "Bambi is a 1942 American animated film directed by David Hand (supervising a team of sequence directors), produced by Walt Disney and based on the book \"Bambi, a Life in the Woods\" by Austrian author ",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": -0.2036,
+            "score": 0.4166,
             "category": "complex_sentence"
-          }
-        ],
-        "numerical": [
-          {
-            "index": 118,
-            "claim_text": "Q: Irma Pamela Hall, an American actress who has appeared in numerous films and television shows since the 1970s, and is best known for playing matriarchal figures including in which 2004 American black comedy thriller film directed by Joel and Ethan Coen?  A: Irma Pamela Hall is known for playing m",
-            "context_snippet": " She is best known for playing matriarchal figures in the films \"A Family Thing\", \"Soul Food\", and \"The Ladykillers\".The Ladykillers is a 2004 American black comedy thriller film directed by Joel and ",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": -0.2,
-            "category": "numerical"
           }
         ],
         "temporal": [
           {
-            "index": 67,
-            "claim_text": "Q: What era was the man associated with Fanny Talbot the leading art critic of?  A: John Ruskin, a prominent social thinker, was associated with Fanny Talbot during the Victorian era.",
-            "context_snippet": "Fanny Talbot (n\u00e9e) Browne (1824\u20131917) was a landowner and philanthropist, and a friend and correspondent of the influential art critic John Ruskin.John Ruskin (8 February 1819 \u2013 20 January 1900) was t",
+            "index": 289,
+            "claim_text": "Q: What was the name of the musical group with which the career of the singer of \"Shikva\" began?  A: Faakhir Mehmood began his career with Vital Signs.",
+            "context_snippet": "\"Shikva\" (Urdu: \u200e ; lit. \"Querulousness\" or \"Complain\" ) is a song by Pakistani recording artist Faakhir Mehmood from his fourth studio album \"Jee Chahay\" (2011).Faakhir Mehmood (Urdu: \u200e ) is a Pakist",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": -0.1915,
+            "score": 0.4929,
             "category": "temporal"
           }
         ],
         "short_answer": [
           {
-            "index": 441,
-            "claim_text": "Q: Who was born first, Francis Nethersole or Elizabeth Stuart?  A: Sir Francis Nethersole",
-            "context_snippet": "Sir Francis Nethersole (1587\u20131659) was an English diplomat, secretary to the Electress Elizabeth, Member of Parliament for Corfe Castle, Dorset, and a Civil War political pamphleteer.Elizabeth Stuart ",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.9673,
+            "index": 31,
+            "claim_text": "Q: What was the company orginally named first?  A: EMC Corporation",
+            "context_snippet": "Dell Technologies Inc. is an American multinational information technology corporation based in Round Rock, Texas.Dell EMC (EMC Corporation until 2016) is an American multinational corporation headqua",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2925,
             "category": "short_answer"
           }
         ],
-        "negation": [
+        "numerical": [
           {
-            "index": 357,
-            "claim_text": "Q: Are both Print and National Journal periodicals?  A: no",
-            "context_snippet": "Print, A Quarterly Journal of the Graphic Arts was a limited edition quarterly periodical begun in 1940 and continued under different names up to the present day as Print, a bimonthly American magazin",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.9967,
-            "category": "negation"
+            "index": 53,
+            "claim_text": "Q: William Stanley, 3rd Baron Monteagle resided in a castle located in what valley?  A: the Hornby Valley",
+            "context_snippet": "William Stanley, 3rd Baron Monteagle (1528\u20131581), of Hornby Castle, Lancashire, was an English politician.Hornby Castle is a country house, developed from a medieval castle, standing to the east of th",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.1766,
+            "category": "numerical"
           }
         ],
         "other": [
           {
-            "index": 191,
-            "claim_text": "Q: True Williams was the first to illustrate which title character of a Mark Twain novel?  A: True Williams was the first to illustrate the character of Huckleberry Finn.",
-            "context_snippet": " He drew all illustrations to the first edition of \"The Adventures of Tom Sawyer\" (1876) and was thus the first to illustrate such characters as Tom Sawyer and Huckleberry Finn.Thomas \"Tom\" Sawyer is ",
+            "index": 17,
+            "claim_text": "Q: Dravid Brook co-wrote a song with this American singer, songwriter and record producer with who?  A: Charles Otto Puth Jr. himself.",
+            "context_snippet": " He is best known for co-writing Eminem's Legacy, Jason Derulo's \"Broke\" featuring Stevie Wonder and Keith Urban, and Charlie Puth's \"Some Type of Love\".Charles Otto Puth Jr. ( ) (born December 2, 199",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": -0.1969,
+            "score": 0.1701,
             "category": "other"
           }
         ]
       },
-      "total_errors": 218,
+      "total_errors": 64,
       "total_samples": 500,
-      "error_rate": 0.436
+      "error_rate": 0.128
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.6716417910447762,
-        "recall": 0.18672199170124482,
-        "f1-score": 0.2922077922077922,
-        "support": 241.0
+        "precision": 0.8875502008032129,
+        "recall": 0.8599221789883269,
+        "f1-score": 0.8735177865612648,
+        "support": 257.0
       },
       "hallucinated": {
-        "precision": 0.5473441108545035,
-        "recall": 0.915057915057915,
-        "f1-score": 0.684971098265896,
-        "support": 259.0
+        "precision": 0.8565737051792829,
+        "recall": 0.8847736625514403,
+        "f1-score": 0.8704453441295547,
+        "support": 243.0
       },
-      "accuracy": 0.564,
+      "accuracy": 0.872,
       "macro avg": {
-        "precision": 0.6094929509496398,
-        "recall": 0.5508899533795799,
-        "f1-score": 0.4885894452368441,
+        "precision": 0.8720619529912479,
+        "recall": 0.8723479207698837,
+        "f1-score": 0.8719815653454097,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.6072555927062149,
-        "recall": 0.564,
-        "f1-score": 0.49565918474589,
+        "precision": 0.8724956239299829,
+        "recall": 0.872,
+        "f1-score": 0.8720245795394536,
         "support": 500.0
       }
     }
   },
   {
     "dataset_name": "FEVER (validation)",
-    "mode": "nli",
+    "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-10-14T19:26:20.675719+00:00",
-    "auroc": 0.9541025641025641,
-    "f1": 0.8155339805825242,
-    "precision": 0.7039106145251397,
-    "recall": 0.9692307692307692,
-    "brier_raw": 0.16528474289684822,
-    "ece_raw": 0.27789731486316516,
-    "brier_calibrated": 0.08263020392657629,
-    "ece_calibrated": 0.05539672964346085,
-    "plot_path": "docs\\calibration\\calibration_nli_fever_validation.png",
+    "timestamp": "2026-11-11T10:42:04.481258+00:00",
+    "auroc": 0.9296314102564103,
+    "f1": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "brier_raw": 0.36861375764889875,
+    "ece_raw": 0.35522574003599144,
+    "brier_calibrated": 0.2463618063427575,
+    "ece_calibrated": 1.6708236130202891e-06,
+    "plot_path": "docs\\calibration\\calibration_fusion_fever_validation.png",
     "error_analysis": {
       "category_counts": {
         "complex_sentence": {
           "fp": 0,
           "fn": 0
         },
-        "numerical": {
-          "fp": 15,
-          "fn": 2
-        },
         "temporal": {
-          "fp": 3,
-          "fn": 0
+          "fp": 0,
+          "fn": 3
         },
         "short_answer": {
           "fp": 0,
           "fn": 0
         },
-        "negation": {
+        "numerical": {
           "fp": 0,
-          "fn": 0
+          "fn": 52
         },
         "other": {
-          "fp": 88,
-          "fn": 6
+          "fp": 0,
+          "fn": 178
+        },
+        "negation": {
+          "fp": 0,
+          "fn": 27
         }
       },
       "gallery": {
-        "numerical": [
-          {
-            "index": 438,
-            "claim_text": "Janelle Mon\u00e1e was conceived on December 1st, 1985.",
-            "context_snippet": "Janelle Mon\u00e1e Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- d\u0292\u0259\u02c8n\u025bl_mo\u028a\u02c8ne\u026a -RSB- -RRB- is an American singer , songwriter , actress , and model signed to her own imprint , Wondaland Arts So",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": -0.1988,
-            "category": "numerical"
-          }
-        ],
         "temporal": [
           {
-            "index": 158,
-            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
-            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.944,
+            "index": 321,
+            "claim_text": "The Bloods was founded in Los Angeles, Massachusetts.",
+            "context_snippet": "The Bloods are a primarily , though not exclusively , African American street gang founded in Los Angeles , California .",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.171,
             "category": "temporal"
+          }
+        ],
+        "numerical": [
+          {
+            "index": 339,
+            "claim_text": "Rob Sheridan finished college in 1979.",
+            "context_snippet": "Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known for his extensive work with the band Nine Inch Nails .",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.1558,
+            "category": "numerical"
           }
         ],
         "other": [
           {
-            "index": 95,
-            "claim_text": "Mary-Kate Olsen and Ashley Olsen are former child artists.",
-            "context_snippet": "Mary-Kate Olsen and Ashley Olsen -LRB- born June 13 , 1986 -RRB- , also known as the Olsen twins collectively , are American fashion designers and former child actresses .",
+            "index": 441,
+            "claim_text": "Dan O'Bannon died.",
+            "context_snippet": "Daniel Thomas `` Dan '' O'Bannon -LRB- September 30 , 1946 -- December 17 , 2009 -RRB- was an American film screenwriter , director , visual effects supervisor , and occasional actor , usually in the ",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": -0.2,
+            "score": 0.1551,
             "category": "other"
+          }
+        ],
+        "negation": [
+          {
+            "index": 361,
+            "claim_text": "Arizona is not in the United States.",
+            "context_snippet": "It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern corner of Colorado . California -LRB- -LSB- k\u00e6l\u1d7b\u02c8f\u0254\u02d0rnj\u0259 , _ - ni.\u0259 -RSB- , -RR",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.1566,
+            "category": "negation"
           }
         ]
       },
-      "total_errors": 114,
+      "total_errors": 260,
       "total_samples": 500,
-      "error_rate": 0.228
+      "error_rate": 0.52
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.9436619718309859,
-        "recall": 0.5583333333333333,
-        "f1-score": 0.7015706806282722,
+        "precision": 0.48,
+        "recall": 1.0,
+        "f1-score": 0.6486486486486487,
         "support": 240.0
       },
       "hallucinated": {
-        "precision": 0.7039106145251397,
-        "recall": 0.9692307692307692,
-        "f1-score": 0.8155339805825242,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
         "support": 260.0
       },
-      "accuracy": 0.772,
+      "accuracy": 0.48,
       "macro avg": {
-        "precision": 0.8237862931780628,
-        "recall": 0.7637820512820512,
-        "f1-score": 0.7585523306053983,
+        "precision": 0.24,
+        "recall": 0.5,
+        "f1-score": 0.32432432432432434,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.8189912660319458,
-        "recall": 0.772,
-        "f1-score": 0.7608315966044833,
+        "precision": 0.23039999999999997,
+        "recall": 0.48,
+        "f1-score": 0.31135135135135134,
         "support": 500.0
       }
     }
