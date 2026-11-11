@@ -83,28 +83,28 @@ def run_length_analysis() -> dict:
     # Baseline 1: Surface features only (5-fold CV)
     prob_surface = cv_predict_proba(X_surface, y_true, seed=42)
     auc_surface = float(roc_auc_score(y_true, prob_surface))
-    _, auc_surface_lo, auc_surface_hi = bootstrap_auroc_ci(y_true, prob_surface, seed=42)
+    _, auc_surface_lo, auc_surface_hi = bootstrap_auroc_ci(y_true, prob_surface, n_bootstrap=10000, seed=42)
 
     # Baseline 2: Claim length alone
     prob_len = cv_predict_proba(lengths.reshape(-1, 1), y_true, seed=42)
     auc_len = float(roc_auc_score(y_true, prob_len))
-    _, auc_len_lo, auc_len_hi = bootstrap_auroc_ci(y_true, prob_len, seed=42)
+    _, auc_len_lo, auc_len_hi = bootstrap_auroc_ci(y_true, prob_len, n_bootstrap=10000, seed=42)
 
     # NLI alone
     auc_nli = float(roc_auc_score(y_true, nli_scores))
-    _, auc_nli_lo, auc_nli_hi = bootstrap_auroc_ci(y_true, nli_scores, seed=42)
+    _, auc_nli_lo, auc_nli_hi = bootstrap_auroc_ci(y_true, nli_scores, n_bootstrap=10000, seed=42)
 
     # Combined: NLI + Surface features (5-fold CV)
     X_combined = np.column_stack([nli_scores, X_surface])
     prob_combined = cv_predict_proba(X_combined, y_true, seed=42)
     auc_combined = float(roc_auc_score(y_true, prob_combined))
-    _, auc_combined_lo, auc_combined_hi = bootstrap_auroc_ci(y_true, prob_combined, seed=42)
+    _, auc_combined_lo, auc_combined_hi = bootstrap_auroc_ci(y_true, prob_combined, n_bootstrap=10000, seed=42)
 
     # Combined: NLI + Length alone (5-fold CV)
     X_nli_len = np.column_stack([nli_scores, lengths])
     prob_nli_len = cv_predict_proba(X_nli_len, y_true, seed=42)
     auc_nli_len = float(roc_auc_score(y_true, prob_nli_len))
-    _, auc_nli_len_lo, auc_nli_len_hi = bootstrap_auroc_ci(y_true, prob_nli_len, seed=42)
+    _, auc_nli_len_lo, auc_nli_len_hi = bootstrap_auroc_ci(y_true, prob_nli_len, n_bootstrap=10000, seed=42)
 
     # DeLong test: Combined vs Surface-only
     delong_z_inc, delong_p_inc = delong_test(y_true, prob_combined, prob_surface)
@@ -135,17 +135,17 @@ def run_length_analysis() -> dict:
 
         # In-stratum NLI AUROC
         auc_s_nli = float(roc_auc_score(y_s, nli_s))
-        _, auc_s_nli_lo, auc_s_nli_hi = bootstrap_auroc_ci(y_s, nli_s, seed=42)
+        _, auc_s_nli_lo, auc_s_nli_hi = bootstrap_auroc_ci(y_s, nli_s, n_bootstrap=10000, seed=42)
 
         # In-stratum Length AUROC
         auc_s_len = float(roc_auc_score(y_s, len_s))
-        _, auc_s_len_lo, auc_s_len_hi = bootstrap_auroc_ci(y_s, len_s, seed=42)
+        _, auc_s_len_lo, auc_s_len_hi = bootstrap_auroc_ci(y_s, len_s, n_bootstrap=10000, seed=42)
 
         # In-stratum surface model
         X_surf_s = X_surface[mask]
         prob_surf_s = cv_predict_proba(X_surf_s, y_s, seed=42)
         auc_s_surf = float(roc_auc_score(y_s, prob_surf_s))
-        _, auc_s_surf_lo, auc_s_surf_hi = bootstrap_auroc_ci(y_s, prob_surf_s, seed=42)
+        _, auc_s_surf_lo, auc_s_surf_hi = bootstrap_auroc_ci(y_s, prob_surf_s, n_bootstrap=10000, seed=42)
 
         print(f"Stratum: {s_name} (n={n_stratum}, pos={np.sum(y_s)}, neg={n_stratum - np.sum(y_s)}):")
         print(f"  Length alone AUROC:   {format_ci(auc_s_len, auc_s_len_lo, auc_s_len_hi)}")
@@ -180,10 +180,10 @@ def run_length_analysis() -> dict:
     ])
     prob_fever_surf = cv_predict_proba(X_fever_surf, y_fever, seed=42)
     auc_fever_surf = float(roc_auc_score(y_fever, prob_fever_surf))
-    _, auc_fever_surf_lo, auc_fever_surf_hi = bootstrap_auroc_ci(y_fever, prob_fever_surf, seed=42)
+    _, auc_fever_surf_lo, auc_fever_surf_hi = bootstrap_auroc_ci(y_fever, prob_fever_surf, n_bootstrap=10000, seed=42)
 
     auc_fever_nli = float(roc_auc_score(y_fever, nli_fever))
-    _, auc_fever_nli_lo, auc_fever_nli_hi = bootstrap_auroc_ci(y_fever, nli_fever, seed=42)
+    _, auc_fever_nli_lo, auc_fever_nli_hi = bootstrap_auroc_ci(y_fever, nli_fever, n_bootstrap=10000, seed=42)
 
     print(f"FEVER (n=1,000):")
     print(f"  Surface features alone AUROC: {format_ci(auc_fever_surf, auc_fever_surf_lo, auc_fever_surf_hi)}")
