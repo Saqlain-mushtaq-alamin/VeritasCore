@@ -75,6 +75,7 @@ class NLIVerifier(BaseVerifier):
         chunk_overlap_tokens: int = _DEFAULT_CHUNK_OVERLAP_TOKENS,
         use_sentence_level: bool = False,
         use_bidirectional: bool = False,
+        precision: str = "fp32",
     ) -> None:
         """Initialise NLIVerifier.
 
@@ -101,6 +102,7 @@ class NLIVerifier(BaseVerifier):
                 at half the inference latency (13.0 ms vs 28.5 ms).
                 If True, run an experimental reverse pass (claim → chunk) as an
                 ablation variant. Ignored when use_sentence_level=True.
+            precision: Inference precision, 'fp32' or 'fp16'. Default 'fp32'.
         """
         if not 0.0 <= entailment_threshold <= 1.0:
             raise ValueError("entailment_threshold must be in [0, 1]")
@@ -114,6 +116,7 @@ class NLIVerifier(BaseVerifier):
         self.chunk_overlap_tokens = chunk_overlap_tokens
         self.use_sentence_level = use_sentence_level
         self.use_bidirectional = use_bidirectional
+        self.precision = precision.lower()
 
         self._model: Any = None
         self._tokenizer: Any = None
