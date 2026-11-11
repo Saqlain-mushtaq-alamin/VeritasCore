@@ -3,171 +3,188 @@
     "dataset_name": "HaluEval QA",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T14:39:09.656425+00:00",
-    "auroc": 0.7523498422763446,
-    "f1": 0.7168458781362007,
-    "precision": 0.6349206349206349,
-    "recall": 0.823045267489712,
-    "brier_raw": 0.2092367788713914,
-    "ece_raw": 0.07816326585152089,
+    "timestamp": "2026-11-11T17:07:19.560887+00:00",
+    "auroc": 0.7707242897158864,
+    "f1": 0.7014681892332789,
+    "precision": 0.5842391304347826,
+    "recall": 0.8775510204081632,
+    "brier_raw": 0.2034504878632305,
+    "ece_raw": 0.11092092626460053,
     "brier_raw_ci": [
-      0.1971,
-      0.222
+      0.1918,
+      0.2158
     ],
     "ece_raw_ci": [
-      0.0566,
-      0.1225
+      0.082,
+      0.152
     ],
-    "brier_calibrated": 0.20597049658793207,
-    "ece_calibrated": 0.06825820497179894,
+    "brier_calibrated": 0.1996885617078697,
+    "ece_calibrated": 0.06859630468605653,
     "brier_calibrated_ci": [
-      0.1919,
-      0.2205
+      0.1879,
+      0.2118
     ],
     "ece_calibrated_ci": [
-      0.0467,
-      0.1126
+      0.0588,
+      0.1176
     ],
-    "plot_path": "docs\\calibration\\calibration_fusion_halueval_qa.png",
+    "calibration_difference": {
+      "delta_brier": 0.0038,
+      "delta_brier_ci": [
+        -0.0005,
+        0.008
+      ],
+      "delta_brier_p_value": 0.082,
+      "delta_ece": 0.0298,
+      "delta_ece_ci": [
+        -0.0049,
+        0.0581
+      ],
+      "delta_ece_p_value": 0.0856,
+      "two_sided": true,
+      "n_bootstrap": 10000
+    },
     "error_analysis": {
       "category_counts": {
-        "temporal": {
-          "fp": 0,
-          "fn": 2
+        "numerical": {
+          "fp": 38,
+          "fn": 20
         },
-        "other": {
-          "fp": 4,
-          "fn": 12
+        "short_answer": {
+          "fp": 99,
+          "fn": 0
+        },
+        "negation": {
+          "fp": 8,
+          "fn": 1
         },
         "complex_sentence": {
           "fp": 2,
           "fn": 0
         },
-        "numerical": {
-          "fp": 39,
-          "fn": 26
+        "other": {
+          "fp": 5,
+          "fn": 8
         },
-        "short_answer": {
-          "fp": 68,
-          "fn": 3
-        },
-        "negation": {
-          "fp": 2,
-          "fn": 0
+        "temporal": {
+          "fp": 1,
+          "fn": 1
         }
       },
       "gallery": {
-        "temporal": [
-          {
-            "index": 276,
-            "claim_text": "Q: Who was born first, Sherman Alexie or Adunis?  A: Sherman Alexie was born first.",
-            "context_snippet": "Sherman Joseph Alexie, Jr. (born October 7, 1966) is a Spokane-Coeur d'Alene-American novelist, short story writer, poet, and filmmaker.Ali Ahmad Said Esber , romanised: \"\u02bfAl\u012b A\u1e25mad Sa\u02bf\u012bd 'Isbar\" (bor",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.3018,
-            "category": "temporal"
-          }
-        ],
-        "other": [
-          {
-            "index": 129,
-            "claim_text": "Q: Kim Warwick and Matt Lucena both play what sport?  A: Kim Warwick and Matt Lucena both played professional tennis.",
-            "context_snippet": "Kim Warwick (born 8 April 1952) is an Australian former professional male tennis player who competed on the ATP Tour from 1970\u20131987 reaching the final of the singles Australian Open in 1980.Matt Lucen",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2705,
-            "category": "other"
-          }
-        ],
-        "complex_sentence": [
-          {
-            "index": 352,
-            "claim_text": "Q:  large, primarily residential, public research university in Kent, Ohio, United States has an online folk music stream that is hosted by an American radio personality who is also a representative of Philadelphia's folk music scene, what was he called by \"The Philadelphia inquirer\"?  A: The Grandf",
-            "context_snippet": "Gene Shay (born Ivan Shaner, March 4, 1935 in Philadelphia, Pennsylvania) is an American radio personality. He is a representative of Philadelphia's folk music scene. A founder of the annual Philadelp",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.8032,
-            "category": "complex_sentence"
-          }
-        ],
         "numerical": [
           {
-            "index": 97,
-            "claim_text": "Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.",
-            "context_snippet": " This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater auto-racing formula that ran in different series in various regions around the wor",
+            "index": 456,
+            "claim_text": "Q: What 1993 Disney movie starring Elijah Wood was based on a Mark Twain novel?  A: The Disney movie with Huck Finn.",
+            "context_snippet": "Tom and Huck is a 1995 American adventure comedy-drama film based on Mark Twain's novel \"The Adventures of Tom Sawyer\", and starring Jonathan Taylor Thomas, Brad Renfro, Mike McShane, and Amy Wright.T",
             "true_label": "hallucinated",
             "pred_label": "supported",
-            "score": 0.2552,
+            "score": 0.2408,
             "category": "numerical"
           }
         ],
         "short_answer": [
           {
-            "index": 300,
-            "claim_text": "Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry",
-            "context_snippet": "Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the National Basketball Association (NBA).Wardell Stephen Curry II (born March 14, 198",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.4221,
+            "index": 278,
+            "claim_text": "Q: Gerald William Heaney, served for nearly forty years as a federal judge on the United States Court of Appeals for the Eighth Circuit, and was an organizer for several liberal Democratic politicians, including which former   American politician, poet, and a long-time Congressman from Minnesota?  A",
+            "context_snippet": " Between the end of World War II and his appointment to the federal bench, he rewrote the Free State of Bavaria\u2019s labor laws, and was a valued political advisor and organizer for several liberal Democ",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.8115,
             "category": "short_answer"
           }
         ],
         "negation": [
           {
-            "index": 435,
-            "claim_text": "Q: Fir and Imperata, are a type of tree?  A: no",
-            "context_snippet": "Firs (Abies) are a genus of 48\u201356 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but widespread genus of tropical and subtropical grasses, commonly known as satintail",
+            "index": 326,
+            "claim_text": "Q: Who is an American musician, Peter Chelsom or Billy Bob Thornton?  A: Peter Chelsom is not an American musician.",
+            "context_snippet": "Peter Chelsom (born 20 April 1956) is a British film director, writer, and actor.William Robert \"Billy Bob\" Thornton (born August 4, 1955) is an American actor, filmmaker, singer, songwriter, and musi",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.3349,
+            "category": "negation"
+          }
+        ],
+        "complex_sentence": [
+          {
+            "index": 143,
+            "claim_text": "Q: What locations is the folklore which Huldra belongs to representative of?  A: Norway, Sweden, Finland, Denmark, Iceland and the Faroe Islands",
+            "context_snippet": " The mountain is named after Huldra in Scandinavian folklore.Scandinavian folklore or Nordic folklore is the folklore of Norway, Sweden, Finland, Denmark, Iceland and the Faroe Islands.",
             "true_label": "supported",
             "pred_label": "hallucinated",
-            "score": 0.68,
-            "category": "negation"
+            "score": 0.5446,
+            "category": "complex_sentence"
+          }
+        ],
+        "other": [
+          {
+            "index": 362,
+            "claim_text": "Q: Signet Jewelers owns what Delaware based retailer, along with Kay and Jared?  A: Signet Jewelers owns Delaware Jewelry Retailer.",
+            "context_snippet": " Signet Jewelers owns and operates the companies Zales, Kay Jewelers, and Jared.The Zale Corporation is an American jewelry retailer, incorporated in Delaware in 1993.",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.255,
+            "category": "other"
+          }
+        ],
+        "temporal": [
+          {
+            "index": 28,
+            "claim_text": "Q: For what ride is Pepper's ghost, an illusion technique, used when the Blue Fairy disappears, leaving a pile of fiber-optic fairy dust on the floor?  A: The Blue Fairy disappears in the Haunted Mansion.",
+            "context_snippet": "Pepper's ghost is an illusion technique used in theatre, amusement parks, museums, television, and concerts. Examples of the illusion are the Girl-to-Gorilla trick found in old carnival sideshows and ",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.3808,
+            "category": "temporal"
           }
         ]
       },
-      "total_errors": 158,
+      "total_errors": 183,
       "total_samples": 500,
-      "error_rate": 0.316
+      "error_rate": 0.366
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.7675675675675676,
-        "recall": 0.5525291828793775,
-        "f1-score": 0.6425339366515838,
-        "support": 257.0
+        "precision": 0.7727272727272727,
+        "recall": 0.4,
+        "f1-score": 0.5271317829457365,
+        "support": 255.0
       },
       "hallucinated": {
-        "precision": 0.6349206349206349,
-        "recall": 0.823045267489712,
-        "f1-score": 0.7168458781362007,
-        "support": 243.0
+        "precision": 0.5842391304347826,
+        "recall": 0.8775510204081632,
+        "f1-score": 0.7014681892332789,
+        "support": 245.0
       },
-      "accuracy": 0.684,
+      "accuracy": 0.634,
       "macro avg": {
-        "precision": 0.7012441012441013,
-        "recall": 0.6877872251845447,
-        "f1-score": 0.6796899073938922,
+        "precision": 0.6784832015810276,
+        "recall": 0.6387755102040816,
+        "f1-score": 0.6142999860895078,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.7031011583011583,
-        "recall": 0.684,
-        "f1-score": 0.6786495402131075,
+        "precision": 0.6803680830039525,
+        "recall": 0.634,
+        "f1-score": 0.6125566220266323,
         "support": 500.0
       }
     },
-    "threshold_selection_rule": "F1-maximizing decision threshold fitted strictly on HaluEval QA grid split (tau = 0.46, Grid F1 = 0.7880)",
-    "decision_threshold": 0.4599999999999999,
-    "grid_f1": 0.7879799666110183
+    "threshold_selection_rule": "F1-maximizing decision threshold fitted strictly on held-out HaluEval QA calibration split (tau = 0.42, Calib F1 = 0.7192)",
+    "decision_threshold": 0.41999999999999993,
+    "grid_f1": 0.7192118226600985,
+    "calib_f1": 0.7192118226600985,
+    "calibration_split_info": "Platt scaling fitted on HaluEval QA calib_set (held out from fusion training). Zero-shot transfer to FEVER."
   },
   {
     "dataset_name": "FEVER (validation)",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T14:39:21.116314+00:00",
+    "timestamp": "2026-11-11T17:07:35.081500+00:00",
     "auroc": 0.9067788461538462,
-    "f1": 0.8821138211382114,
-    "precision": 0.9353448275862069,
-    "recall": 0.8346153846153846,
+    "f1": 0.8875739644970414,
+    "precision": 0.9109311740890689,
+    "recall": 0.8653846153846154,
     "brier_raw": 0.16737676956978928,
     "ece_raw": 0.2477005155078839,
     "brier_raw_ci": [
@@ -178,34 +195,37 @@
       0.2192,
       0.2758
     ],
-    "brier_calibrated": 0.15470910971767307,
-    "ece_calibrated": 0.22823683715108123,
+    "brier_calibrated": 0.17489125507650516,
+    "ece_calibrated": 0.24443912477599117,
     "brier_calibrated_ci": [
-      0.1442,
-      0.1657
+      0.164,
+      0.186
     ],
     "ece_calibrated_ci": [
-      0.1997,
-      0.2556
+      0.2149,
+      0.2728
     ],
-    "plot_path": "docs\\calibration\\calibration_fusion_fever_validation.png",
+    "calibration_difference": {
+      "delta_brier": -0.0075,
+      "delta_brier_ci": [
+        -0.0113,
+        -0.0038
+      ],
+      "delta_brier_p_value": 0.0002,
+      "delta_ece": 0.0032,
+      "delta_ece_ci": [
+        -0.0158,
+        0.0224
+      ],
+      "delta_ece_p_value": 0.76,
+      "two_sided": true,
+      "n_bootstrap": 10000
+    },
     "error_analysis": {
       "category_counts": {
-        "temporal": {
-          "fp": 1,
-          "fn": 0
-        },
-        "other": {
-          "fp": 14,
-          "fn": 21
-        },
-        "complex_sentence": {
-          "fp": 0,
-          "fn": 0
-        },
         "numerical": {
           "fp": 0,
-          "fn": 19
+          "fn": 12
         },
         "short_answer": {
           "fp": 0,
@@ -214,31 +234,21 @@
         "negation": {
           "fp": 0,
           "fn": 3
+        },
+        "complex_sentence": {
+          "fp": 0,
+          "fn": 0
+        },
+        "other": {
+          "fp": 21,
+          "fn": 20
+        },
+        "temporal": {
+          "fp": 1,
+          "fn": 0
         }
       },
       "gallery": {
-        "temporal": [
-          {
-            "index": 158,
-            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
-            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.6269,
-            "category": "temporal"
-          }
-        ],
-        "other": [
-          {
-            "index": 188,
-            "claim_text": "Bhagat Singh was murdered.",
-            "context_snippet": "Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justification or valid excuse , especially the unlawful killing of another human bein",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2719,
-            "category": "other"
-          }
-        ],
         "numerical": [
           {
             "index": 339,
@@ -260,41 +270,65 @@
             "score": 0.3622,
             "category": "negation"
           }
+        ],
+        "other": [
+          {
+            "index": 188,
+            "claim_text": "Bhagat Singh was murdered.",
+            "context_snippet": "Singh was convicted and hanged in March 1931 , aged 23 . A murder is the unlawful killing of another human without justification or valid excuse , especially the unlawful killing of another human bein",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2719,
+            "category": "other"
+          }
+        ],
+        "temporal": [
+          {
+            "index": 158,
+            "claim_text": "San Diego Comic-Con was founded by Richard Alf.",
+            "context_snippet": "It was founded as the Golden State Comic Book Convention in 1970 by a group of San Diegans that included Shel Dorf , Richard Alf , Ken Krueger and Mike Towry ; later , it was called the `` San Diego C",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.6269,
+            "category": "temporal"
+          }
         ]
       },
-      "total_errors": 58,
+      "total_errors": 57,
       "total_samples": 500,
-      "error_rate": 0.116
+      "error_rate": 0.114
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.8395522388059702,
-        "recall": 0.9375,
-        "f1-score": 0.8858267716535433,
+        "precision": 0.8616600790513834,
+        "recall": 0.9083333333333333,
+        "f1-score": 0.8843813387423936,
         "support": 240.0
       },
       "hallucinated": {
-        "precision": 0.9353448275862069,
-        "recall": 0.8346153846153846,
-        "f1-score": 0.8821138211382114,
+        "precision": 0.9109311740890689,
+        "recall": 0.8653846153846154,
+        "f1-score": 0.8875739644970414,
         "support": 260.0
       },
-      "accuracy": 0.884,
+      "accuracy": 0.886,
       "macro avg": {
-        "precision": 0.8874485331960885,
-        "recall": 0.8860576923076924,
-        "f1-score": 0.8839702963958773,
+        "precision": 0.8862956265702262,
+        "recall": 0.8868589743589743,
+        "f1-score": 0.8859776516197175,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.8893643849716932,
-        "recall": 0.884,
-        "f1-score": 0.8838960373855707,
+        "precision": 0.8872810484709799,
+        "recall": 0.886,
+        "f1-score": 0.8860415041348104,
         "support": 500.0
       }
     },
-    "threshold_selection_rule": "F1-maximizing decision threshold fitted strictly on HaluEval QA grid split (tau = 0.46, Grid F1 = 0.7880)",
-    "decision_threshold": 0.4599999999999999,
-    "grid_f1": 0.7879799666110183
+    "threshold_selection_rule": "F1-maximizing decision threshold fitted strictly on held-out HaluEval QA calibration split (tau = 0.42, Calib F1 = 0.7192)",
+    "decision_threshold": 0.41999999999999993,
+    "grid_f1": 0.7192118226600985,
+    "calib_f1": 0.7192118226600985,
+    "calibration_split_info": "Platt scaling fitted on HaluEval QA calib_set (held out from fusion training). Zero-shot transfer to FEVER."
   }
 ]
