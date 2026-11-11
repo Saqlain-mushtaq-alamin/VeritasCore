@@ -87,8 +87,8 @@ class LatencyResult:
 
     def as_table_row(self) -> str:
         return (
-            f"| {self.component:<30} | {self.device:<10} | {self.precision:<8} "
-            f"| {self.batch_size:^5} | {self.avg_ms:>8.1f} | {self.p95_ms:>8.1f} "
+            f"| {self.component:<32} | {self.device:<10} | {self.precision:<8} "
+            f"| {self.batch_size:^5} | {self.avg_ms:>8.1f} | {self.p50_ms:>8.1f} | {self.p95_ms:>8.1f} "
             f"| {self.throughput_per_sec:>10.2f} | {self.gpu_memory_mb:>8.0f} |"
         )
 
@@ -598,17 +598,18 @@ def benchmark_nli_verifier(
     _reset_gpu_peak()
     verifier = NLIVerifier(use_bidirectional=use_bidirectional, precision=precision)
 
-    # Warm-up (excluded from timing)
-    warmup = Claim(
-        id="warmup",
-        text="The sky appears blue due to Rayleigh scattering.",
-        source_span=(0, 49),
-        source_text="The sky appears blue due to Rayleigh scattering.",
-    )
+    # Warm-up (5 runs, excluded from timing)
     warmup_context = "Light from the sun scatters in the atmosphere, making the sky appear blue."
-    _sync_cuda()
-    verifier.verify([warmup], context=warmup_context)
-    _sync_cuda()
+    for w_i in range(5):
+        warmup = Claim(
+            id=f"warmup_{w_i}",
+            text=f"The sky appears blue due to Rayleigh scattering ({w_i}).",
+            source_span=(0, 49),
+            source_text=f"The sky appears blue due to Rayleigh scattering ({w_i}).",
+        )
+        _sync_cuda()
+        verifier.verify([warmup], context=warmup_context)
+        _sync_cuda()
 
     # Record GPU memory after warm-up
     gpu_mem_after_warmup = _gpu_mem_mb()
@@ -1228,12 +1229,12 @@ def print_component_table(results: list[LatencyResult]) -> None:
     print("TABLE 5a: Per-Component Latency")
     print("=" * 70)
     header = (
-        "| Component                      | Device     | Precision "
-        "| Batch | Avg (ms) | P95 (ms) | Throughput | GPU Mem |"
+        "| Component                        | Device     | Precision "
+        "| Batch | Avg (ms) | P50 (ms) | P95 (ms) | Throughput | GPU Mem |"
     )
     sep = (
-        "|--------------------------------|------------|----------"
-        "|:-----:|:--------:|:--------:|:----------:|:-------:|"
+        "|----------------------------------|------------|----------"
+        "|:-----:|:--------:|:--------:|:--------:|:----------:|:-------:|"
     )
     print(header)
     print(sep)
@@ -1394,16 +1395,17 @@ def main() -> None:
             retrieval_warm = benchmark_retrieval_verifier_warm(n_samples=min(n, 10))
             report.component_results.append(retrieval_warm)
 
-            nli_fwd_16 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=False, precision="fp16")
+            nli_n = max(n, 100)
+            nli_fwd_16 = benchmark_nli_verifier(n_samples=nli_n, batch_size=1, use_bidirectional=False, precision="fp16")
             report.component_results.append(nli_fwd_16)
 
-            nli_fwd_32 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=False, precision="fp32")
+            nli_fwd_32 = benchmark_nli_verifier(n_samples=nli_n, batch_size=1, use_bidirectional=False, precision="fp32")
             report.component_results.append(nli_fwd_32)
 
-            nli_bidi_16 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True, precision="fp16")
+            nli_bidi_16 = benchmark_nli_verifier(n_samples=nli_n, batch_size=1, use_bidirectional=True, precision="fp16")
             report.component_results.append(nli_bidi_16)
 
-            nli_bidi_32 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True, precision="fp32")
+            nli_bidi_32 = benchmark_nli_verifier(n_samples=nli_n, batch_size=1, use_bidirectional=True, precision="fp32")
             report.component_results.append(nli_bidi_32)
 
             llm_decomp = benchmark_llm_decomposer(n_samples=min(n, 3))
