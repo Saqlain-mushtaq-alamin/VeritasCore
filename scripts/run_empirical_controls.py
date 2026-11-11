@@ -457,7 +457,7 @@ def generate_empirical_controls_report() -> None:
     doc.append("```")
     doc.append("- **Tuning Split:** Grid search was performed **strictly on the HaluEval QA grid split ($n=500$, seed 42)**.")
     doc.append("- **Evaluation Split:** The held-out HaluEval evaluation ($n=1,500$, AUROC **0.7098** forward-only / **0.6968** bidirectional) is strictly disjoint.")
-    doc.append("- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9721** (forward-only) and **0.9678** (bidirectional), proving strong out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.")
+    doc.append("- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9721** (forward-only) and **0.9678** (bidirectional), demonstrating out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.")
 
     report_content = "\n".join(doc)
     with open(OUTPUT_REPORT, "w", encoding="utf-8") as f:

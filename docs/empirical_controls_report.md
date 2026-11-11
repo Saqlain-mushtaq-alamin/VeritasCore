@@ -1,6 +1,6 @@
 # Empirical Verification Controls & Methodological Audits
 
-> Scientific sanity checks and diagnostic controls proving the validity of VeritasCore evaluation results.
+> Scientific sanity checks and diagnostic controls evaluating the statistical and methodological integrity of VeritasCore evaluation results.
 
 ---
 
@@ -34,7 +34,7 @@ Features evaluated: `claim_length`, `claim_word_count`, `has_numbers`, `has_prop
 In the raw official FEVER release, `evidence` entries were stored as index pointers (`[annotation_id, evidence_id, wiki_title, sentence_id]`).
 However, VeritasCore utilized the curated `copenlu/fever_gold_evidence` benchmark download, where `triple[2]` directly provides the pre-extracted gold sentence string.
 
-Below is an audit of 20 randomly sampled FEVER validation pairs confirming real sentence text is extracted:
+Below is an audit of 20 randomly sampled FEVER validation pairs verifying raw sentence text extraction:
 
 | # | Claim | Gold Evidence Sentence (`triple[2]`) | Wiki Page (`triple[0]`) |
 |---|---|---|---|
@@ -77,7 +77,7 @@ Scoring was executed twice on duplicate samples ($n=100$) with seed=42.
 - `LLMDecomposer` uses `threading.Thread(target=_worker, daemon=True)` with a per-sample wall-clock timeout (`timeout_per_sample=60.0s`).
 - If generation exceeds the timeout, a `DecompositionError` is raised, triggering fallback to `RuleDecomposer` if `fallback_on_error=True`.
 - **Important Concurrency Behavior:** In PyTorch, Python cannot forcibly abort a running CUDA C++ kernel in an orphaned daemon thread. If a timeout fires, the daemon thread continues to consume GPU compute until the model generates `<end_of_text>` or hits `max_new_tokens=160`. This can transiently impact the latency of subsequent claims.
-- **Empirical Hardware Run Rate:** In the 50-sample hardware evaluation on RTX 4060 (`docs/phase1_evaluation_log.md` §5), **0 timeouts occurred** (maximum observed latency was 15.24s against the 60s limit). 47/50 (94.0%) claims were in-range with 100% span validity, confirming zero orphaned GPU threads during benchmarking.
+- **Empirical Hardware Run Rate:** In the 50-sample hardware evaluation on RTX 4060 (`docs/phase1_evaluation_log.md` §5), **0 timeouts occurred** (maximum observed latency was 15.24s against the 60s limit). 47/50 (94.0%) claims were in-range with 100% span validity, indicating zero observed orphaned GPU threads during benchmarking.
 
 ---
 
@@ -88,28 +88,28 @@ To strictly control the family-wise error rate (FWER) across the multiple pairwi
 ### HaluEval QA Ablations ($m=4$ hypotheses)
 | Rank | Ablation Configuration | $\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($lpha=0.05$)? |
 |---|---|:---:|:---:|:---:|:---:|
-| 1 | -NLI | +0.0322 | 0.0167 | **0.0668** | NO |
-| 2 | -Retrieval | +0.0080 | 0.1514 | **0.4542** | NO |
-| 3 | Surface-only (Length) | +0.0186 | 0.1595 | **0.4542** | NO |
-| 4 | +Consistency (Artifact) | -0.1858 | 1.0000 | **1.0000** | NO |
+| 1 | +Consistency (Artifact) | -0.1858 | 0.0001 | **0.0004** | ✓ YES |
+| 2 | -NLI | +0.0322 | 0.0334 | **0.1002** | NO |
+| 3 | NLI + surface features | +0.0080 | 0.3028 | **0.6056** | NO |
+| 4 | Surface-only (Length) | +0.0186 | 0.3190 | **0.6056** | NO |
 
 ### FEVER Validation Ablations ($m=3$ hypotheses)
 | Rank | Ablation Configuration | $\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($lpha=0.05$)? |
 |---|---|:---:|:---:|:---:|:---:|
 | 1 | -NLI | +0.1746 | 0.0001 | **0.0003** | ✓ YES |
-| 2 | -Retrieval | +0.0620 | 0.0001 | **0.0003** | ✓ YES |
+| 2 | NLI + surface features | +0.0620 | 0.0001 | **0.0003** | ✓ YES |
 | 3 | Surface-only (Length) | +0.3705 | 0.0001 | **0.0003** | ✓ YES |
 
 ### Pooled Correction Across All Ablation Comparisons ($m=7$ hypotheses)
 | Rank | Comparison | Dataset | $\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($lpha=0.05$)? |
 |---|---|:---:|:---:|:---:|:---:|:---:|
-| 1 | -NLI | fever | +0.1746 | 0.0001 | **0.0007** | ✓ YES |
-| 2 | -Retrieval | fever | +0.0620 | 0.0001 | **0.0007** | ✓ YES |
-| 3 | Surface-only (Length) | fever | +0.3705 | 0.0001 | **0.0007** | ✓ YES |
-| 4 | -NLI | halueval | +0.0322 | 0.0167 | **0.0668** | NO |
-| 5 | -Retrieval | halueval | +0.0080 | 0.1514 | **0.4542** | NO |
-| 6 | Surface-only (Length) | halueval | +0.0186 | 0.1595 | **0.4542** | NO |
-| 7 | +Consistency (Artifact) | halueval | -0.1858 | 1.0000 | **1.0000** | NO |
+| 1 | +Consistency (Artifact) | halueval | -0.1858 | 0.0001 | **0.0007** | ✓ YES |
+| 2 | -NLI | fever | +0.1746 | 0.0001 | **0.0007** | ✓ YES |
+| 3 | NLI + surface features | fever | +0.0620 | 0.0001 | **0.0007** | ✓ YES |
+| 4 | Surface-only (Length) | fever | +0.3705 | 0.0001 | **0.0007** | ✓ YES |
+| 5 | -NLI | halueval | +0.0322 | 0.0334 | **0.1002** | NO |
+| 6 | NLI + surface features | halueval | +0.0080 | 0.3028 | **0.6056** | NO |
+| 7 | Surface-only (Length) | halueval | +0.0186 | 0.3190 | **0.6056** | NO |
 
 ---
 
@@ -122,4 +122,4 @@ hallucination_score = fwd_contradiction - 0.2 * fwd_entailment - 0.6 * rev_entai
 ```
 - **Tuning Split:** Grid search was performed **strictly on the HaluEval QA grid split ($n=500$, seed 42)**.
 - **Evaluation Split:** The held-out HaluEval evaluation ($n=1,500$, AUROC **0.7098** forward-only / **0.6968** bidirectional) is strictly disjoint.
-- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9721** (forward-only) and **0.9678** (bidirectional), proving strong out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.
+- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9721** (forward-only) and **0.9678** (bidirectional), demonstrating out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.
