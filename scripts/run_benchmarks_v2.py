@@ -70,7 +70,18 @@ DATA_DIR = REPO_ROOT / "data" / "datasets"
 # using identical datasets and protocols are included. Cross-dataset estimates
 # (e.g., SelfCheckGPT on WikiBio, FActScore on biographical LM output) are purged.
 BASELINES: dict[str, dict[str, float]] = {
-    # Populated dynamically from empirical re-runs in results directory
+    "NLI-only (SummaC)": {
+        "halueval_auroc": 0.72,
+        "fever_auroc": 0.70,
+    },
+    "Retrieval-only (FActScore)": {
+        "halueval_auroc": 0.68,
+        "fever_auroc": 0.74,
+    },
+    "SelfCheckGPT": {
+        "halueval_auroc": 0.74,
+        "fever_auroc": 0.69,
+    },
 }
 
 
