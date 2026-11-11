@@ -1361,11 +1361,17 @@ def main() -> None:
             retrieval_warm = benchmark_retrieval_verifier_warm(n_samples=min(n, 10))
             report.component_results.append(retrieval_warm)
 
-            nli_bidi = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True)
-            report.component_results.append(nli_bidi)
+            nli_fwd_16 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=False, precision="fp16")
+            report.component_results.append(nli_fwd_16)
 
-            nli_fwd = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=False)
-            report.component_results.append(nli_fwd)
+            nli_fwd_32 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=False, precision="fp32")
+            report.component_results.append(nli_fwd_32)
+
+            nli_bidi_16 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True, precision="fp16")
+            report.component_results.append(nli_bidi_16)
+
+            nli_bidi_32 = benchmark_nli_verifier(n_samples=n, batch_size=1, use_bidirectional=True, precision="fp32")
+            report.component_results.append(nli_bidi_32)
 
             llm_decomp = benchmark_llm_decomposer(n_samples=min(n, 3))
             report.component_results.append(llm_decomp)
