@@ -1,6 +1,4 @@
 import asyncio, sys, time
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 print("1. Importing modules...")
 from veritascore.core.types import Claim
@@ -31,7 +29,12 @@ claim = Claim(
     source_text="The Eiffel Tower is located in Paris.",
 )
 
-print("4. Calling verify...")
-t0 = time.perf_counter()
-res = v.verify([claim])
-print(f"5. Done in {(time.perf_counter()-t0)*1000:.1f}ms: {res}")
+print("4. Testing new event loop manually...")
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+try:
+    print("5. Calling run_until_complete...")
+    res = loop.run_until_complete(v.verify_async([claim]))
+    print("6. Success:", res)
+finally:
+    loop.close()
