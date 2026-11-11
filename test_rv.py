@@ -1,5 +1,4 @@
-import asyncio, sys, time
-
+import time
 print("1. Importing modules...")
 from veritascore.core.types import Claim
 from veritascore.retriever.base import SearchResult
@@ -29,12 +28,11 @@ claim = Claim(
     source_text="The Eiffel Tower is located in Paris.",
 )
 
-print("4. Testing new event loop manually...")
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-try:
-    print("5. Calling run_until_complete...")
-    res = loop.run_until_complete(v.verify_async([claim]))
-    print("6. Success:", res)
-finally:
-    loop.close()
+# Test synchronous path:
+v.nli_verifier._load_model()
+q = v._formulate_query(claim, None)
+res = v.retriever.cache.get(q)
+t0 = time.perf_counter()
+ans = v._verify_against_evidence(claim, res)
+dt = (time.perf_counter() - t0) * 1000
+print(f"Sync verify done in {dt:.1f}ms: verdict={ans.verdict}, conf={ans.confidence:.2f}")
