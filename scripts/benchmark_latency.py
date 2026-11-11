@@ -857,6 +857,13 @@ def benchmark_cold_start_consistency() -> ColdStartResult:
 def benchmark_cold_start_llm_decomposer() -> ColdStartResult:
     """Measure LLMDecomposer cold-start loading time (Phi-3-mini)."""
     print("\n  [ColdStart] LLMDecomposer model loading...")
+    import gc
+    import torch
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+
     _reset_gpu_peak()
     cpu_before = _cpu_mem_mb()
 
@@ -870,6 +877,10 @@ def benchmark_cold_start_llm_decomposer() -> ColdStartResult:
     gpu_mem = _gpu_mem_mb()
     cpu_mem = _cpu_mem_mb() - cpu_before
     decomposer.unload()
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
 
     result = ColdStartResult(
         model_name="Phi-3-mini-4k-instruct (LLM Decomposer)",
