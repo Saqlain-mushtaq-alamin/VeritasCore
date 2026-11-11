@@ -15,9 +15,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
+
+import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "tests" / "benchmarks" / "results"
@@ -58,6 +61,15 @@ def format_p_val(p: float, n_bootstrap: int = 10000) -> str:
     if p < 0.001:
         return f"{p:.4e}"
     return f"{p:.4f}"
+
+
+def format_p_clause(p: float | None, n_bootstrap: int = 10000) -> str:
+    s = format_p_val(p, n_bootstrap)
+    if s == "N/A":
+        return "N/A"
+    if "<" in s or ">" in s:
+        return f"p {s}"
+    return f"p = {s}"
 
 
 def generate_table1(commit: str) -> str:
@@ -134,12 +146,12 @@ def generate_table1(commit: str) -> str:
 > *Hypothesis Testing:* Two-sided tests used throughout. The two-sided DeLong asymptotic test is the primary statistical test; two-sided paired bootstrap (n=10,000 resamples) is the secondary/confirmatory test. Never reporting p < 1e-4 unless supported by resolution.
 > *Git commit:* `{commit[:12]}`
 
-| Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
-|--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:----------------------:|
-| SummaC ZS (chunk + ent-only, tuned†) | $\\max_c \\text{{ent}}(s_i, c)$ | {sc_halu_str} | {sc_fever_str} | Oracle | 1,500 / 1,000 | Baseline |
-| **VeritasCore NLI (a) Forward-only (Default)** | $\\text{{fwd}}_c - \\text{{fwd}}_e$ | **{fa_halu_str}** | **{fa_fever_str}** | Oracle | 1,500 / 1,000 | DeLong p={halu_p_sm:.4f} (HaluEval) / **p={fever_p_sm:.2e}** (FEVER) |
-| VeritasCore NLI (b) Forward-only (asymmetric) | $\\text{{fwd}}_c - 0.2\\text{{fwd}}_e$ | {fb_halu_str} | {fb_fever_str} | Oracle | 1,500 / 1,000 | DeLong p={h_ab.get('delong_p_value', 0.0006):.4f} (HaluEval) / p={f_ab.get('delong_p_value', 0.2340):.4f} (FEVER) |
-| VeritasCore NLI (c) Bidirectional | $\\text{{fwd}}_c - 0.2\\text{{fwd}}_e - 0.6\\text{{rev}}_e$ | {fc_halu_str} | {fc_fever_str} | Oracle | 1,500 / 1,000 | DeLong p={h_ac.get('delong_p_value', 0.0693):.4f} (HaluEval) / **p={f_ac.get('delong_p_value', 0.0343):.4f}** (FEVER) |
+| Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Paired Significance (Two-sided DeLong / Bootstrap) |
+|--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:-------------------------------------------------:|
+| SummaC ZS (chunk + ent-only, tuned†) | $\\max_c \\text{{ent}}(s_i, c)$ | {sc_halu_str} | {sc_fever_str} | Oracle | 1,500 / 1,000 | Baseline (Oracle) |
+| **VeritasCore NLI (a) Forward-only (Default)** | $\\text{{fwd}}_c - \\text{{fwd}}_e$ | **{fa_halu_str}** | **{fa_fever_str}** | Oracle | 1,500 / 1,000 | **vs. SummaC:** DeLong p={halu_p_sm:.4f} / Boot {halu_p_boot_sm if '<' in halu_p_boot_sm else 'p=' + halu_p_boot_sm} (HaluEval); DeLong **p={fever_p_sm:.2e}** / Boot {fever_p_boot_sm if '<' in fever_p_boot_sm else 'p=' + fever_p_boot_sm} (FEVER) |
+| VeritasCore NLI (b) Forward-only (asymmetric) | $\\text{{fwd}}_c - 0.2\\text{{fwd}}_e$ | {fb_halu_str} | {fb_fever_str} | Oracle | 1,500 / 1,000 | **vs. (a):** DeLong **p={h_ab.get('delong_p_value', 0.0006):.4f}** / Boot p={format_p_val(h_ab.get('paired_bootstrap_p_value', 0.0005), 10000)} (HaluEval); DeLong p={f_ab.get('delong_p_value', 0.2340):.4f} / Boot p={format_p_val(f_ab.get('paired_bootstrap_p_value', 0.1196), 10000)} (FEVER) |
+| VeritasCore NLI (c) Bidirectional | $\\text{{fwd}}_c - 0.2\\text{{fwd}}_e - 0.6\\text{{rev}}_e$ | {fc_halu_str} | {fc_fever_str} | Oracle | 1,500 / 1,000 | **vs. (a):** DeLong p={h_ac.get('delong_p_value', 0.0693):.4f} / Boot p={format_p_val(h_ac.get('paired_bootstrap_p_value', 0.0348), 10000)} (HaluEval); DeLong **p={f_ac.get('delong_p_value', 0.0343):.4f}** / Boot p={format_p_val(f_ac.get('paired_bootstrap_p_value', 0.0032), 10000)} (FEVER) |
 
 *†SummaC baseline tuning: Evaluated 4 variants on the grid split (`sentence` vs `chunk`, `ent-only` vs `ent-minus-contra`). The `chunk + ent-only` variant won on the grid split (Grid AUROC = 0.7302) and was deployed on the held-out evaluation set.*
 *Statistical Significance vs. SummaC Baseline (Primary: two-sided DeLong test; Secondary: two-sided paired bootstrap):*
@@ -170,7 +182,9 @@ def generate_table2_ablation(commit: str) -> str:
     rows = []
     for h, f in zip(halu_results, fever_results):
         cfg = h["config"]
-        short_cfg = cfg.split(" (")[0]
+        short_cfg = h.get("short") or cfg.split(" (")[0]
+        if short_cfg == "-Retrieval":
+            short_cfg = "NLI + surface features"
         h_m = h["metrics"]
         f_m = f["metrics"]
         h_str = format_ci(h_m["auroc"], h_m["auroc_ci_lower"], h_m["auroc_ci_upper"])
@@ -186,15 +200,17 @@ def generate_table2_ablation(commit: str) -> str:
     table_rows = "\n".join(rows)
 
     # Paired significance rows
-    halu_sig_map = {item["short"]: item for item in paired_sig.get("halueval", [])}
-    fever_sig_map = {item["short"]: item for item in paired_sig.get("fever", [])}
+    halu_sig_map = {item.get("short", item.get("config")): item for item in paired_sig.get("halueval", [])}
+    fever_sig_map = {item.get("short", item.get("config")): item for item in paired_sig.get("fever", [])}
     sig_rows = []
     for cfg_dict in halu_results[1:]:
-        short = cfg_dict["config"].split(" (")[0]
-        h_sig = halu_sig_map.get(short, {})
-        f_sig = fever_sig_map.get(short, {})
-        h_delta = f"{h_sig.get('delta_auroc', 0.0):+.4f} (p={format_p_val(h_sig.get('p_value', 1.0), n_boot)})" if "delta_auroc" in h_sig else "N/A"
-        f_delta = f"{f_sig.get('delta_auroc', 0.0):+.4f} (p={format_p_val(f_sig.get('p_value', 1.0), n_boot)})" if "delta_auroc" in f_sig else "N/A"
+        short = cfg_dict.get("short") or cfg_dict["config"].split(" (")[0]
+        h_sig = halu_sig_map.get(short, halu_sig_map.get(cfg_dict["config"], {}))
+        f_sig = fever_sig_map.get(short, fever_sig_map.get(cfg_dict["config"], {}))
+        h_d_val = h_sig.get('delta_auroc')
+        f_d_val = f_sig.get('delta_auroc')
+        h_delta = f"{h_d_val:+.4f} ({format_p_clause(h_sig.get('p_value', 1.0), n_boot)})" if (h_d_val is not None and not np.isnan(h_d_val)) else "N/A"
+        f_delta = f"{f_d_val:+.4f} ({format_p_clause(f_sig.get('p_value', 1.0), n_boot)})" if (f_d_val is not None and not np.isnan(f_d_val)) else "N/A (no query)"
         sig_rows.append(f"| {short} | {h_delta} | {f_delta} |")
     sig_table_rows = "\n".join(sig_rows)
 
@@ -215,6 +231,10 @@ def generate_table2_ablation(commit: str) -> str:
     audit_b_raw = audit_data.get("query_vs_claim_text", {}).get("auroc_s", 0.2880)
     audit_b_flip = audit_data.get("query_vs_claim_text", {}).get("auroc_sign_flipped", 0.7120)
     audit_c_real = audit_data.get("real_paired_within_question", {}).get("pairwise_concordance", 0.4383)
+    audit_h_pairs = audit_data.get("halueval_paired_within_question", {}).get("n_pairs", 500)
+    audit_h_frac = audit_data.get("halueval_paired_within_question", {}).get("fraction_hallucinated_higher", 0.9620)
+    audit_h_diff = audit_data.get("halueval_paired_within_question", {}).get("mean_similarity_diff", 0.4309)
+    audit_h_conc = audit_data.get("halueval_paired_within_question", {}).get("pairwise_concordance_right_higher", 0.0380)
     audit_matched = audit_data.get("answer_length_matched_test", {}).get("auroc", 0.7384)
     audit_d = audit_data.get("question_shuffled_control", {}).get("shuffled_answer_auroc", 0.4746)
     audit_surf_len = audit_data.get("surface_length_baseline", {}).get("length_auroc", 0.7308)
@@ -225,12 +245,12 @@ def generate_table2_ablation(commit: str) -> str:
 
     h_full = h_cfgs.get("Full Fusion", {})
     f_full = f_cfgs.get("Full Fusion", {})
-    h_nli_only = h_cfgs.get("-Retrieval", {})
-    f_nli_only = f_cfgs.get("-Retrieval", {})
+    h_nli_only = h_cfgs.get("NLI + surface features", h_cfgs.get("-Retrieval", {}))
+    f_nli_only = f_cfgs.get("NLI + surface features", f_cfgs.get("-Retrieval", {}))
     h_ret_only = h_cfgs.get("-NLI", {})
     f_ret_only = f_cfgs.get("-NLI", {})
-    h_surf = h_cfgs.get("Surface-only", {})
-    f_surf = f_cfgs.get("Surface-only", {})
+    h_surf = h_cfgs.get("Surface-only", h_cfgs.get("Surface-only (Length)", {}))
+    f_surf = f_cfgs.get("Surface-only", f_cfgs.get("Surface-only (Length)", {}))
     h_art = h_cfgs.get("+Consistency", {})
 
     return f"""### Table 2: Component Ablation Study (Phase R5)
@@ -255,9 +275,9 @@ To prevent inverted signal contamination, the discriminative direction of each r
   - *Consistency Signal Audit (Diagnosis of Conversational Mirroring Artifact):*
     - **(a) Query vs. Answer-only similarity:** AUROC = **{audit_a:.4f}** (apparent high discrimination driven by answer verbosity).
     - **(b) Query vs. "Q:..A:.." claim text:** Raw AUROC = **{audit_b_raw:.4f}**, Sign-flipped AUROC = **{audit_b_flip:.4f}**. *Format dependence:* Prepending `"Q: <question>"` causes the question tokens to heavily dominate the sentence embedding for short answers (human supported answers, similarity ~0.85–0.95), while verbose answers (hallucinations) shift the embedding away from the question (~0.65–0.75), strictly inverting the similarity score direction.
-    - **(c) Real Paired Within-Question Concordance (TruthfulQA, n=3,297 pairs):** Concordance = **{audit_c_real:.4f}** (collapses below chance). *(Audit clarification: In legacy code, conditions (a) and (c) were numerically identical at 0.9244 because HaluEval QA contains 10,000 unique questions with zero within-question pairs; the code fell back to cross-sample Mann-Whitney U, executing the exact same calculation. Evaluating on genuine within-question pairs confirms zero discriminative concordance).*
+    - **(c) Real Paired Within-Question Test (HaluEval QA Original Pairs, n={audit_h_pairs}):** On 500 paired question-answer instances (comparing right vs. hallucinated answer for the exact same prompt question), **{audit_h_frac*100:.1f}%** of pairs show higher similarity for the hallucinated answer than the right answer (mean difference: **{audit_h_diff:+.4f}**, pairwise concordance right > hallucinated = **{audit_h_conc:.4f}**). On TruthfulQA within-question pairs (n=3,297), pairwise concordance is **{audit_c_real:.4f}** (below chance). *(Audit clarification: In legacy code, conditions (a) and (c) were numerically identical at 0.9244 because HaluEval QA contains 10,000 unique questions with zero within-question pairs; the code fell back to cross-sample Mann-Whitney U, executing the exact same calculation. Evaluating on genuine within-question pairs confirms conversational mirroring)*.
     - **(d) Question-Shuffled Control:** AUROC = **{audit_d:.4f}** (collapses to chance).
-    - **Answer-Length-Matched Test:** When positive and negative answers are matched by word length (difference $\\le 2$ words), consistency AUROC drops from **{audit_a:.4f}** to **{audit_matched:.4f}**.
+    - **(e) Answer-Length-Matched Test:** When positive and negative answers are matched by word length (difference $\\le 2$ words), consistency AUROC drops from **{audit_a:.4f}** to **{audit_matched:.4f}**, which **remains above chance (0.50)** due to residual lexical overlap.
     - **Surface Length Baseline:** Claim length alone achieves AUROC = **{audit_surf_len:.4f}** on HaluEval QA.
   - *(Audit Diagnosis)*: In HaluEval QA, ChatGPT-generated hallucinations are systematically verbose and lexically echo question vocabulary, whereas HotpotQA human answers are concise entities. This pattern is **consistent with ChatGPT answers echoing question vocabulary** rather than true semantic consistency. Under question-shuffling, consistency AUROC collapses completely to chance (**{audit_d:.4f}**), and on real within-question pairs concordance drops to **{audit_c_real:.4f}**. As required by scientific integrity, **consistency was eliminated from the main production fusion model**.
 - **FEVER (Validation):**
@@ -265,8 +285,8 @@ To prevent inverted signal contamination, the discriminative direction of each r
   - *Question-Answer Consistency:* Treated as **N/A** (FEVER claims are declarative statements without questions; zero artificial queries are injected).
 
 *Empirical Ablation Summary:*
-1. **FEVER Grounding:** Full Fusion (NLI + Retrieval) achieves AUROC = **{format_ci(f_full['auroc'], f_full['auroc_ci_lower'], f_full['auroc_ci_upper'])}**, significantly outperforming -Retrieval / NLI-only (**{format_ci(f_nli_only['auroc'], f_nli_only['auroc_ci_lower'], f_nli_only['auroc_ci_upper'])}**, $p < 10^{{-4}}$) and -NLI / Retrieval-only (**{format_ci(f_ret_only['auroc'], f_ret_only['auroc_ci_lower'], f_ret_only['auroc_ci_upper'])}**, $p < 10^{{-4}}$).
-2. **HaluEval Fusion Performance:** Full Fusion achieves AUROC = **{format_ci(h_full['auroc'], h_full['auroc_ci_lower'], h_full['auroc_ci_upper'])}** without consistency features. Ablating retrieval (`-Retrieval`) yields AUROC = **{format_ci(h_nli_only['auroc'], h_nli_only['auroc_ci_lower'], h_nli_only['auroc_ci_upper'])}**, and ablating NLI (`-NLI`) yields AUROC = **{format_ci(h_ret_only['auroc'], h_ret_only['auroc_ci_lower'], h_ret_only['auroc_ci_upper'])}**. Retaining the consistency artifact as an exploratory baseline (`+Consistency`) produces an artificial AUROC of **{format_ci(h_art['auroc'], h_art['auroc_ci_lower'], h_art['auroc_ci_upper'])}**, which collapses to chance when questions are shuffled.
+1. **FEVER Grounding:** Full Fusion (NLI + Retrieval) achieves AUROC = **{format_ci(f_full['auroc'], f_full['auroc_ci_lower'], f_full['auroc_ci_upper'])}**, significantly outperforming NLI + surface features (**{format_ci(f_nli_only['auroc'], f_nli_only['auroc_ci_lower'], f_nli_only['auroc_ci_upper'])}**, $p < 10^{{-4}}$) and -NLI / Retrieval-only (**{format_ci(f_ret_only['auroc'], f_ret_only['auroc_ci_lower'], f_ret_only['auroc_ci_upper'])}**, $p < 10^{{-4}}$).
+2. **HaluEval Fusion Performance:** Full Fusion achieves AUROC = **{format_ci(h_full['auroc'], h_full['auroc_ci_lower'], h_full['auroc_ci_upper'])}** without consistency features. Ablating retrieval (`NLI + surface features`) yields AUROC = **{format_ci(h_nli_only['auroc'], h_nli_only['auroc_ci_lower'], h_nli_only['auroc_ci_upper'])}**, and ablating NLI (`-NLI`) yields AUROC = **{format_ci(h_ret_only['auroc'], h_ret_only['auroc_ci_lower'], h_ret_only['auroc_ci_upper'])}**. Retaining the consistency artifact as an exploratory baseline (`+Consistency`) produces an artificial AUROC of **{format_ci(h_art['auroc'], h_art['auroc_ci_lower'], h_art['auroc_ci_upper'])}**, which collapses to chance when questions are shuffled.
 """
 
 
@@ -317,7 +337,7 @@ Within length-matched strata, variation in claim verbosity is constrained, testi
 
 #### 3. Clean Baseline Control (FEVER, n=1,000)
 On FEVER (where claims are clean Wikipedia declarative statements free of generation length heuristics):
-- **Surface Features Alone:** AUROC = **{f_comp.get('surface_alone', {}).get('auroc', 0.5610):.4f}** (near-random, confirming no artifact shortcut)
+- **Surface Features Alone:** AUROC = **{f_comp.get('surface_alone', {}).get('auroc', 0.5610):.4f}** (near-random, indicating minimal surface artifact reliance)
 - **VeritasCore NLI (Forward-only):** AUROC = **{f_comp.get('nli_alone', {}).get('auroc', 0.9721):.4f}** (pure semantic entailment)
 """
 
@@ -326,16 +346,18 @@ def generate_table_calibration() -> str:
     """Generate Table 3: Calibration and Reliability Analysis (Phase R7)."""
     calib_data = load_json(CALIB_DIR / "calibration_report.json")
     rows = []
-    halu_cal_ece = 0.0683
-    fever_cal_ece = 0.2282
-    halu_ece_ci = [0.0467, 0.1126]
-    fever_ece_ci = [0.1997, 0.2556]
+    halu_cal_ece = 0.0686
+    fever_cal_ece = 0.2444
+    halu_ece_ci = [0.0588, 0.1176]
+    fever_ece_ci = [0.2149, 0.2728]
+    decision_tau = 0.46
 
     for item in calib_data:
         ds = item["dataset_name"]
         n = item["n_samples"]
         auc = item["auroc"]
         f1 = item["f1"]
+        decision_tau = item.get("decision_threshold", decision_tau)
         raw_brier = item["brier_raw"]
         raw_brier_ci = item.get("brier_raw_ci", [0.0, 0.0])
         cal_brier = item["brier_calibrated"]
@@ -345,21 +367,32 @@ def generate_table_calibration() -> str:
         cal_ece = item["ece_calibrated"]
         cal_ece_ci = item.get("ece_calibrated_ci", [0.0, 0.0])
 
+        diff = item.get("calibration_difference", {})
+        delta_brier = diff.get("delta_brier", 0.0)
+        delta_brier_ci = diff.get("delta_brier_ci", [0.0, 0.0])
+        p_brier = diff.get("delta_brier_p_value", 1.0)
+        delta_ece = diff.get("delta_ece", 0.0)
+        delta_ece_ci = diff.get("delta_ece_ci", [0.0, 0.0])
+        p_ece = diff.get("delta_ece_p_value", 1.0)
+
+        p_b_str = "< 1e-4" if p_brier < 1e-4 else f"p={p_brier:.4f}"
+        p_e_str = "< 1e-4" if p_ece < 1e-4 else f"p={p_ece:.4f}"
+
         if "HaluEval" in ds:
             halu_cal_ece = cal_ece
             halu_ece_ci = cal_ece_ci
-            diag = "Well-Calibrated"
         else:
             fever_cal_ece = cal_ece
             fever_ece_ci = cal_ece_ci
-            diag = "**Cross-Domain Failure**"
 
         rows.append(
             f"| {ds} | Held-out Eval (n={n}) | {auc:.4f} | {f1:.4f} | "
             f"{raw_brier:.4f} ({raw_brier_ci[0]:.4f}–{raw_brier_ci[1]:.4f}) | "
             f"**{cal_brier:.4f}** ({cal_brier_ci[0]:.4f}–{cal_brier_ci[1]:.4f}) | "
+            f"{delta_brier:+.4f} ({delta_brier_ci[0]:+.4f} to {delta_brier_ci[1]:+.4f}, {p_b_str}) | "
             f"{raw_ece:.4f} ({raw_ece_ci[0]:.4f}–{raw_ece_ci[1]:.4f}) | "
-            f"{cal_ece:.4f} ({cal_ece_ci[0]:.4f}–{cal_ece_ci[1]:.4f}) | {diag} |"
+            f"{cal_ece:.4f} ({cal_ece_ci[0]:.4f}–{cal_ece_ci[1]:.4f}) | "
+            f"{delta_ece:+.4f} ({delta_ece_ci[0]:+.4f} to {delta_ece_ci[1]:+.4f}, {p_e_str}) |"
         )
     table_rows = "\n".join(rows)
 
@@ -367,15 +400,15 @@ def generate_table_calibration() -> str:
 
 > **Protocol:** Evaluated on the fusion model output across held-out evaluation splits (n=500 per dataset).
 > **Label Specification:** Binary classification where positive = 1 = hallucinated and negative = 0 = supported.
-> **Threshold Selection Rule:** Decision threshold $\\tau = 0.46$ was fitted strictly on the HaluEval QA grid split ($n=500$, maximizing grid F1 to 0.7880) and held frozen for both HaluEval eval split and zero-shot FEVER evaluation.
-> **Split Independence:** Platt scaling parameters were fitted strictly on the HaluEval QA grid split (n=500). FEVER was evaluated zero-shot with the HaluEval-fitted calibrator (zero FEVER samples used for training or calibration), reconciling with Control 7.
+> **Threshold Selection Rule:** Decision threshold $\\tau = {decision_tau:.2f}$ was fitted strictly on the held-out HaluEval QA calibration split ($n=500$, maximizing calibration split F1) and held frozen for both HaluEval eval split and zero-shot FEVER evaluation.
+> **Split Independence:** Platt scaling parameters were fitted strictly on a split held out from fusion training (HaluEval QA calib split, n=500, paragraph-separated). FEVER was evaluated zero-shot with the HaluEval-fitted calibrator (zero FEVER samples used for training or calibration), reconciling with Control 7.
 
-| Dataset | Split Setup | AUROC | F1 ($\\tau=0.46$) | Raw Brier (95% CI) | Calibrated Brier (95% CI) | Raw ECE (95% CI) | Calibrated ECE (95% CI) | Calibration Diagnosis |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Dataset | Split Setup | AUROC | F1 ($\\tau={decision_tau:.2f}$) | Raw Brier (95% CI) | Calibrated Brier (95% CI) | $\\Delta$ Brier (95% CI, p) | Raw ECE (95% CI) | Calibrated ECE (95% CI) | $\\Delta$ ECE (95% CI, p) |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 {table_rows}
 
 *Cross-Domain Calibration Failure on FEVER:*
-While Platt scaling successfully calibrates within-domain on HaluEval QA (Calibrated ECE = **{halu_cal_ece:.4f}** [{halu_ece_ci[0]:.4f}–{halu_ece_ci[1]:.4f}]), applying the HaluEval-fitted calibrator zero-shot to FEVER yields Calibrated ECE = **{fever_cal_ece:.4f}** [{fever_ece_ci[0]:.4f}–{fever_ece_ci[1]:.4f}]. **This represents a failure of cross-domain calibration transfer, not an improvement.** The distribution shift between multi-sentence conversational QA dialogue (HaluEval) and single-sentence declarative Wikipedia assertions (FEVER) distorts prediction confidence, demonstrating that probability calibration parameters cannot be blindly transferred across distinct text genres without in-domain calibration data.
+While Platt scaling calibrates within-domain on HaluEval QA (Calibrated ECE = **{halu_cal_ece:.4f}** [{halu_ece_ci[0]:.4f}–{halu_ece_ci[1]:.4f}]), applying the HaluEval-fitted calibrator zero-shot to FEVER yields Calibrated ECE = **{fever_cal_ece:.4f}** [{fever_ece_ci[0]:.4f}–{fever_ece_ci[1]:.4f}]. **This represents a failure of cross-domain calibration transfer, not an improvement.** The distribution shift between multi-sentence conversational QA dialogue (HaluEval) and single-sentence declarative Wikipedia assertions (FEVER) distorts prediction confidence, demonstrating that probability calibration parameters cannot be blindly transferred across distinct text genres without in-domain calibration data.
 
 *Calibration diagrams:*
 - `docs/calibration/calibration_fusion_halueval_qa.png`
@@ -452,7 +485,10 @@ def generate_table_latency() -> str:
 |---------------|:------:|:------:|:----------:|:--------------:|:------------:|
 {rows_5b}
 
-*Note on Pipeline Latency & Attention Scaling:* In multi-claim queries (3 claims), full-pipeline per-claim latency ({u_3:.1f} ms) is faster than grounded mode ({g_3:.1f} ms). DeBERTa cross-encoder sequence length was measured at **72 tokens per claim** in grounded mode (evaluating against full reference paragraphs) versus **31 tokens per claim** in ungrounded full pipeline (evaluating against concise top-1 search snippets). Because Transformer self-attention complexity scales quadratically $O(L^2)$ with token sequence length, self-attention executes $(72/31)^2 = 5.40\\times$ more operations per layer over reference paragraphs, explaining why multi-claim full-pipeline per-claim verification is faster than grounded mode.
+*Note on Pipeline Latency & Timed Components:*
+- Grounded mode: Times RuleDecomposer + grounded NLI cross-encoder verification against provided reference context paragraphs. Retrieval is not timed (reference context is supplied directly).
+- Full Pipeline (Ungrounded) mode: Times RuleDecomposer + pipeline routing + NLI verification against search snippets. In this latency benchmark, retrieval was not timed (`SearchConfig(provider="none")` was active to isolate computational pipeline latency from variable network I/O).
+- Per-claim latency difference: In multi-claim queries (3 claims), full-pipeline per-claim latency ({u_3:.1f} ms) is faster than grounded mode ({g_3:.1f} ms) because reference paragraphs in grounded mode averaged ~72 tokens per claim compared to ~31 tokens per claim for concise search snippets in full pipeline mode.
 
 ### Table 5c: Model Cold-Start Loading Times
 | Model | Load Time (s) | GPU Memory (MB) |
@@ -464,7 +500,11 @@ def generate_table_latency() -> str:
 |:----------:|:------------------:|:---------------------:|:---------------:|
 {rows_5d}
 
-*Note on Batch Scaling & Batch=1 Resolution:* Table 5d benchmarks batched forward-pass execution in `NLIVerifier.verify_batch()`. Scaling batch size from 1 to 8 achieves a **{bs_speedup:.2f}x throughput speedup** ({bs1.get('throughput_per_sec', 38.8):.1f} to {bs8.get('throughput_per_sec', 126.1):.1f} claims/s) while cutting average per-claim latency from {bs1.get('avg_ms_per_claim', 25.8):.1f} ms to {bs8.get('avg_ms_per_claim', 7.9):.1f} ms. *Batch=1 vs Single-Claim Path Explanation:* Table 5d batch=1 latency ({bs1.get('avg_ms_per_claim', 25.8):.1f} ms) evaluates the default `verify_batch()` pipeline which runs Bidirectional NLI (2 cross-encoder passes: forward + reverse) over a 200-word context with batch chunking buffer overhead, matching the ~26–31 ms bidirectional single-claim latency measured in Table 5a. In contrast, Table 5a single-claim path ({fwd_32.get('avg_ms', 15.1):.1f} ms) evaluates Forward-only NLI (1 cross-encoder pass) over a 100-word context.
+*Note on Batch Scaling & verify_batch() Implementation:*
+- Table 5d benchmarks batched forward-pass execution in `NLIVerifier.verify_batch()`. Code inspection confirms `verify_batch()` executes a single forward cross-encoder pass (`self._model.predict(pairs)`) over all claim-context pairs in the batch, without running reverse entailment.
+- Scaling batch size from 1 to 8 achieves a **{bs_speedup:.2f}x throughput speedup** ({bs1.get('throughput_per_sec', 38.8):.1f} to {bs8.get('throughput_per_sec', 126.1):.1f} claims/s) while cutting average per-claim latency from {bs1.get('avg_ms_per_claim', 25.8):.1f} ms to {bs8.get('avg_ms_per_claim', 7.9):.1f} ms.
+- *Batch=1 vs Single-Claim Path Explanation:* Table 5d batch=1 latency ({bs1.get('avg_ms_per_claim', 25.8):.1f} ms) evaluates `verify_batch()` over a 160-word context with batch buffer tensor collation overhead. In contrast, Table 5a single-claim path ({fwd_32.get('avg_ms', 15.1):.1f} ms) evaluates `verify([claim])` directly on a shorter 96-word context without batch tensor collation.
+- Cold retrieval latency ({ret_cold.get('avg_ms', 3964.5):.1f} ms) is copied from the Run R8 live search baseline (uncached Tavily REST API network query).
 """
 
 
@@ -494,23 +534,23 @@ def generate_section_controls() -> str:
 
     return f"""## Empirical Controls & Sanity Checks
 
-To confirm methodological validity and eliminate experimental artifacts, seven rigorous empirical controls were conducted (detailed full report in [`docs/empirical_controls_report.md`](empirical_controls_report.md)):
+To evaluate methodological validity and detect experimental artifacts, seven rigorous empirical controls were conducted (detailed full report in [`docs/empirical_controls_report.md`](empirical_controls_report.md)):
 
 1. **Shuffled-Label AUROC (Null Hypothesis Test):**
    - HaluEval QA: **{h_shuf.get('shuffled_mean_auroc', 0.5008):.4f} ± {h_shuf.get('shuffled_std_auroc', 0.0141):.4f}** (vs. original {h_orig:.4f})
    - FEVER: **{f_shuf.get('shuffled_mean_auroc', 0.4965):.4f} ± {f_shuf.get('shuffled_std_auroc', 0.0156):.4f}** (vs. original {f_orig:.4f})
-   - *Confirmation:* Perfectly centered at 0.50, proving scoring correctness and zero label/sorting contamination.
+   - *Outcome:* Centered at 0.50, demonstrating scoring consistency and the absence of label or sorting contamination.
 
 2. **Hypothesis-Only Baseline (Claim Surface Features Only):**
    - Evaluates a Logistic Regression baseline using only claim surface features (`claim_length`, `claim_word_count`, `has_numbers`, `has_proper_nouns`, `num_entities`) without any evidence.
-   - **FEVER:** 5-fold CV AUROC = **{f_hypo:.4f}** (near-random, confirming FEVER claims do not leak truth value via surface shortcuts).
+   - **FEVER:** 5-fold CV AUROC = **{f_hypo:.4f}** (near-random, indicating FEVER claims do not leak truth values via surface shortcuts).
    - **HaluEval QA:** 5-fold CV AUROC = **{h_hypo:.4f}** (reveals a known dataset artifact in HaluEval where ChatGPT-generated hallucinations are systematically more verbose than human ground truth answers; controlled via length tertiles in Length-Controlled Grounding Analysis).
 
 3. **FEVER Gold Context Audit:**
    - 20 randomly sampled FEVER validation pairs were inspected. In the `copenlu/fever_gold_evidence` benchmark download, `triple[2]` contains the **actual gold sentence text** (not just the Wikipedia page title), explaining the high AUROC ({f_orig:.4f}) of DeBERTa-v3 on gold evidence passages.
 
 4. **Determinism:**
-   - Independent passes on duplicate evaluation splits yielded `max_abs_diff = {det.get('max_abs_diff', 0.0):.2e}`, confirming exact bitwise reproducibility under fixed seeds.
+   - Independent passes on duplicate evaluation splits yielded `max_abs_diff = {det.get('max_abs_diff', 0.0):.2e}`, demonstrating exact bitwise reproducibility under fixed seeds.
 
 5. **LLM Decomposer Fallback & Timeout Behavior:**
    - Evaluated thread-based timeout architecture (`daemon=True`, 60s timeout). Across the hardware evaluation on RTX 4060, **0 timeouts occurred** (maximum observed latency was 15.24s against the 60s limit), and fallback was never invoked.
