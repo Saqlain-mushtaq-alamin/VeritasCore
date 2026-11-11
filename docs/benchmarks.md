@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `cbc8b4a43db7`).
+> All numbers generated automatically from saved raw experimental runs (commit `67f9b2d3d746`).
 
 ---
 
@@ -56,7 +56,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, n_bootstrap=10,000 resamples).
 > *Hypothesis Testing:* Two-sided tests used throughout. The two-sided DeLong asymptotic test is the primary statistical test; two-sided paired bootstrap (n=10,000 resamples) is the secondary/confirmatory test. Never reporting p < 1e-4 unless supported by resolution.
-> *Git commit:* `cbc8b4a43db7`
+> *Git commit:* `67f9b2d3d746`
 
 | Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:----------------------:|
@@ -115,7 +115,7 @@ On FEVER (where claims are clean Wikipedia declarative statements free of genera
 
 > **Protocol:** Evaluates the contribution of each signal combination on held-out evaluation sets (n=500 per dataset, 10,000 bootstrap resamples).
 > **Fusion Model Specification:** Logistic Regression (`class_weight='balanced'`, `max_iter=1000`, `random_state=42`) trained exclusively on the disjoint 500-sample grid split (`models/fusion/model.joblib`) with real data only. Consistency features were removed following audit. Evaluated on the held-out evaluation split.
-> *Git commit:* `cbc8b4a43db7`
+> *Git commit:* `67f9b2d3d746`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
