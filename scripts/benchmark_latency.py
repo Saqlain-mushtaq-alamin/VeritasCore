@@ -532,13 +532,15 @@ def benchmark_retrieval_verifier_warm(n_samples: int = 10) -> LatencyResult:
         pass
 
     latencies: list[float] = []
-    for _ in range(n_samples):
+    for i in range(n_samples):
         t0 = time.perf_counter()
         try:
             verifier.verify([claim])
         except Exception:
             pass
-        latencies.append((time.perf_counter() - t0) * 1000)
+        dt = (time.perf_counter() - t0) * 1000
+        latencies.append(dt)
+        print(f"    Warm query {i+1}/{n_samples}: {dt:.1f}ms")
 
     avg = mean(latencies) if latencies else 0.0
     throughput = 1000.0 / avg if avg > 0 else 0.0
