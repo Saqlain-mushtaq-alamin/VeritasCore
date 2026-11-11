@@ -132,6 +132,22 @@ class TestEvidenceAggregation:
         verdicts = verifier.verify([sample_claim])
         assert verdicts[0].verdict == Verdict.SUPPORTED
 
+    def test_brave_default_relevance_support(self, sample_claim: Claim) -> None:
+        """Brave Search returns relevance_score=0.5 (or unranked). Should NOT be capped below 0.6 threshold."""
+        results = [
+            SearchResult(
+                title="T",
+                url="http://x.com",
+                snippet="The tower was completed in 1889.",
+                relevance_score=0.5,
+            )
+        ]
+        probs = {"The tower was completed in 1889.": np.array([0.05, 0.10, 0.90])}
+        verifier = make_verifier(results, probs)
+        verdicts = verifier.verify([sample_claim])
+        assert verdicts[0].verdict == Verdict.SUPPORTED
+        assert verdicts[0].confidence >= 0.6
+
     def test_majority_support(self, sample_claim: Claim) -> None:
         """3/3 sources support -> SUPPORTED."""
         results = [

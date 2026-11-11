@@ -289,8 +289,14 @@ class RetrievalVerifier(BaseVerifier):
                 verification_mode=VerificationMode.UNGROUNDED,
             )
 
-        entail_scores = [float(r.probs[2]) * r.relevance for r in nli_results]  # type: ignore[index]
-        contra_scores = [float(r.probs[0]) * r.relevance for r in nli_results]  # type: ignore[index]
+        # Normalize relevance weights if all results lack provider relevance scores
+        # (e.g. Brave Search API which defaults to 0.5) so signals are not artificially
+        # capped below agreement_threshold (default 0.6).
+        max_rel = max((r.relevance for r in nli_results), default=1.0)
+        rel_scale = (1.0 / max_rel) if 0.0 < max_rel <= 0.5 else 1.0
+
+        entail_scores = [float(r.probs[2]) * (r.relevance * rel_scale) for r in nli_results]  # type: ignore[index]
+        contra_scores = [float(r.probs[0]) * (r.relevance * rel_scale) for r in nli_results]  # type: ignore[index]
 
         avg_entail = float(np.mean(entail_scores))
         avg_contra = float(np.mean(contra_scores))

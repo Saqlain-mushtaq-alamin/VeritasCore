@@ -115,7 +115,7 @@ class BraveRetriever(BaseRetriever):
                 title=item.get("title", ""),
                 url=item.get("url", ""),
                 snippet=item.get("description", ""),
-                relevance_score=0.5,  # Brave doesn't provide per-result scores
+                relevance_score=1.0,  # Brave doesn't provide per-result scores; default to 1.0 (unweighted)
             )
             for item in data.get("web", {}).get("results", [])
         ]
