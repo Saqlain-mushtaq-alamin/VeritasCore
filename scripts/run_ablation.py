@@ -830,6 +830,11 @@ def main() -> None:
                 s["retrieval_score"] = None
             print("  Retrieval signal: SKIPPED (--no-retrieval)")
             dataset_cache_stats[ds_name] = {"cache_hits": 0, "cache_misses": 0, "actual_tavily_calls": 0}
+        elif args.simulate_retrieval:
+            consistency_results = simulate_retrieval_signal(consistency_results, seed=args.seed)
+            retrieval_is_simulated = True
+            dataset_cache_stats[ds_name] = {"cache_hits": 0, "cache_misses": 0, "actual_tavily_calls": 0}
+            print("  Retrieval signal: SIMULATED (NLI + Gaussian noise, sigma=0.15)")
         else:
             retrieval_results, stats = run_retrieval_verification(consistency_results, nli_verifier=nli_verifier)
             consistency_results = retrieval_results
