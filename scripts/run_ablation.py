@@ -52,6 +52,8 @@ import argparse
 import io
 import json
 import os
+os.environ["HF_HUB_OFFLINE"] = "1"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
 import sys
 import time
 from pathlib import Path
@@ -85,53 +87,41 @@ MODEL_DIR = SCRIPTS_DIR.parent / "models" / "fusion"
 
 ABLATION_CONFIGS: list[dict[str, Any]] = [
     {
-        "name": "Full Fusion (NLI + Retrieval + Consistency)",
+        "name": "Full Fusion (NLI + Retrieval)",
         "short": "Full Fusion",
         "use_nli": True,
         "use_retrieval": True,
-        "use_consistency": True,
+        "use_consistency": False,
     },
     {
-        "name": "-NLI (Retrieval + Consistency)",
+        "name": "-NLI (Retrieval-only)",
         "short": "-NLI",
         "use_nli": False,
         "use_retrieval": True,
-        "use_consistency": True,
+        "use_consistency": False,
     },
     {
-        "name": "-Retrieval (NLI + Consistency)",
+        "name": "-Retrieval (NLI-only)",
         "short": "-Retrieval",
         "use_nli": True,
         "use_retrieval": False,
-        "use_consistency": True,
-    },
-    {
-        "name": "-Consistency (NLI + Retrieval)",
-        "short": "-Consistency",
-        "use_nli": True,
-        "use_retrieval": True,
         "use_consistency": False,
     },
     {
-        "name": "NLI-only",
-        "short": "NLI-only",
-        "use_nli": True,
-        "use_retrieval": False,
-        "use_consistency": False,
-    },
-    {
-        "name": "Retrieval-only",
-        "short": "Retrieval-only",
-        "use_nli": False,
-        "use_retrieval": True,
-        "use_consistency": False,
-    },
-    {
-        "name": "Consistency-only",
-        "short": "Consistency-only",
+        "name": "Surface-only (Length)",
+        "short": "Surface-only (Length)",
         "use_nli": False,
         "use_retrieval": False,
+        "use_consistency": False,
+        "surface_length": True,
+    },
+    {
+        "name": "+Consistency (Artifact)",
+        "short": "+Consistency (Artifact)",
+        "use_nli": True,
+        "use_retrieval": True,
         "use_consistency": True,
+        "artifact_consistency": True,
     },
 ]
 
@@ -475,6 +465,15 @@ def compute_config_scores(
     cfg: dict[str, Any],
 ) -> tuple[np.ndarray, np.ndarray]:
     """Compute continuous scores and binary labels for a given config."""
+    if cfg.get("surface_length"):
+        lengths = np.array([len(s["claim_text"].split()) for s in samples], dtype=float)
+        med = float(np.median(lengths))
+        std = float(np.std(lengths)) if float(np.std(lengths)) > 0 else 1.0
+        norm_scores = 1.0 / (1.0 + np.exp(-(lengths - med) / std))
+        scores = [float(s) for s in norm_scores]
+        labels = [int(s["label"]) for s in samples]
+        return np.array(scores, dtype=float), np.array(labels, dtype=int)
+
     scores = []
     labels = []
     for sample in samples:
@@ -482,13 +481,18 @@ def compute_config_scores(
             sample,
             use_nli=cfg["use_nli"],
             use_retrieval=cfg["use_retrieval"],
-            use_consistency=cfg["use_consistency"],
+            use_consistency=cfg.get("use_consistency", False),
         )
         trust_score = scorer.score_claim(verdict)
         # scorer.score_claim outputs P(supported). For hallucination detection (label 1 = hallucinated),
         # the prediction score must be P(hallucinated) = 1.0 - trust_score:
         hallucination_score = 1.0 - trust_score
-        scores.append(hallucination_score)
+
+        if cfg.get("artifact_consistency") and sample.get("consistency_score") is not None:
+            cons = sample["consistency_score"]
+            hallucination_score = 0.3 * hallucination_score + 0.7 * cons
+
+        scores.append(float(hallucination_score))
         labels.append(sample["label"])
     return np.array(scores, dtype=float), np.array(labels, dtype=int)
 
@@ -698,10 +702,10 @@ def run_ablation_on_dataset(
     full_scores = None
 
     for i, cfg in enumerate(ABLATION_CONFIGS):
-        print(f"  [{i + 1}/7] {cfg['short']}...", end=" ", flush=True)
+        print(f"  [{i + 1}/{len(ABLATION_CONFIGS)}] {cfg['short']}...", end=" ", flush=True)
         t0 = time.time()
         # If configuration relies only on consistency, but dataset lacks queries (e.g. FEVER):
-        if cfg["short"] == "Consistency-only" and all(s.get("consistency_score") is None for s in samples):
+        if cfg.get("artifact_consistency") and all(s.get("consistency_score") is None for s in samples):
             scores = np.full(len(samples), 0.5)
             metrics = {
                 "auroc": float("nan"),
