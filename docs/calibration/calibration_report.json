@@ -3,63 +3,60 @@
     "dataset_name": "HaluEval QA",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T14:36:47.560512+00:00",
+    "timestamp": "2026-11-11T14:39:09.656425+00:00",
     "auroc": 0.7523498422763446,
-    "f1": 0.7115384615384616,
-    "precision": 0.6678700361010831,
-    "recall": 0.7613168724279835,
+    "f1": 0.7168458781362007,
+    "precision": 0.6349206349206349,
+    "recall": 0.823045267489712,
     "brier_raw": 0.2092367788713914,
+    "ece_raw": 0.07816326585152089,
+    "brier_raw_ci": [
+      0.1971,
+      0.222
+    ],
+    "ece_raw_ci": [
+      0.0566,
+      0.1225
+    ],
     "brier_calibrated": 0.20597049658793207,
+    "ece_calibrated": 0.06825820497179894,
+    "brier_calibrated_ci": [
+      0.1919,
+      0.2205
+    ],
+    "ece_calibrated_ci": [
+      0.0467,
+      0.1126
+    ],
+    "plot_path": "docs\\calibration\\calibration_fusion_halueval_qa.png",
     "error_analysis": {
       "category_counts": {
-        "negation": {
-          "fp": 1,
+        "temporal": {
+          "fp": 0,
+          "fn": 2
+        },
+        "other": {
+          "fp": 4,
+          "fn": 12
+        },
+        "complex_sentence": {
+          "fp": 2,
           "fn": 0
         },
         "numerical": {
-          "fp": 32,
-          "fn": 36
-        },
-        "temporal": {
-          "fp": 0,
-          "fn": 3
+          "fp": 39,
+          "fn": 26
         },
         "short_answer": {
-          "fp": 54,
+          "fp": 68,
           "fn": 3
         },
-        "other": {
-          "fp": 3,
-          "fn": 16
-        },
-        "complex_sentence": {
+        "negation": {
           "fp": 2,
           "fn": 0
         }
       },
       "gallery": {
-        "negation": [
-          {
-            "index": 435,
-            "claim_text": "Q: Fir and Imperata, are a type of tree?  A: no",
-            "context_snippet": "Firs (Abies) are a genus of 48\u201356 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but widespread genus of tropical and subtropical grasses, commonly known as satintail",
-            "true_label": "supported",
-            "pred_label": "hallucinated",
-            "score": 0.68,
-            "category": "negation"
-          }
-        ],
-        "numerical": [
-          {
-            "index": 97,
-            "claim_text": "Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.",
-            "context_snippet": " This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater auto-racing formula that ran in different series in various regions around the wor",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2552,
-            "category": "numerical"
-          }
-        ],
         "temporal": [
           {
             "index": 276,
@@ -69,17 +66,6 @@
             "pred_label": "supported",
             "score": 0.3018,
             "category": "temporal"
-          }
-        ],
-        "short_answer": [
-          {
-            "index": 300,
-            "claim_text": "Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry",
-            "context_snippet": "Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the National Basketball Association (NBA).Wardell Stephen Curry II (born March 14, 198",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.4221,
-            "category": "short_answer"
           }
         ],
         "other": [
@@ -103,101 +89,134 @@
             "score": 0.8032,
             "category": "complex_sentence"
           }
+        ],
+        "numerical": [
+          {
+            "index": 97,
+            "claim_text": "Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.",
+            "context_snippet": " This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater auto-racing formula that ran in different series in various regions around the wor",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2552,
+            "category": "numerical"
+          }
+        ],
+        "short_answer": [
+          {
+            "index": 300,
+            "claim_text": "Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry",
+            "context_snippet": "Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the National Basketball Association (NBA).Wardell Stephen Curry II (born March 14, 198",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.4221,
+            "category": "short_answer"
+          }
+        ],
+        "negation": [
+          {
+            "index": 435,
+            "claim_text": "Q: Fir and Imperata, are a type of tree?  A: no",
+            "context_snippet": "Firs (Abies) are a genus of 48\u201356 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but widespread genus of tropical and subtropical grasses, commonly known as satintail",
+            "true_label": "supported",
+            "pred_label": "hallucinated",
+            "score": 0.68,
+            "category": "negation"
+          }
         ]
       },
-      "total_errors": 150,
+      "total_errors": 158,
       "total_samples": 500,
-      "error_rate": 0.3
+      "error_rate": 0.316
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.7399103139013453,
-        "recall": 0.642023346303502,
-        "f1-score": 0.6875,
+        "precision": 0.7675675675675676,
+        "recall": 0.5525291828793775,
+        "f1-score": 0.6425339366515838,
         "support": 257.0
       },
       "hallucinated": {
-        "precision": 0.6678700361010831,
-        "recall": 0.7613168724279835,
-        "f1-score": 0.7115384615384616,
+        "precision": 0.6349206349206349,
+        "recall": 0.823045267489712,
+        "f1-score": 0.7168458781362007,
         "support": 243.0
       },
-      "accuracy": 0.7,
+      "accuracy": 0.684,
       "macro avg": {
-        "precision": 0.7038901750012142,
-        "recall": 0.7016701093657427,
-        "f1-score": 0.6995192307692308,
+        "precision": 0.7012441012441013,
+        "recall": 0.6877872251845447,
+        "f1-score": 0.6796899073938922,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.7048987388904179,
-        "recall": 0.7,
-        "f1-score": 0.6991826923076924,
+        "precision": 0.7031011583011583,
+        "recall": 0.684,
+        "f1-score": 0.6786495402131075,
         "support": 500.0
       }
-    }
+    },
+    "threshold_selection_rule": "F1-maximizing decision threshold fitted strictly on HaluEval QA grid split (tau = 0.46, Grid F1 = 0.7880)",
+    "decision_threshold": 0.4599999999999999,
+    "grid_f1": 0.7879799666110183
   },
   {
     "dataset_name": "FEVER (validation)",
     "mode": "fusion",
     "n_samples": 500,
-    "timestamp": "2026-11-11T14:36:56.975318+00:00",
+    "timestamp": "2026-11-11T14:39:21.116314+00:00",
     "auroc": 0.9067788461538462,
-    "f1": 0.8400852878464818,
-    "precision": 0.9425837320574163,
-    "recall": 0.7576923076923077,
+    "f1": 0.8821138211382114,
+    "precision": 0.9353448275862069,
+    "recall": 0.8346153846153846,
     "brier_raw": 0.16737676956978928,
+    "ece_raw": 0.2477005155078839,
+    "brier_raw_ci": [
+      0.159,
+      0.1761
+    ],
+    "ece_raw_ci": [
+      0.2192,
+      0.2758
+    ],
     "brier_calibrated": 0.15470910971767307,
+    "ece_calibrated": 0.22823683715108123,
+    "brier_calibrated_ci": [
+      0.1442,
+      0.1657
+    ],
+    "ece_calibrated_ci": [
+      0.1997,
+      0.2556
+    ],
+    "plot_path": "docs\\calibration\\calibration_fusion_fever_validation.png",
     "error_analysis": {
       "category_counts": {
-        "negation": {
-          "fp": 0,
-          "fn": 4
-        },
-        "numerical": {
-          "fp": 0,
-          "fn": 37
-        },
         "temporal": {
           "fp": 1,
           "fn": 0
+        },
+        "other": {
+          "fp": 14,
+          "fn": 21
+        },
+        "complex_sentence": {
+          "fp": 0,
+          "fn": 0
+        },
+        "numerical": {
+          "fp": 0,
+          "fn": 19
         },
         "short_answer": {
           "fp": 0,
           "fn": 0
         },
-        "other": {
-          "fp": 11,
-          "fn": 22
-        },
-        "complex_sentence": {
+        "negation": {
           "fp": 0,
-          "fn": 0
+          "fn": 3
         }
       },
       "gallery": {
-        "negation": [
-          {
-            "index": 361,
-            "claim_text": "Arizona is not in the United States.",
-            "context_snippet": "It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern corner of Colorado . California -LRB- -LSB- k\u00e6l\u1d7b\u02c8f\u0254\u02d0rnj\u0259 , _ - ni.\u0259 -RSB- , -RR",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.3622,
-            "category": "negation"
-          }
-        ],
-        "numerical": [
-          {
-            "index": 339,
-            "claim_text": "Rob Sheridan finished college in 1979.",
-            "context_snippet": "Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known for his extensive work with the band Nine Inch Nails .",
-            "true_label": "hallucinated",
-            "pred_label": "supported",
-            "score": 0.2738,
-            "category": "numerical"
-          }
-        ],
         "temporal": [
           {
             "index": 158,
@@ -219,38 +238,63 @@
             "score": 0.2719,
             "category": "other"
           }
+        ],
+        "numerical": [
+          {
+            "index": 339,
+            "claim_text": "Rob Sheridan finished college in 1979.",
+            "context_snippet": "Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known for his extensive work with the band Nine Inch Nails .",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.2738,
+            "category": "numerical"
+          }
+        ],
+        "negation": [
+          {
+            "index": 361,
+            "claim_text": "Arizona is not in the United States.",
+            "context_snippet": "It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern corner of Colorado . California -LRB- -LSB- k\u00e6l\u1d7b\u02c8f\u0254\u02d0rnj\u0259 , _ - ni.\u0259 -RSB- , -RR",
+            "true_label": "hallucinated",
+            "pred_label": "supported",
+            "score": 0.3622,
+            "category": "negation"
+          }
         ]
       },
-      "total_errors": 75,
+      "total_errors": 58,
       "total_samples": 500,
-      "error_rate": 0.15
+      "error_rate": 0.116
     },
     "per_class_report": {
       "supported": {
-        "precision": 0.7835051546391752,
-        "recall": 0.95,
-        "f1-score": 0.8587570621468926,
+        "precision": 0.8395522388059702,
+        "recall": 0.9375,
+        "f1-score": 0.8858267716535433,
         "support": 240.0
       },
       "hallucinated": {
-        "precision": 0.9425837320574163,
-        "recall": 0.7576923076923077,
-        "f1-score": 0.8400852878464818,
+        "precision": 0.9353448275862069,
+        "recall": 0.8346153846153846,
+        "f1-score": 0.8821138211382114,
         "support": 260.0
       },
-      "accuracy": 0.85,
+      "accuracy": 0.884,
       "macro avg": {
-        "precision": 0.8630444433482958,
-        "recall": 0.8538461538461538,
-        "f1-score": 0.8494211749966872,
+        "precision": 0.8874485331960885,
+        "recall": 0.8860576923076924,
+        "f1-score": 0.8839702963958773,
         "support": 500.0
       },
       "weighted avg": {
-        "precision": 0.8662260148966605,
-        "recall": 0.85,
-        "f1-score": 0.8490477395106791,
+        "precision": 0.8893643849716932,
+        "recall": 0.884,
+        "f1-score": 0.8838960373855707,
         "support": 500.0
       }
-    }
+    },
+    "threshold_selection_rule": "F1-maximizing decision threshold fitted strictly on HaluEval QA grid split (tau = 0.46, Grid F1 = 0.7880)",
+    "decision_threshold": 0.4599999999999999,
+    "grid_f1": 0.7879799666110183
   }
 ]

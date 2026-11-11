@@ -1,6 +1,6 @@
 # Phase R7: Calibration Plots & Error Analysis
 
-> Generated: 2026-11-11 14:36 UTC
+> Generated: 2026-11-11 14:39 UTC
 
 ---
 
@@ -12,6 +12,7 @@
 - **Brier Score (Platt-scaled)**: 0.2060
 - **Improvement after calibration**: +0.0033
 - **AUROC**: 0.7523
+- **Plot**: `docs\calibration\calibration_fusion_halueval_qa.png`
 
 ### FEVER (validation)
 
@@ -19,6 +20,7 @@
 - **Brier Score (Platt-scaled)**: 0.1547
 - **Improvement after calibration**: +0.0127
 - **AUROC**: 0.9068
+- **Plot**: `docs\calibration\calibration_fusion_fever_validation.png`
 
 ---
 
@@ -28,44 +30,18 @@
 
 #### HaluEval QA
 
-**Total errors**: 150 / 500 (30.0% error rate)
+**Total errors**: 158 / 500 (31.6% error rate)
 
 | Error Category | FP | FN | Total | % of Errors |
 |---------------|:--:|:--:|:-----:|:-----------:|
-| Short answers (NLI struggles with near-empty hypothesis) | 54 | 3 | 57 | 38.0% |
-| Numerical claims (NLI may not distinguish exact numbers) | 32 | 36 | 68 | 45.3% |
-| Negation (NLI negation handling is a known weakness) | 1 | 0 | 1 | 0.7% |
+| Short answers (NLI struggles with near-empty hypothesis) | 68 | 3 | 71 | 44.9% |
+| Numerical claims (NLI may not distinguish exact numbers) | 39 | 26 | 65 | 41.1% |
+| Negation (NLI negation handling is a known weakness) | 2 | 0 | 2 | 1.3% |
 | Multi-hop / complex (single NLI pass insufficient) | 2 | 0 | 2 | 1.3% |
-| Temporal (evidence may be outdated or ambiguous) | 0 | 3 | 3 | 2.0% |
-| Other / unknown | 3 | 16 | 19 | 12.7% |
+| Temporal (evidence may be outdated or ambiguous) | 0 | 2 | 2 | 1.3% |
+| Other / unknown | 4 | 12 | 16 | 10.1% |
 
 ### Failure Case Gallery
-
-
-#### Negation Examples
-
-**FP** (score=0.680)  
-- **Claim**: `Q: Fir and Imperata, are a type of tree?  A: no`  
-- **Context**: _Firs (Abies) are a genus of 48–56 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but w_  
-- **True**: supported  **Predicted**: hallucinated
-
-
-#### Numerical Examples
-
-**FN** (score=0.255)  
-- **Claim**: `Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.`  
-- **Context**: _ This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater au_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.284)  
-- **Claim**: `Q: Eugene Isaac Meyer was the father of a publisher whose memoir won what in 1998?  A: Eugene Isaac Meyer was the father of a publisher whose memoir w`  
-- **Context**: _Eugene Isaac Meyer (October 31, 1875 – July 17, 1959) was an American financier, public official, and newspaper publishe_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.311)  
-- **Claim**: `Q: When was the Russian librettist whose work was used in the opera Dubrovsky born?  A: Modest Ilyich Tchaikovsky was born in the mid-1800s.`  
-- **Context**: _Dubrovsky (Russian: "Дубровский" ) is an opera in four acts (5 scenes) Op. 58, by Eduard Nápravník, to a Russian librett_  
-- **True**: hallucinated  **Predicted**: supported
 
 
 #### Temporal Examples
@@ -78,29 +54,6 @@
 **FN** (score=0.412)  
 - **Claim**: `Q: Who was born Earlier, Jon Amiel or Michael Ritchie?  A: Jon Amiel was born earlier.`  
 - **Context**: _Michael Brunswick Ritchie (November 28, 1938 – April 16, 2001) was an American film director of films with comical or sa_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.480)  
-- **Claim**: `Q: Which magazine was founded first, The General or XXL?  A: XXL was founded before The General.`  
-- **Context**: _The General (1964–1998) was a bi-monthly periodical devoted to supporting Avalon Hill's line of wargames, with articles _  
-- **True**: hallucinated  **Predicted**: supported
-
-
-#### Short Answer Examples
-
-**FN** (score=0.422)  
-- **Claim**: `Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry`  
-- **Context**: _Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the Na_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.426)  
-- **Claim**: `Q: What was the company orginally named first?  A: EMC Corporation`  
-- **Context**: _Dell Technologies Inc. is an American multinational information technology corporation based in Round Rock, Texas.Dell E_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.428)  
-- **Claim**: `Q: Paul Di'Anno and Joe Gooch participated in what band position?  A: guitarist and songwriter.`  
-- **Context**: _Paul Andrews (born 17 May 1958), better known by his stage name Paul Di'Anno, is a British singer best known as the firs_  
 - **True**: hallucinated  **Predicted**: supported
 
 
@@ -134,56 +87,69 @@
 - **Context**: _ He is the lead singer, occasional backing vocalist, guitarist, keyboardist, theremin player and songwriter for the band_  
 - **True**: supported  **Predicted**: hallucinated
 
-#### FEVER (validation)
 
-**Total errors**: 75 / 500 (15.0% error rate)
+#### Numerical Examples
 
-| Error Category | FP | FN | Total | % of Errors |
-|---------------|:--:|:--:|:-----:|:-----------:|
-| Short answers (NLI struggles with near-empty hypothesis) | 0 | 0 | 0 | 0.0% |
-| Numerical claims (NLI may not distinguish exact numbers) | 0 | 37 | 37 | 49.3% |
-| Negation (NLI negation handling is a known weakness) | 0 | 4 | 4 | 5.3% |
-| Multi-hop / complex (single NLI pass insufficient) | 0 | 0 | 0 | 0.0% |
-| Temporal (evidence may be outdated or ambiguous) | 1 | 0 | 1 | 1.3% |
-| Other / unknown | 11 | 22 | 33 | 44.0% |
+**FN** (score=0.255)  
+- **Claim**: `Q: Which single seater auto-racing formula did 1977 Can-Am season series used  A: The 1977 Can-Am season series used modified version of Formula 5000.`  
+- **Context**: _ This series used Formula 5000 Lola T332s with fenders added.Formula 5000 (or F5000) was an open wheel, single seater au_  
+- **True**: hallucinated  **Predicted**: supported
 
-### Failure Case Gallery
+**FN** (score=0.284)  
+- **Claim**: `Q: Eugene Isaac Meyer was the father of a publisher whose memoir won what in 1998?  A: Eugene Isaac Meyer was the father of a publisher whose memoir w`  
+- **Context**: _Eugene Isaac Meyer (October 31, 1875 – July 17, 1959) was an American financier, public official, and newspaper publishe_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.311)  
+- **Claim**: `Q: When was the Russian librettist whose work was used in the opera Dubrovsky born?  A: Modest Ilyich Tchaikovsky was born in the mid-1800s.`  
+- **Context**: _Dubrovsky (Russian: "Дубровский" ) is an opera in four acts (5 scenes) Op. 58, by Eduard Nápravník, to a Russian librett_  
+- **True**: hallucinated  **Predicted**: supported
+
+
+#### Short Answer Examples
+
+**FN** (score=0.422)  
+- **Claim**: `Q: Which players' team, Seth or Stephen Curry, is closer to New Orleans?  A: Stephen Curry`  
+- **Context**: _Seth Adham Curry (born August 23, 1990) is an American professional basketball player for the Dallas Mavericks of the Na_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.426)  
+- **Claim**: `Q: What was the company orginally named first?  A: EMC Corporation`  
+- **Context**: _Dell Technologies Inc. is an American multinational information technology corporation based in Round Rock, Texas.Dell E_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.428)  
+- **Claim**: `Q: Paul Di'Anno and Joe Gooch participated in what band position?  A: guitarist and songwriter.`  
+- **Context**: _Paul Andrews (born 17 May 1958), better known by his stage name Paul Di'Anno, is a British singer best known as the firs_  
+- **True**: hallucinated  **Predicted**: supported
 
 
 #### Negation Examples
 
-**FN** (score=0.362)  
-- **Claim**: `Arizona is not in the United States.`  
-- **Context**: _It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern_  
-- **True**: hallucinated  **Predicted**: supported
+**FP** (score=0.680)  
+- **Claim**: `Q: Fir and Imperata, are a type of tree?  A: no`  
+- **Context**: _Firs (Abies) are a genus of 48–56 species of evergreen coniferous trees in the family Pinaceae.Imperata is a small but w_  
+- **True**: supported  **Predicted**: hallucinated
 
-**FN** (score=0.374)  
-- **Claim**: `Leslie is not the middle name of Neil Diamond.`  
-- **Context**: _Neil Leslie Diamond -LRB- born January 24 , 1941 -RRB- is an American singer-songwriter , musician and actor ._  
-- **True**: hallucinated  **Predicted**: supported
+**FP** (score=0.477)  
+- **Claim**: `Q: Were the bands  OK Go and The New Pornographers formed in the same city?  A: no`  
+- **Context**: _OK Go is an American rock band originally from Chicago, Illinois, now based in Los Angeles, California.The New Pornograp_  
+- **True**: supported  **Predicted**: hallucinated
 
-**FN** (score=0.375)  
-- **Claim**: `The Faroe Islands are no longer part of the Kingdom of Mercia.`  
-- **Context**: _Between 1035 and 1814 , the Faeroes were part of the Hereditary Kingdom of Norway ._  
-- **True**: hallucinated  **Predicted**: supported
+#### FEVER (validation)
 
+**Total errors**: 58 / 500 (11.6% error rate)
 
-#### Numerical Examples
+| Error Category | FP | FN | Total | % of Errors |
+|---------------|:--:|:--:|:-----:|:-----------:|
+| Short answers (NLI struggles with near-empty hypothesis) | 0 | 0 | 0 | 0.0% |
+| Numerical claims (NLI may not distinguish exact numbers) | 0 | 19 | 19 | 32.8% |
+| Negation (NLI negation handling is a known weakness) | 0 | 3 | 3 | 5.2% |
+| Multi-hop / complex (single NLI pass insufficient) | 0 | 0 | 0 | 0.0% |
+| Temporal (evidence may be outdated or ambiguous) | 1 | 0 | 1 | 1.7% |
+| Other / unknown | 14 | 21 | 35 | 60.3% |
 
-**FN** (score=0.274)  
-- **Claim**: `Rob Sheridan finished college in 1979.`  
-- **Context**: _Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.288)  
-- **Claim**: `Alice Cooper graduated college on February 4th, 1948.`  
-- **Context**: _Alice Cooper -LRB- born Vincent Damon Furnier ; February 4 , 1948 -RRB- is an American singer , songwriter , and actor w_  
-- **True**: hallucinated  **Predicted**: supported
-
-**FN** (score=0.288)  
-- **Claim**: `Janelle Monáe was conceived on December 1st, 1985.`  
-- **Context**: _Janelle Monáe Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- dʒəˈnɛl_moʊˈneɪ -RSB- -RRB- is an American singer _  
-- **True**: hallucinated  **Predicted**: supported
+### Failure Case Gallery
 
 
 #### Temporal Examples
@@ -212,6 +178,42 @@
 - **True**: hallucinated  **Predicted**: supported
 
 
+#### Numerical Examples
+
+**FN** (score=0.274)  
+- **Claim**: `Rob Sheridan finished college in 1979.`  
+- **Context**: _Rob Sheridan -LRB- born October 11 , 1979 -RRB- is an American graphic designer , director , and photographer best known_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.288)  
+- **Claim**: `Alice Cooper graduated college on February 4th, 1948.`  
+- **Context**: _Alice Cooper -LRB- born Vincent Damon Furnier ; February 4 , 1948 -RRB- is an American singer , songwriter , and actor w_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.288)  
+- **Claim**: `Janelle Monáe was conceived on December 1st, 1985.`  
+- **Context**: _Janelle Monáe Robinson -LRB- born December 1 , 1985 -RRB- -LRB- -LSB- dʒəˈnɛl_moʊˈneɪ -RSB- -RRB- is an American singer _  
+- **True**: hallucinated  **Predicted**: supported
+
+
+#### Negation Examples
+
+**FN** (score=0.362)  
+- **Claim**: `Arizona is not in the United States.`  
+- **Context**: _It has borders with New Mexico , Utah , Nevada , California , and Mexico , and one point in common with the southwestern_  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.374)  
+- **Claim**: `Leslie is not the middle name of Neil Diamond.`  
+- **Context**: _Neil Leslie Diamond -LRB- born January 24 , 1941 -RRB- is an American singer-songwriter , musician and actor ._  
+- **True**: hallucinated  **Predicted**: supported
+
+**FN** (score=0.375)  
+- **Claim**: `The Faroe Islands are no longer part of the Kingdom of Mercia.`  
+- **Context**: _Between 1035 and 1814 , the Faeroes were part of the Hereditary Kingdom of Norway ._  
+- **True**: hallucinated  **Predicted**: supported
+
+
 ---
 
 ## Part C: Per-Class Metrics
@@ -220,17 +222,17 @@
 
 | Class | Precision | Recall | F1 | Support |
 |-------|:---------:|:------:|:--:|:-------:|
-| supported | 0.740 | 0.642 | 0.688 | 257 |
-| hallucinated | 0.668 | 0.761 | 0.712 | 243 |
-| **macro avg** | 0.704 | 0.702 | 0.700 | 500 |
+| supported | 0.768 | 0.553 | 0.643 | 257 |
+| hallucinated | 0.635 | 0.823 | 0.717 | 243 |
+| **macro avg** | 0.701 | 0.688 | 0.680 | 500 |
 
 ### FEVER (validation)
 
 | Class | Precision | Recall | F1 | Support |
 |-------|:---------:|:------:|:--:|:-------:|
-| supported | 0.784 | 0.950 | 0.859 | 240 |
-| hallucinated | 0.943 | 0.758 | 0.840 | 260 |
-| **macro avg** | 0.863 | 0.854 | 0.849 | 500 |
+| supported | 0.840 | 0.938 | 0.886 | 240 |
+| hallucinated | 0.935 | 0.835 | 0.882 | 260 |
+| **macro avg** | 0.887 | 0.886 | 0.884 | 500 |
 
 
 ---
