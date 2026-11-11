@@ -182,10 +182,19 @@ class NLIVerifier(BaseVerifier):
 
         revision = self.config.models.nli_revision
         try:
+            import torch
             self._tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
-            self._model = AutoModelForSequenceClassification.from_pretrained(model_name, revision=revision)
-
             self._device = self._resolve_device()
+
+            load_kwargs: dict[str, Any] = {}
+            if revision:
+                load_kwargs["revision"] = revision
+            if self._device != "cpu" and self.precision == "fp16":
+                load_kwargs["torch_dtype"] = torch.float16
+            else:
+                load_kwargs["torch_dtype"] = torch.float32
+
+            self._model = AutoModelForSequenceClassification.from_pretrained(model_name, **load_kwargs)
             self._model = self._model.to(self._device)
             self._model.eval()
 
@@ -717,10 +726,13 @@ class NLIVerifier(BaseVerifier):
         self._loaded = False
 
         try:
+            import gc
             import torch
 
+            gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                torch.cuda.reset_peak_memory_stats()
                 logger.info(
                     "GPU memory after unload: %.0f MB allocated",
                     torch.cuda.memory_allocated() / 1e6,

@@ -246,7 +246,7 @@ class LLMDecomposer(BaseDecomposer):
             if self._device != "cpu":
                 load_kwargs["torch_dtype"] = torch.float16
 
-                # Check free VRAM — if ≥ 7.5 GB available, load entirely on GPU
+                # Check free VRAM — if ≥ 6.8 GB available, load entirely on GPU
                 free_vram_gb = 0.0
                 try:
                     free_bytes, _ = torch.cuda.mem_get_info(0)
@@ -254,7 +254,7 @@ class LLMDecomposer(BaseDecomposer):
                 except Exception:
                     pass
 
-                if free_vram_gb >= 7.5:
+                if free_vram_gb >= 6.8:
                     # All layers on GPU — fastest path, 100% GPU utilisation
                     load_kwargs["device_map"] = {"": 0}
                     logger.info("Forcing full GPU load (%.1f GB free VRAM)", free_vram_gb)
