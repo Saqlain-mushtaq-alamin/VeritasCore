@@ -1,4 +1,7 @@
-import sys, time
+import asyncio, sys, time
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 print("1. Importing modules...")
 from veritascore.core.types import Claim
 from veritascore.retriever.base import SearchResult
