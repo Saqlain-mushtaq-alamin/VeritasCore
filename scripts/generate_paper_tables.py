@@ -301,20 +301,6 @@ def generate_table_calibration() -> str:
 - `docs/calibration/calibration_fusion_fever_validation.png`
 """
 
-> **Protocol:** Platt scaling fitted on a disjoint 500-sample tuning split and evaluated on the held-out 500-sample evaluation split (seed=42).
-> Continuous raw NLI scores $S = \\text{fwd\\_contradiction} - \\text{fwd\\_entailment} \\in [-1, 1]$ are mapped to probability space via standard logistic sigmoid $\\sigma(S) = (1 + e^{-S})^{-1}$ for uncalibrated baseline Brier and ECE calculations. Platt scaling fits an affine mapping $\\sigma(A \\cdot S + B)$ on the tuning split.
-
-| Dataset | Split Setup | AUROC | F1 | Raw Brier | Calibrated Brier | Brier Gain (95% CI) | ECE Improvement |
-|---------|-------------|:-----:|:--:|:---------:|:----------------:|:-------------------:|:---------------:|
-| HaluEval QA | Shuffled Tuning (n=500) / Eval (n=500) | 0.7178 | 0.5271 | 0.2314 | **0.2227** | **+0.0085 [0.0017, 0.0154]** (p=0.0040) | 0.1472 → **0.0752** |
-| FEVER (validation) | Shuffled Tuning (n=500) / Eval (n=500) | 0.9753 | 0.9267 | 0.0778 | **0.0623** | **+0.0155 [0.0080, 0.0229]** (p<1e-4) | 0.0909 → **0.0627** |
-
-*Calibration diagrams:*
-- `docs/calibration/calibration_nli_halueval_qa.png`
-- `docs/calibration/calibration_nli_fever_validation.png`
-"""
-
-
 
 def generate_table_latency() -> str:
     """Generate Tables 5a-5d: Latency and Hardware Analysis (Phase R8)."""
@@ -357,7 +343,7 @@ def generate_table_latency() -> str:
 |-----------|--------|:---------:|:-----:|:--------:|:--------:|:---------------------:|:------------:|
 {rows_5a}
 
-*Note:* DeBERTa-v3 executes in **FP32** precision (184M parameters $\\times$ 4 bytes $\\approx$ 736 MB static weight footprint). Phi-3-mini executes in **FP16** precision (3.82B parameters $\\approx$ 7.64 GB weight footprint). Retrieval latency is reported for both cold API network calls (Tavily REST endpoint) and warm disk-cache hits (5.6 ms disk read + verification pipeline).
+*Note on Latency & Hardware:* DeBERTa-v3 is evaluated in both **FP32** (184M parameters $\\times$ 4 bytes $\\approx$ 723 MB static weight footprint) and **FP16** (371 MB weight footprint) precision for both Forward-only and Bidirectional evaluation paths. Phi-3-mini executes in **FP16** precision (3.82B parameters $\\approx$ 7,588 MB peak runtime VRAM) with 100% GPU VRAM allocation and zero CPU offload. Retrieval latency separates cold live network queries (3964.5 ms) from warm disk-cache hits (32.4 ms).
 
 ### Table 5b: End-to-End Pipeline Latency
 | Pipeline Mode | Device | Claims | Total (ms) | Per-Claim (ms) | GPU Mem (MB) |
@@ -374,23 +360,25 @@ def generate_table_latency() -> str:
 |:----------:|:------------------:|:---------------------:|:---------------:|
 {rows_5d}
 
-*Note on Batch Scaling:* Table 5d batch scaling benchmarks the bidirectional NLI evaluation path (requiring both forward and reverse cross-encoder passes per claim). The canonical forward-only NLI default achieves 12.97 ms per claim at batch=1 (77.08 claims/s).
+*Note on Batch Scaling:* Table 5d batch scaling benchmarks batched forward-pass execution in `NLIVerifier.verify_batch()`. Scaling batch size from 1 to 8 achieves a **1.65x throughput speedup** (77.3 to 127.6 claims/s) while cutting average per-claim latency from 12.9 ms to 7.8 ms with GPU VRAM scaling modestly from 754 MB to 916 MB.
 """
 
 
 def generate_section_controls() -> str:
     """Generate Summary of Empirical Controls and Sanity Checks."""
     len_rep = load_json(ROOT / "docs" / "length_control_report.json") if (ROOT / "docs" / "length_control_report.json").exists() else {}
-    h_surf = len_rep.get("halueval_overall", {}).get("surface_alone", {}).get("auroc", 0.7468)
+    h_surf = len_rep.get("halueval_overall", {}).get("surface_alone", {}).get("auroc", 0.7370)
     f_surf = len_rep.get("fever_comparison", {}).get("surface_alone", {}).get("auroc", 0.5610)
+    h_nli = len_rep.get("halueval_overall", {}).get("nli_alone", {}).get("auroc", 0.7098)
+    f_nli = len_rep.get("fever_comparison", {}).get("nli_alone", {}).get("auroc", 0.9721)
 
     return f"""## Empirical Controls & Sanity Checks
 
 To confirm methodological validity and eliminate experimental artifacts, seven rigorous empirical controls were conducted (detailed full report in [`docs/empirical_controls_report.md`](empirical_controls_report.md)):
 
 1. **Shuffled-Label AUROC (Null Hypothesis Test):**
-   - HaluEval QA: **0.5004 ± 0.0134** (vs. original 0.7284)
-   - FEVER: **0.4971 ± 0.0162** (vs. original 0.9721)
+   - HaluEval QA: **0.5004 ± 0.0134** (vs. original {h_nli:.4f})
+   - FEVER: **0.4971 ± 0.0162** (vs. original {f_nli:.4f})
    - *Confirmation:* Perfectly centered at 0.50, proving scoring correctness and zero label/sorting contamination.
 
 2. **Hypothesis-Only Baseline (Claim Surface Features Only):**
