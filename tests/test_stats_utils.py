@@ -164,6 +164,38 @@ class TestDeLongTest:
         z_ba, _ = delong_test(y_true, y_score_b, y_score_a)
         assert abs(z_ab + z_ba) < 1e-9
 
+    def test_delong_against_reference_imbalanced_data(self):
+        """Test against direct DeLong et al. (1988) formulation on imbalanced data (n1 != n0)."""
+        from scipy import stats
+
+        rng = np.random.RandomState(42)
+        n1, n0 = 35, 85  # highly imbalanced: 35 positive, 85 negative
+        y_true = np.array([1] * n1 + [0] * n0)
+        y_score_a = np.concatenate([rng.normal(1.2, 0.9, n1), rng.normal(0.2, 1.1, n0)])
+        y_score_b = np.concatenate([rng.normal(0.9, 1.0, n1), rng.normal(0.1, 1.0, n0)])
+
+        # Reference DeLong computation
+        pos_idx = np.where(y_true == 1)[0]
+        neg_idx = np.where(y_true == 0)[0]
+        m, n = len(pos_idx), len(neg_idx)
+
+        v10_a = np.array([np.mean((y_score_a[i] > y_score_a[neg_idx]) + 0.5 * (y_score_a[i] == y_score_a[neg_idx])) for i in pos_idx])
+        v10_b = np.array([np.mean((y_score_b[i] > y_score_b[neg_idx]) + 0.5 * (y_score_b[i] == y_score_b[neg_idx])) for i in pos_idx])
+        v01_a = np.array([np.mean((y_score_a[pos_idx] > y_score_a[j]) + 0.5 * (y_score_a[pos_idx] == y_score_a[j])) for j in neg_idx])
+        v01_b = np.array([np.mean((y_score_b[pos_idx] > y_score_b[j]) + 0.5 * (y_score_b[pos_idx] == y_score_b[j])) for j in neg_idx])
+
+        s10 = np.cov(np.vstack([v10_a, v10_b]))
+        s01 = np.cov(np.vstack([v01_a, v01_b]))
+        sigma = s10 / m + s01 / n
+        var_diff = sigma[0, 0] + sigma[1, 1] - 2 * sigma[0, 1]
+        expected_z = (np.mean(v10_a) - np.mean(v10_b)) / np.sqrt(var_diff)
+        expected_p = float(2 * stats.norm.sf(abs(expected_z)))
+
+        actual_z, actual_p = delong_test(y_true, y_score_a, y_score_b)
+
+        assert abs(actual_z - expected_z) < 1e-10
+        assert abs(actual_p - expected_p) < 1e-10
+
 
 # ---------------------------------------------------------------------------
 # paired_bootstrap_test

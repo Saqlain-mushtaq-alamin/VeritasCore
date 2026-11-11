@@ -189,7 +189,8 @@ def delong_test(
         [np.cov(V01_a, V01_b)[0, 1], np.var(V01_b, ddof=1)],
     ])
 
-    cov_matrix = S10 / n0 + S01 / n1
+    # DeLong variance: S10 / n1 (positives) + S01 / n0 (negatives)
+    cov_matrix = S10 / n1 + S01 / n0
 
     # Test statistic for H0: AUC_A - AUC_B = 0
     delta = auc_a - auc_b
@@ -257,3 +258,21 @@ def format_ci(mean: float, lower: float, upper: float, decimals: int = 4) -> str
     """Format a CI as 'mean (lower–upper)' for display."""
     fmt = f"{{:.{decimals}f}}"
     return f"{fmt.format(mean)} ({fmt.format(lower)}–{fmt.format(upper)})"
+
+
+def format_p_val(p: float, n_bootstrap: int | None = None) -> str:
+    """Format a p-value for display.
+
+    Never prints '< 1e-4' unless the sample size / bootstrap resolution
+    supports it (requires n_bootstrap >= 10,000, i.e., resolution <= 1e-4).
+    """
+    if n_bootstrap is not None:
+        resolution = 1.0 / n_bootstrap
+        if resolution > 1e-4:
+            if p < resolution:
+                return f"< {resolution:.4f}"
+            return f"{p:.4f}"
+    if p < 1e-4 or p == 0.0:
+        return "< 1e-4"
+    return f"{p:.4f}"
+
