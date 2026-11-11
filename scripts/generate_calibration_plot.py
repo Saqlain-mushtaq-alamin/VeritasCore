@@ -141,6 +141,67 @@ def compute_brier_ece_cis(
     }
 
 
+def compute_brier_ece_diff_bootstrap(
+    y_true: list[int] | np.ndarray,
+    y_raw: list[float] | np.ndarray,
+    y_cal: list[float] | np.ndarray,
+    n_bootstrap: int = 10000,
+    seed: int = 42,
+    n_bins: int = 10,
+) -> dict[str, Any]:
+    """Compute paired bootstrap difference (raw - calibrated) for Brier score and ECE.
+
+    A positive delta indicates improvement after calibration (error reduction).
+    Returns mean delta, 95% CI, and two-sided p-value: 2 * min(P(diff <= 0), P(diff >= 0)).
+    """
+    y_t = np.asarray(y_true, dtype=int)
+    y_r = np.clip(np.asarray(y_raw, dtype=float), 0.0, 1.0)
+    y_c = np.clip(np.asarray(y_cal, dtype=float), 0.0, 1.0)
+    n = len(y_t)
+    rng = np.random.RandomState(seed)
+
+    brier_diffs = []
+    ece_diffs = []
+
+    for _ in range(n_bootstrap):
+        idx = rng.choice(n, size=n, replace=True)
+        yt = y_t[idx]
+        if len(np.unique(yt)) < 2:
+            continue
+        b_raw = float(brier_score_loss(yt, y_r[idx]))
+        b_cal = float(brier_score_loss(yt, y_c[idx]))
+        brier_diffs.append(b_raw - b_cal)
+
+        e_raw = compute_ece(yt, y_r[idx], n_bins=n_bins)
+        e_cal = compute_ece(yt, y_c[idx], n_bins=n_bins)
+        ece_diffs.append(e_raw - e_cal)
+
+    b_arr = np.array(brier_diffs)
+    e_arr = np.array(ece_diffs)
+
+    b_ci = [round(float(np.percentile(b_arr, 2.5)), 4), round(float(np.percentile(b_arr, 97.5)), 4)]
+    e_ci = [round(float(np.percentile(e_arr, 2.5)), 4), round(float(np.percentile(e_arr, 97.5)), 4)]
+
+    p_b_less = float(np.mean(b_arr <= 0))
+    p_b_greater = float(np.mean(b_arr >= 0))
+    p_brier = min(1.0, 2.0 * min(p_b_less, p_b_greater))
+
+    p_e_less = float(np.mean(e_arr <= 0))
+    p_e_greater = float(np.mean(e_arr >= 0))
+    p_ece = min(1.0, 2.0 * min(p_e_less, p_e_greater))
+
+    return {
+        "delta_brier": round(float(np.mean(b_arr)), 4),
+        "delta_brier_ci": b_ci,
+        "delta_brier_p_value": round(p_brier, 4),
+        "delta_ece": round(float(np.mean(e_arr)), 4),
+        "delta_ece_ci": e_ci,
+        "delta_ece_p_value": round(p_ece, 4),
+        "two_sided": True,
+        "n_bootstrap": n_bootstrap,
+    }
+
+
 def plot_reliability_diagram(
     y_true: list[int],
     y_score_raw: list[float],
@@ -185,6 +246,7 @@ def plot_reliability_diagram(
             cal_cis = compute_brier_ece_cis(y_true_arr, cal_arr, n_bins=n_bins)
             metrics["brier_calibrated_ci"] = cal_cis["brier_ci"]
             metrics["ece_calibrated_ci"] = cal_cis["ece_ci"]
+            metrics["calibration_difference"] = compute_brier_ece_diff_bootstrap(y_true_arr, raw_arr, cal_arr, n_bootstrap=10000)
         return metrics
 
     has_calib = y_score_calibrated is not None
@@ -201,6 +263,7 @@ def plot_reliability_diagram(
         cal_cis = compute_brier_ece_cis(y_true_arr, calib_arr, n_bins=n_bins)
         metrics["brier_calibrated_ci"] = cal_cis["brier_ci"]
         metrics["ece_calibrated_ci"] = cal_cis["ece_ci"]
+        metrics["calibration_difference"] = compute_brier_ece_diff_bootstrap(y_true_arr, raw_arr, calib_arr, n_bootstrap=10000)
         panels.append((axes[1], calib_arr, "After Platt Scaling"))
 
     for ax, scores, label in panels:
@@ -469,10 +532,72 @@ def generate_synthetic_data(
 # Dataset loaders
 # =============================================================================
 
+def split_halueval_three_way(
+    grid_n: int = 500,
+    calib_n: int = 500,
+    eval_n: int = 500,
+    seed: int = 42,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """Split HaluEval QA into 3 disjoint groups by knowledge paragraph:
+    1. grid_set: used for fusion model training (n=500)
+    2. calib_set: held out from fusion training, used to fit Platt scaling (n=500)
+    3. eval_set: held-out evaluation set (n=500)
+    """
+    from collections import defaultdict
+    from run_benchmarks_v2 import load_halueval_qa_all
+
+    raw = load_halueval_qa_all(max_n=10000)
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for s in raw:
+        key = s.get("context", "").strip()
+        groups[key].append(s)
+
+    group_keys = sorted(list(groups.keys()))
+    rng = np.random.RandomState(seed)
+    perm = rng.permutation(len(group_keys))
+
+    grid_set: list[dict[str, Any]] = []
+    grid_keys: set[str] = set()
+    for idx in perm:
+        k = group_keys[idx]
+        g = groups[k]
+        if len(grid_set) + len(g) <= grid_n:
+            grid_set.extend(g)
+            grid_keys.add(k)
+        if len(grid_set) >= grid_n:
+            break
+
+    calib_set: list[dict[str, Any]] = []
+    calib_keys: set[str] = set()
+    for idx in perm:
+        k = group_keys[idx]
+        if k in grid_keys:
+            continue
+        g = groups[k]
+        if len(calib_set) + len(g) <= calib_n:
+            calib_set.extend(g)
+            calib_keys.add(k)
+        if len(calib_set) >= calib_n:
+            break
+
+    eval_set: list[dict[str, Any]] = []
+    for idx in perm:
+        k = group_keys[idx]
+        if k in grid_keys or k in calib_keys:
+            continue
+        g = groups[k]
+        if len(eval_set) + len(g) <= eval_n:
+            eval_set.extend(g)
+        if len(eval_set) >= eval_n:
+            break
+
+    return grid_set, calib_set, eval_set
+
+
 def load_halueval_for_r7(n: int = 500, seed: int = 42) -> list[dict[str, Any]]:
     """Load n HaluEval QA samples from held-out eval split (disjoint from grid)."""
-    from run_benchmarks_v2 import load_halueval_split
-    return load_halueval_split(split="eval", n=n, grid_n=min(n, 500), seed=seed)
+    _, _, eval_set = split_halueval_three_way(grid_n=min(n, 500), calib_n=min(n, 500), eval_n=n, seed=seed)
+    return eval_set
 
 
 def load_fever_for_r7(n: int = 500) -> list[dict[str, Any]]:
@@ -854,6 +979,7 @@ def run_dataset_pipeline(
             cal_cis = compute_brier_ece_cis(y_true, cal_arr, n_bins=10)
             result["brier_calibrated_ci"] = cal_cis["brier_ci"]
             result["ece_calibrated_ci"] = cal_cis["ece_ci"]
+            result["calibration_difference"] = compute_brier_ece_diff_bootstrap(y_true, raw_arr, cal_arr, n_bootstrap=10000)
 
     # Part B — error analysis
     print(f"  [R7-B] Categorising errors for {dataset_name}...")
@@ -950,42 +1076,45 @@ def main() -> None:  # noqa: C901
 
     # Real datasets
     if not args.synthetic:
-        # Step 1: Fit Platt scaling calibrator exclusively on HaluEval QA grid split (500 samples)
-        # to ensure true zero-shot out-of-domain transfer on FEVER (reconciling with Control 7).
-        print("\n[Platt] Fitting Platt calibrator on HaluEval QA grid-search split...")
-        from run_benchmarks_v2 import load_halueval_split
+        # Step 1: Fit Platt scaling calibrator on a split held out from fusion training (calib_samples, n=500)
+        # to ensure true split separation and out-of-domain transfer on FEVER (reconciling with Control 7).
+        print("\n[Platt] Partitioning HaluEval QA into 3 disjoint paragraph-separated splits...")
+        grid_samples, calib_samples, eval_samples = split_halueval_three_way(
+            grid_n=min(args.n, 500), calib_n=min(args.n, 500), eval_n=min(args.n, 500), seed=args.seed
+        )
+        print(f"  Split sizes: grid={len(grid_samples)}, calib={len(calib_samples)}, eval={len(eval_samples)}")
+        print("\n[Platt] Fitting Platt calibrator on HaluEval QA calibration split (held out from fusion training)...")
         from sklearn.linear_model import LogisticRegression
-        grid_samples = load_halueval_split(split="grid", n=min(args.n, 500), grid_n=min(args.n, 500), seed=args.seed)
 
         if args.mode == "fusion":
             from veritascore.scorer.fusion import FusionScorer
             calib_scorer = FusionScorer()
             calib_scorer.load()
-            y_true_grid, y_score_grid, _ = score_samples_fusion(grid_samples, "HaluEval QA (grid split)", calib_scorer)
+            y_true_calib, y_score_calib_fit, _ = score_samples_fusion(calib_samples, "HaluEval QA (calib split)", calib_scorer)
         else:
-            y_true_grid, y_score_grid, _ = score_samples_nli(grid_samples, "HaluEval QA (grid split)")
+            y_true_calib, y_score_calib_fit, _ = score_samples_nli(calib_samples, "HaluEval QA (calib split)")
 
         platt = LogisticRegression(C=1.0, solver="lbfgs")
-        platt.fit(np.asarray(y_score_grid).reshape(-1, 1), np.asarray(y_true_grid))
-        print(f"  Platt calibrator fitted on grid split (slope={platt.coef_[0][0]:.3f}, intercept={platt.intercept_[0]:.3f}).")
+        platt.fit(np.asarray(y_score_calib_fit).reshape(-1, 1), np.asarray(y_true_calib))
+        print(f"  Platt calibrator fitted on held-out calib split (slope={platt.coef_[0][0]:.3f}, intercept={platt.intercept_[0]:.3f}).")
 
-        # Select decision threshold tau that maximizes F1 strictly on grid split
+        # Select decision threshold tau that maximizes F1 strictly on calib split
         candidate_taus = np.linspace(0.05, 0.95, 91)
         best_tau = 0.5
-        best_grid_f1 = -1.0
+        best_calib_f1 = -1.0
         for cand_tau in candidate_taus:
-            cand_pred = (np.asarray(y_score_grid) >= cand_tau).astype(int)
-            cand_f1 = float(f1_score(y_true_grid, cand_pred, zero_division=0))
-            if cand_f1 > best_grid_f1:
-                best_grid_f1 = cand_f1
+            cand_pred = (np.asarray(y_score_calib_fit) >= cand_tau).astype(int)
+            cand_f1 = float(f1_score(y_true_calib, cand_pred, zero_division=0))
+            if cand_f1 > best_calib_f1:
+                best_calib_f1 = cand_f1
                 best_tau = float(cand_tau)
-        print(f"  F1 decision threshold fitted on grid split: tau = {best_tau:.2f} (Grid F1 = {best_grid_f1:.4f})")
+        print(f"  F1 decision threshold fitted on calib split: tau = {best_tau:.2f} (Calib F1 = {best_calib_f1:.4f})")
 
         for dataset in args.datasets:
             print(f"\n[{dataset.upper()}] Loading {args.n} samples...")
             try:
                 if dataset == "halueval":
-                    samples = load_halueval_for_r7(n=args.n, seed=args.seed)
+                    samples = eval_samples
                     ds_label = "HaluEval QA"
                 else:
                     samples = load_fever_for_r7(n=args.n)

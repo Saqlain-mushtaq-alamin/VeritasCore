@@ -101,8 +101,8 @@ ABLATION_CONFIGS: list[dict[str, Any]] = [
         "use_consistency": False,
     },
     {
-        "name": "-Retrieval (NLI-only)",
-        "short": "-Retrieval",
+        "name": "NLI + surface features (no retrieval)",
+        "short": "NLI + surface features",
         "use_nli": True,
         "use_retrieval": False,
         "use_consistency": False,
@@ -664,7 +664,7 @@ def write_markdown_table(
             full_auc = dataset_results[ds][0]["metrics"]["auroc"]
             nli_auc = next(
                 r["metrics"]["auroc"] for r in dataset_results[ds]
-                if r["config"]["short"] in ("-Retrieval", "NLI-only")
+                if r["config"]["short"] in ("NLI + surface features", "-Retrieval", "NLI-only")
             )
             if full_auc < nli_auc:
                 lines.append("")
@@ -898,13 +898,16 @@ def main() -> None:
             cfg_scores = dataset_results[ds][i]["scores"]
             try:
                 delta, p = paired_bootstrap_test(
-                    full_labels, full_scores, cfg_scores, n_bootstrap=args.n_bootstrap
+                    full_labels, full_scores, cfg_scores, n_bootstrap=args.n_bootstrap, two_sided=True
                 )
                 paired_significance[ds].append({
                     "config": cfg["name"],
                     "short": cfg["short"],
                     "delta_auroc": float(delta),
                     "p_value": float(p),
+                    "two_sided": True,
+                    "test": "paired_bootstrap_two_sided",
+                    "n_bootstrap": args.n_bootstrap,
                 })
             except Exception as e:
                 paired_significance[ds].append({
