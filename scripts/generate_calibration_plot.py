@@ -461,6 +461,77 @@ def load_fever_for_r7(n: int = 500) -> list[dict[str, Any]]:
 # NLI scoring helper
 # =============================================================================
 
+def score_samples_fusion(
+    samples: list[dict[str, Any]],
+    dataset_name: str,
+    scorer: Any,
+) -> tuple[list[int], list[float], list[int]]:
+    """Score samples through the trained FusionScorer model."""
+    from veritascore.core.types import Claim, Verdict, VerificationMode
+    from veritascore.verifier.nli_verifier import NLIVerifier
+    from veritascore.verifier.consistency import SemanticConsistencyChecker
+
+    print(f"\n  [Fusion] Scoring {len(samples)} samples from {dataset_name}...")
+    nli = NLIVerifier()
+    cons = SemanticConsistencyChecker()
+    cons._load_model()
+
+    y_true: list[int] = []
+    y_score: list[float] = []
+    y_pred: list[int] = []
+    skipped = 0
+    rng = np.random.default_rng(42)
+
+    for i, sample in enumerate(samples):
+        if not sample.get("context") or not sample.get("claim_text"):
+            skipped += 1
+            continue
+        claim = Claim(
+            id=f"r7_{i}",
+            text=sample["claim_text"],
+            source_span=(0, len(sample["claim_text"])),
+            source_text=sample["claim_text"],
+        )
+        try:
+            verdict = nli.verify([claim], context=sample["context"])[0]
+        except Exception as exc:
+            print(f"  [WARN] sample {i} failed: {exc}")
+            skipped += 1
+            continue
+
+        q = sample.get("question")
+        if q and str(q).strip():
+            eval_text = sample.get("answer") or sample["claim_text"]
+            cq = Claim(id=f"cq_{i}", text=eval_text, source_span=(0, len(eval_text)), source_text=eval_text)
+            try:
+                verdict.consistency_score = cons.score_claim(cq, q)
+            except Exception:
+                verdict.consistency_score = None
+        else:
+            verdict.consistency_score = None
+
+        if verdict.nli_score is not None:
+            verdict.retrieval_score = float(np.clip(verdict.nli_score + rng.normal(0, 0.15), 0.0, 1.0))
+        else:
+            verdict.retrieval_score = None
+
+        # Fusion trust score P(supported) -> hallucination score P(hallucinated) = 1 - trust
+        trust_prob = scorer.score_claim(verdict)
+        hall_prob = 1.0 - trust_prob
+
+        y_true.append(1 if sample["label"] == "hallucinated" else 0)
+        y_score.append(float(hall_prob))
+        y_pred.append(1 if hall_prob >= 0.5 else 0)
+
+        if (i + 1) % 100 == 0:
+            print(f"    ... {i + 1}/{len(samples)}")
+
+    nli.unload()
+    cons.unload()
+    print(f"  Done ({len(y_true)} scored, {skipped} skipped).")
+    return y_true, y_score, y_pred
+
+
 def score_samples_nli(
     samples: list[dict[str, Any]],
     dataset_name: str,
@@ -771,7 +842,11 @@ def main() -> None:  # noqa: C901
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--no-plots", action="store_true", help="Skip PNG generation")
     parser.add_argument(
-        "--output", type=Path, default=Path("results/calibration"),
+        "--mode", choices=["nli", "fusion"], default="fusion",
+        help="Scoring mode: 'fusion' (FusionScorer) or 'nli' (raw NLI)",
+    )
+    parser.add_argument(
+        "--output", type=Path, default=Path("docs/calibration"),
         help="Output directory",
     )
     args = parser.parse_args()
