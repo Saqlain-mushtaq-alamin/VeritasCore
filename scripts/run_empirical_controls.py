@@ -264,11 +264,12 @@ def run_determinism_test(n_samples: int = 100, seed: int = 42) -> dict[str, Any]
 
 
 def compute_holm_bonferroni(ablation_data: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    """Control 6: Apply Holm-Bonferroni step-down correction to ablation p-values."""
+    """Control 6: Apply Holm-Bonferroni step-down correction to ablation p-values across all comparisons."""
     print("\n[Control 6] Applying Holm-Bonferroni Correction to Ablation P-Values...")
 
     paired_sig = ablation_data.get("paired_significance", {})
     holm_corrected = {}
+    all_tests = []
 
     for ds in ["halueval", "fever"]:
         tests = []
@@ -281,6 +282,7 @@ def compute_holm_bonferroni(ablation_data: dict[str, Any]) -> dict[str, list[dic
             # When p_val is 0.0 with 10k resamples, resolution is 1e-4
             p_raw = max(float(p_val), 1e-4) if p_val == 0.0 else float(p_val)
             tests.append((cfg, delta, p_raw))
+            all_tests.append((f"{ds.capitalize()}: {cfg}", ds, cfg, delta, p_raw))
 
         sorted_tests = sorted(tests, key=lambda x: x[2])
         m = len(sorted_tests)
@@ -305,6 +307,30 @@ def compute_holm_bonferroni(ablation_data: dict[str, Any]) -> dict[str, list[dic
 
         holm_corrected[ds] = adjusted_records
 
+    # Pooled correction across all ablation comparisons (both datasets combined)
+    sorted_all = sorted(all_tests, key=lambda x: x[4])
+    m_all = len(sorted_all)
+    pooled_records = []
+    running_max_all = 0.0
+    for rank, (full_name, ds, cfg, delta, p_raw) in enumerate(sorted_all, 1):
+        mult = m_all - rank + 1
+        p_adj_cand = min(1.0, mult * p_raw)
+        running_max_all = max(running_max_all, p_adj_cand)
+        p_holm_pooled = min(1.0, running_max_all)
+        is_sig_pooled = p_holm_pooled < 0.05
+        pooled_records.append({
+            "full_name": full_name,
+            "dataset": ds,
+            "config": cfg,
+            "rank": rank,
+            "delta_auroc": delta,
+            "raw_p": p_raw,
+            "holm_p": p_holm_pooled,
+            "significant_after_holm": is_sig_pooled,
+        })
+        print(f"  [Pooled] {full_name:<35}: raw p={p_raw:.4f} -> Holm p={p_holm_pooled:.4f} (Sig: {is_sig_pooled})")
+
+    holm_corrected["all_pooled"] = pooled_records
     return holm_corrected
 
 
