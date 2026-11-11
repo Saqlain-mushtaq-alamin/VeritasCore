@@ -485,6 +485,13 @@ def generate_section_controls() -> str:
     h_orig = h_shuf.get("original_auroc", 0.7098)
     f_orig = f_shuf.get("original_auroc", 0.9721)
 
+    h_holm = ctrl.get("holm_bonferroni", {}).get("halueval", [])
+    f_holm = ctrl.get("holm_bonferroni", {}).get("fever", [])
+    p_holm = ctrl.get("holm_bonferroni", {}).get("all_pooled", [])
+
+    h_holm_str = "; ".join(f"`{r['config']}` (raw p={r['raw_p']:.4f} → Holm p={r['holm_p']:.4f})" for r in h_holm)
+    f_holm_str = "; ".join(f"`{r['config']}` (raw p={r['raw_p']:.4f} → Holm p={r['holm_p']:.4f})" for r in f_holm)
+
     return f"""## Empirical Controls & Sanity Checks
 
 To confirm methodological validity and eliminate experimental artifacts, seven rigorous empirical controls were conducted (detailed full report in [`docs/empirical_controls_report.md`](empirical_controls_report.md)):
@@ -508,8 +515,11 @@ To confirm methodological validity and eliminate experimental artifacts, seven r
 5. **LLM Decomposer Fallback & Timeout Behavior:**
    - Evaluated thread-based timeout architecture (`daemon=True`, 60s timeout). Across the hardware evaluation on RTX 4060, **0 timeouts occurred** (maximum observed latency was 15.24s against the 60s limit), and fallback was never invoked.
 
-6. **Holm-Bonferroni Correction:**
-   - Applied step-down correction across all ablation comparisons against Full Fusion. Primary signal ablations on FEVER (`-NLI` adjusted p = 0.0003; `-Retrieval` adjusted p = 0.0003) remain highly statistically significant at $\\alpha = 0.05$.
+6. **Holm-Bonferroni Correction Across All Comparisons:**
+   - Applied step-down correction controlling the family-wise error rate across all ablation comparisons against Full Fusion.
+   - **HaluEval ($m={len(h_holm)}$):** {h_holm_str}. Primary signal ablation `-NLI` (raw p=0.0167) adjusts to Holm p=0.0668, not surviving the $\\alpha=0.05$ family threshold, reflecting the dominance of retrieval and surface signals on HaluEval.
+   - **FEVER ($m={len(f_holm)}$):** {f_holm_str}. All primary signal ablations (`-NLI`, `-Retrieval`, `-Length`) remain highly statistically significant after step-down adjustment ($p_{{adj}} = 0.0003$).
+   - **Pooled Correction ($m={len(p_holm)}$ across both datasets):** FEVER core signals remain significant ($p_{{adj}} = 0.0007$), while HaluEval `-NLI` ($p_{{adj}} = 0.0668$) confirms the contrast between benchmark dynamics.
 
 7. **Out-of-Domain Transfer Protocol:**
    - All models, feature weights, and Platt calibrators were fitted **strictly on the HaluEval QA grid split ($n=500$)**. FEVER ($n=1,000$) served as a true zero-shot out-of-domain transfer benchmark without any tuning on FEVER data.
