@@ -932,6 +932,39 @@ def main() -> None:
             fwd_path.write_text(json.dumps(fwd_data, indent=2))
             print(f"  Forward-only results saved → {fwd_path}")
 
+        # Update table1_results.json with current run
+        if halu_r and fever_r:
+            t1_path = args.output / "table1_results.json"
+            t1_data = {}
+            if t1_path.exists():
+                try:
+                    t1_data = json.loads(t1_path.read_text(encoding="utf-8"))
+                except Exception:
+                    t1_data = {}
+            norm_key = halu_r.get("scoring_formula", args.score_formula)
+            t1_data[norm_key] = {
+                "halueval": {
+                    "dataset": halu_r["dataset"],
+                    "n_samples": halu_r["n_samples"],
+                    "auroc": halu_r["auroc"],
+                    "ci_auroc_lower": halu_r.get("ci_auroc_lower", halu_r["auroc"]),
+                    "ci_auroc_upper": halu_r.get("ci_auroc_upper", halu_r["auroc"]),
+                    "f1": halu_r["f1"],
+                    "scoring_formula": halu_r.get("scoring_formula"),
+                },
+                "fever": {
+                    "dataset": fever_r["dataset"],
+                    "n_samples": fever_r["n_samples"],
+                    "auroc": fever_r["auroc"],
+                    "ci_auroc_lower": fever_r.get("ci_auroc_lower", fever_r["auroc"]),
+                    "ci_auroc_upper": fever_r.get("ci_auroc_upper", fever_r["auroc"]),
+                    "f1": fever_r["f1"],
+                    "scoring_formula": fever_r.get("scoring_formula"),
+                },
+            }
+            t1_path.write_text(json.dumps(t1_data, indent=2))
+            print(f"  Table 1 entry '{norm_key}' saved → {t1_path}")
+
         # Print comparison table
         print("\n" + "=" * 70)
         print("COMPARISON TABLE")
