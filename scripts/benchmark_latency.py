@@ -933,7 +933,7 @@ def benchmark_batch_scaling(
             for i in range(bs)
         ]
         _sync_cuda()
-        verifier.verify(wu, context=context)
+        verifier.verify_batch(wu, context=context, batch_size=bs)
         _sync_cuda()
         _reset_gpu_peak()
 
@@ -950,7 +950,7 @@ def benchmark_batch_scaling(
             ]
             _sync_cuda()
             t0 = time.perf_counter()
-            verifier.verify(batch, context=context)
+            verifier.verify_batch(batch, context=context, batch_size=bs)
             _sync_cuda()
             batch_times.append((time.perf_counter() - t0) * 1000)
 
