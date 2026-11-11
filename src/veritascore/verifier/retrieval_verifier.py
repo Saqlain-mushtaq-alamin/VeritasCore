@@ -147,9 +147,30 @@ class RetrievalVerifier(BaseVerifier):
             RuntimeError: If called from within a running event loop. Use
                 `await verify_async(...)` directly in that case.
         """
-        print("ENTERED VERIFY METHOD", flush=True)
         if not claims:
             return []
+
+        # Check if all claims can be served from retriever cache
+        cached_results: list[list[SearchResult]] = []
+        all_cached = True
+        for claim in claims:
+            search_query = self._formulate_query(claim, query)
+            res = None
+            if hasattr(self.retriever, "cache") and self.retriever.cache:
+                res = self.retriever.cache.get(search_query)
+            if res is not None:
+                cached_results.append(res[: self.max_evidence])
+            else:
+                all_cached = False
+                break
+
+        if all_cached:
+            # Fast synchronous path for cached queries — avoids asyncio event loop overhead
+            self.nli_verifier._load_model()
+            return [
+                self._verify_against_evidence(claim, res)
+                for claim, res in zip(claims, cached_results)
+            ]
 
         try:
             loop = asyncio.get_running_loop()
@@ -178,40 +199,26 @@ class RetrievalVerifier(BaseVerifier):
         Returns:
             List of ClaimVerdict, one per claim, in input order.
         """
-        print("ENTERED VERIFY METHOD", flush=True)
         if not claims:
             return []
 
-        print("DEBUG 1: inside verify_async", flush=True)
         self.nli_verifier._load_model()
-        print("DEBUG 2: nli model loaded", flush=True)
 
         semaphore = asyncio.Semaphore(self.max_concurrent_claims)
 
         async def _verify_one(claim: Claim) -> ClaimVerdict:
-            print("DEBUG 3: inside _verify_one")
             async with semaphore:
-                print("DEBUG 4: inside semaphore")
                 search_query = self._formulate_query(claim, query)
-                print("DEBUG 5: search_query=", search_query)
                 try:
                     results = await self.retriever.search(
                         search_query, max_results=self.max_evidence
                     )
-                    print("DEBUG 6: search done, got", len(results))
                 except Exception as e:
                     logger.error("Retrieval failed for claim %s: %s", claim.id, e)
-                    print("DEBUG 6 err:", e)
                     results = []
-                print("DEBUG 7: calling _verify_against_evidence")
-                res = self._verify_against_evidence(claim, results)
-                print("DEBUG 8: done _verify_against_evidence")
-                return res
+                return self._verify_against_evidence(claim, results)
 
-        print("DEBUG 9: before gather")
-        ans = list(await asyncio.gather(*(_verify_one(c) for c in claims)))
-        print("DEBUG 10: after gather")
-        return ans
+        return list(await asyncio.gather(*(_verify_one(c) for c in claims)))
 
     # ── Query Formulation ──────────────────────────────────────────────────────
 
