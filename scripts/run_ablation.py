@@ -709,7 +709,7 @@ def main() -> None:
         default=["halueval", "fever"], help="Datasets to evaluate on"
     )
     parser.add_argument("--n", type=int, default=500, help="Number of samples per dataset")
-    parser.add_argument("--n-bootstrap", type=int, default=2000, help="Bootstrap resamples")
+    parser.add_argument("--n-bootstrap", type=int, default=10000, help="Bootstrap resamples")
     parser.add_argument(
         "--no-retrieval", action="store_true",
         help="Skip retrieval signal entirely (use NLI+Consistency only)"

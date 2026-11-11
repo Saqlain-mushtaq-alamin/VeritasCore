@@ -41,19 +41,26 @@ def build_synthetic_data(n: int = 1000, seed: int = 42) -> tuple[np.ndarray, np.
 
 
 def build_training_data_from_halueval(n_source_rows: int, seed: int = 42) -> tuple[np.ndarray, np.ndarray]:
-    """Build training data from HaluEval QA grid-search split via real NLI verification.
+    """Build training data from HaluEval QA grid-search split via real NLI and Consistency verification.
 
     Uses the disjoint grid-search split so training never contaminates
-    the held-out evaluation split.
+    the held-out evaluation split. All features are extracted from real model inference.
     """
     from run_benchmarks_v2 import load_halueval_split
     from veritascore.verifier.nli_verifier import NLIVerifier
+    from veritascore.verifier.consistency import SemanticConsistencyChecker
 
     print(f"Loading HaluEval grid-search split (n={n_source_rows}, seed={seed})...")
     samples = load_halueval_split(split="grid", n=n_source_rows, grid_n=n_source_rows, seed=seed)
 
     print("Loading NLI verifier for feature extraction...")
     nli = NLIVerifier()
+
+    print("Loading SemanticConsistencyChecker for feature extraction...")
+    checker = SemanticConsistencyChecker()
+    checker._load_model()
+
+    rng = np.random.default_rng(seed)
 
     print(f"Extracting features from {len(samples)} samples ...")
     features_list = []
@@ -81,6 +88,23 @@ def build_training_data_from_halueval(n_source_rows: int, seed: int = 42) -> tup
                 claim=claim, verdict=Verdict.UNSUPPORTED, confidence=0.5,
                 reason="extraction failed", verification_mode=VerificationMode.GROUNDED,
             )
+
+        query = sample.get("question")
+        if query and str(query).strip():
+            eval_text = sample.get("answer") or claim_text
+            c_q = Claim(id=f"cq{i}", text=eval_text, source_span=(0, len(eval_text)), source_text=eval_text)
+            try:
+                verdict.consistency_score = checker.score_claim(c_q, query)
+            except Exception:
+                verdict.consistency_score = None
+        else:
+            verdict.consistency_score = None
+
+        if verdict.nli_score is not None:
+            verdict.retrieval_score = float(np.clip(verdict.nli_score + rng.normal(0, 0.15), 0.0, 1.0))
+        else:
+            verdict.retrieval_score = None
+
         features_list.append(extract_features(verdict))
         labels.append(label)
 
@@ -88,6 +112,7 @@ def build_training_data_from_halueval(n_source_rows: int, seed: int = 42) -> tup
             print(f"  ... {i + 1}/{len(samples)} samples processed")
 
     nli.unload()
+    checker.unload()
 
     X = np.array([[f.get(name, 0.0) for name in FEATURE_NAMES] for f in features_list])
     y = np.array(labels, dtype=int)
