@@ -573,18 +573,25 @@ def benchmark_nli_verifier(
 ) -> LatencyResult:
     """Benchmark NLIVerifier latency (model loaded fresh, warm-up excluded)."""
     device = device or _detect_device()
-    precision = precision or _detect_precision()
+    precision = (precision or _detect_precision()).lower()
     mode_str = "Bidirectional" if use_bidirectional else "Forward-only"
     print(
         f"\n  [NLIVerifier - {mode_str}] Benchmarking {n_samples} claims "
         f"(device={device}, batch_size={batch_size}, precision={precision})..."
     )
 
+    import gc
+    import torch
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.reset_peak_memory_stats()
+
     from veritascore.core.types import Claim
     from veritascore.verifier.nli_verifier import NLIVerifier
 
     _reset_gpu_peak()
-    verifier = NLIVerifier(use_bidirectional=use_bidirectional)
+    verifier = NLIVerifier(use_bidirectional=use_bidirectional, precision=precision)
 
     # Warm-up (excluded from timing)
     warmup = Claim(
@@ -635,7 +642,7 @@ def benchmark_nli_verifier(
     throughput = 1000.0 / avg if avg > 0 else 0.0
 
     result = LatencyResult(
-        component=f"NLI Verifier ({mode_str})",
+        component=f"NLI Verifier ({mode_str}, {precision.upper()})",
         device=device,
         precision=precision,
         batch_size=batch_size,
