@@ -180,23 +180,36 @@ class RetrievalVerifier(BaseVerifier):
         if not claims:
             return []
 
+        print("DEBUG 1: inside verify_async")
         self.nli_verifier._load_model()
+        print("DEBUG 2: nli model loaded")
 
         semaphore = asyncio.Semaphore(self.max_concurrent_claims)
 
         async def _verify_one(claim: Claim) -> ClaimVerdict:
+            print("DEBUG 3: inside _verify_one")
             async with semaphore:
+                print("DEBUG 4: inside semaphore")
                 search_query = self._formulate_query(claim, query)
+                print("DEBUG 5: search_query=", search_query)
                 try:
                     results = await self.retriever.search(
                         search_query, max_results=self.max_evidence
                     )
+                    print("DEBUG 6: search done, got", len(results))
                 except Exception as e:
                     logger.error("Retrieval failed for claim %s: %s", claim.id, e)
+                    print("DEBUG 6 err:", e)
                     results = []
-                return self._verify_against_evidence(claim, results)
+                print("DEBUG 7: calling _verify_against_evidence")
+                res = self._verify_against_evidence(claim, results)
+                print("DEBUG 8: done _verify_against_evidence")
+                return res
 
-        return list(await asyncio.gather(*(_verify_one(c) for c in claims)))
+        print("DEBUG 9: before gather")
+        ans = list(await asyncio.gather(*(_verify_one(c) for c in claims)))
+        print("DEBUG 10: after gather")
+        return ans
 
     # ── Query Formulation ──────────────────────────────────────────────────────
 
