@@ -84,32 +84,64 @@ def split_halueval(
     eval_n: int = 1500,
     seed: int = 42,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Split HaluEval into non-overlapping grid-search and held-out eval sets.
+    """Split HaluEval by question/knowledge paragraph (not by row), drawing from full dataset.
+
+    Groups samples by knowledge paragraph to guarantee that no knowledge passage
+    or associated question ever leaks across the grid and evaluation splits.
 
     Args:
-        samples:  Full list of HaluEval samples.
+        samples:  Full list of HaluEval samples (drawn from full dataset).
         grid_n:   Number of samples for grid search / hyperparameter tuning.
         eval_n:   Number of samples for held-out evaluation.
-        seed:     Random seed for permutation.
+        seed:     Random seed for reproducible shuffling.
 
     Returns:
         (grid_set, eval_set) — disjoint subsets.
     """
+    from collections import defaultdict
+
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for s in samples:
+        key = s.get("context", "").strip()
+        groups[key].append(s)
+
+    group_keys = sorted(list(groups.keys()))
     rng = np.random.RandomState(seed)
-    indices = rng.permutation(len(samples))
-    grid_idx = indices[:grid_n]
-    eval_idx = indices[grid_n : grid_n + eval_n]
+    perm = rng.permutation(len(group_keys))
 
-    # Verify disjointness
-    assert len(set(grid_idx) & set(eval_idx)) == 0, "BUG: grid and eval sets overlap!"
+    grid_set: list[dict[str, Any]] = []
+    grid_keys: set[str] = set()
 
-    grid_set = [samples[i] for i in grid_idx]
-    eval_set = [samples[i] for i in eval_idx]
+    for idx in perm:
+        k = group_keys[idx]
+        g = groups[k]
+        if len(grid_set) + len(g) <= grid_n:
+            grid_set.extend(g)
+            grid_keys.add(k)
+        if len(grid_set) >= grid_n:
+            break
+
+    eval_set: list[dict[str, Any]] = []
+    for idx in perm:
+        k = group_keys[idx]
+        if k in grid_keys:
+            continue
+        g = groups[k]
+        if len(eval_set) + len(g) <= eval_n:
+            eval_set.extend(g)
+        if len(eval_set) >= eval_n:
+            break
+
+    # Verify disjointness by knowledge context
+    grid_contexts = {s["context"].strip() for s in grid_set}
+    eval_contexts = {s["context"].strip() for s in eval_set}
+    assert len(grid_contexts & eval_contexts) == 0, "BUG: grid and eval sets overlap in knowledge contexts!"
+
     return grid_set, eval_set
 
 
 def load_halueval_qa_all(max_n: int = 10000) -> list[dict[str, Any]]:
-    """Load up to max_n HaluEval QA samples (raw, unsplit).
+    """Load up to max_n HaluEval QA samples from the full dataset.
 
     Uses sequential indexing so the split is reproducible via seed.
     """
@@ -153,7 +185,7 @@ def load_halueval_split(
     grid_n: int = 500,
     seed: int = 42,
 ) -> list[dict[str, Any]]:
-    """Load HaluEval with proper train/test separation.
+    """Load HaluEval with proper train/test separation grouped by knowledge paragraph.
 
     Args:
         split:  'grid' (hyperparameter tuning), 'eval' (held-out), or 'all'.
@@ -164,20 +196,24 @@ def load_halueval_split(
     Returns:
         List of sample dicts.
     """
-    # Load enough to cover both splits
-    raw = load_halueval_qa_all(max_n=max(grid_n + n + 200, 2500))
+    # Always draw from the full dataset (all 10,000 samples)
+    raw = load_halueval_qa_all(max_n=10000)
 
     if split == "all":
-        return raw[:n]
+        samples = raw[:n]
+    else:
+        grid_set, eval_set = split_halueval(raw, grid_n=grid_n, eval_n=n, seed=seed)
+        samples = grid_set if split == "grid" else eval_set
 
-    grid_set, eval_set = split_halueval(raw, grid_n=grid_n, eval_n=n, seed=seed)
-
-    if split == "grid":
-        samples = grid_set
-        print(f"  [HaluEval] Grid-search split: n={len(samples)} (seed={seed})")
-    else:  # eval
-        samples = eval_set
-        print(f"  [HaluEval] Held-out eval split: n={len(samples)} (seed={seed}, disjoint from grid)")
+    # Print class balance
+    n_pos = sum(1 for s in samples if s["label"] == "hallucinated")
+    n_neg = len(samples) - n_pos
+    pos_pct = (n_pos / len(samples) * 100) if samples else 0.0
+    neg_pct = (n_neg / len(samples) * 100) if samples else 0.0
+    print(
+        f"  [HaluEval] Split '{split}': n={len(samples)} (seed={seed}, grouped by knowledge paragraph)\n"
+        f"  [HaluEval] Class balance: {n_pos} hallucinated ({pos_pct:.1f}%), {n_neg} supported ({neg_pct:.1f}%)"
+    )
 
     return samples
 
@@ -301,25 +337,40 @@ def load_truthfulqa(n: int = 817) -> list[dict[str, Any]]:
 # NLI benchmark runner — returns structured dict
 # ---------------------------------------------------------------------------
 
+def parse_score_formula(formula: str) -> tuple[bool, str]:
+    """Parse score formula into (use_bidirectional, normalized_formula_name)."""
+    clean = formula.strip().lower().replace(" ", "")
+    if clean in ("fwd_c-fwd_e", "fwd_c_minus_fwd_e", "a", "(a)"):
+        return False, "fwd_c - fwd_e"
+    if clean in ("fwd_c-0.2*fwd_e", "fwd_c-0.2fwd_e", "fwd_c_minus_0.2fwd_e", "b", "(b)"):
+        return False, "fwd_c - 0.2*fwd_e"
+    if clean in ("bidirectional", "fwd_c-0.2*fwd_e-0.6*rev_e", "fwd_c-0.2fwd_e-0.6rev_e", "c", "(c)"):
+        return True, "bidirectional"
+    use_bidir = ("rev" in clean) or ("bidirectional" in clean)
+    return use_bidir, formula
+
+
 def run_nli_benchmark(
     samples: list[dict[str, Any]],
     dataset_name: str,
+    score_formula: str = "fwd_c - fwd_e",
     bootstrap_ci: bool = False,
-    n_bootstrap: int = 2000,
+    n_bootstrap: int = 10000,
     seed: int = 42,
 ) -> dict[str, Any]:
     """Run NLI-only verification and return a structured result dict.
 
     Args:
-        samples:      List of {'context', 'claim_text', 'label'} dicts.
-        dataset_name: Display name for the dataset.
-        bootstrap_ci: Whether to compute bootstrapped CIs.
-        n_bootstrap:  Number of bootstrap resamples.
-        seed:         Random seed for bootstrapping.
+        samples:       List of {'context', 'claim_text', 'label'} dicts.
+        dataset_name:  Display name for the dataset.
+        score_formula: Scoring formula: 'fwd_c - fwd_e', 'fwd_c - 0.2*fwd_e', or 'bidirectional'.
+        bootstrap_ci:  Whether to compute bootstrapped CIs.
+        n_bootstrap:   Number of bootstrap resamples (>= 10,000 for required resolution).
+        seed:          Random seed for bootstrapping.
 
     Returns:
         dict with keys: auroc, f1, precision, recall, n_samples, n_skipped,
-        avg_latency_ms, p95_latency_ms, mode, dataset, [ci_auroc_*], [ci_f1_*]
+        avg_latency_ms, p95_latency_ms, mode, dataset, scoring_formula, [ci_auroc_*], [ci_f1_*]
     """
     from sklearn.metrics import (  # type: ignore[import-untyped]
         f1_score,
@@ -330,11 +381,13 @@ def run_nli_benchmark(
 
     from veritascore.verifier.nli_verifier import NLIVerifier  # noqa: E402
 
+    use_bidirectional, norm_formula = parse_score_formula(score_formula)
+
     print(f"\n{'=' * 70}")
-    print(f"NLI Benchmark — {dataset_name} (n={len(samples)})")
+    print(f"NLI Benchmark — {dataset_name} (n={len(samples)}, formula={norm_formula!r})")
     print(f"{'=' * 70}")
 
-    verifier = NLIVerifier()
+    verifier = NLIVerifier(use_bidirectional=use_bidirectional)
     y_true: list[int] = []
     y_score: list[float] = []
     y_pred: list[int] = []
@@ -365,8 +418,15 @@ def run_nli_benchmark(
         fwd_e = float(verdict.nli_score or 0.0)
         fwd_c = float(verdict.contradiction_score or 0.0)
         rev_e = float(verdict.reverse_entailment_score or 0.0)
-        # Scoring formula (grid-searched on separate split per R3)
-        hallucination_score = fwd_c - 0.2 * fwd_e - 0.6 * rev_e
+
+        if norm_formula == "fwd_c - fwd_e":
+            hallucination_score = fwd_c - fwd_e
+        elif norm_formula == "fwd_c - 0.2*fwd_e":
+            hallucination_score = fwd_c - 0.2 * fwd_e
+        elif norm_formula == "bidirectional":
+            hallucination_score = fwd_c - 0.2 * fwd_e - 0.6 * rev_e
+        else:
+            hallucination_score = fwd_c - fwd_e
 
         y_true.append(1 if sample["label"] == "hallucinated" else 0)
         y_score.append(hallucination_score)
@@ -388,7 +448,8 @@ def run_nli_benchmark(
         "n_samples": len(y_true),
         "n_skipped": skipped,
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "scoring_formula": "fwd_c - 0.2*fwd_e - 0.6*rev_e",
+        "scoring_formula": norm_formula,
+        "use_bidirectional": use_bidirectional,
     }
 
     if len(set(y_true)) < 2:
@@ -659,6 +720,13 @@ def main() -> None:
         help="HaluEval split to use: 'eval' (held-out), 'grid' (tune only), 'all' (no split)",
     )
     parser.add_argument(
+        "--score-formula",
+        type=str,
+        default="fwd_c - fwd_e",
+        choices=["fwd_c - fwd_e", "fwd_c - 0.2*fwd_e", "bidirectional"],
+        help="Scoring formula for hallucination detection",
+    )
+    parser.add_argument(
         "--bootstrap-ci",
         action="store_true",
         help="Compute bootstrapped 95%% CIs for all metrics",
@@ -666,8 +734,8 @@ def main() -> None:
     parser.add_argument(
         "--n-bootstrap",
         type=int,
-        default=2000,
-        help="Number of bootstrap resamples (≥ 2000 recommended for publication)",
+        default=10000,
+        help="Number of bootstrap resamples (≥ 10000 for paper resolution)",
     )
     parser.add_argument(
         "--significance-test",
@@ -709,6 +777,7 @@ def main() -> None:
             result = run_nli_benchmark(
                 samples,
                 "HaluEval QA",
+                score_formula=args.score_formula,
                 bootstrap_ci=args.bootstrap_ci,
                 n_bootstrap=args.n_bootstrap,
                 seed=args.seed,
@@ -740,6 +809,7 @@ def main() -> None:
             result = run_nli_benchmark(
                 samples,
                 "FEVER (validation)",
+                score_formula=args.score_formula,
                 bootstrap_ci=args.bootstrap_ci,
                 n_bootstrap=args.n_bootstrap,
                 seed=args.seed,
@@ -818,6 +888,7 @@ def main() -> None:
                 "grid_n": args.grid_n,
                 "seed": args.seed,
                 "split": args.split,
+                "score_formula": args.score_formula,
                 "bootstrap_ci": args.bootstrap_ci,
                 "n_bootstrap": args.n_bootstrap,
             },
@@ -827,6 +898,38 @@ def main() -> None:
         summary_path = args.output / "summary_v2.json"
         summary_path.write_text(json.dumps(summary, indent=2))
         print(f"\nSummary saved → {summary_path}")
+
+        # If forward-only formula was used, also update forward_only_nli_results.json
+        halu_r = next((r for r in all_results if "HaluEval" in r.get("dataset", "")), None)
+        fever_r = next((r for r in all_results if "FEVER" in r.get("dataset", "")), None)
+        if halu_r and fever_r and not halu_r.get("use_bidirectional", False):
+            fwd_path = args.output / "forward_only_nli_results.json"
+            fwd_data = {
+                "halueval": {
+                    "dataset": halu_r["dataset"],
+                    "n_samples": halu_r["n_samples"],
+                    "auroc": halu_r["auroc"],
+                    "ci_auroc_lower": halu_r.get("ci_auroc_lower", halu_r["auroc"]),
+                    "ci_auroc_upper": halu_r.get("ci_auroc_upper", halu_r["auroc"]),
+                    "f1": halu_r["f1"],
+                    "scoring_formula": halu_r.get("scoring_formula"),
+                    "y_true": halu_r.get("_y_true", []),
+                    "y_score": halu_r.get("_y_score", []),
+                },
+                "fever": {
+                    "dataset": fever_r["dataset"],
+                    "n_samples": fever_r["n_samples"],
+                    "auroc": fever_r["auroc"],
+                    "ci_auroc_lower": fever_r.get("ci_auroc_lower", fever_r["auroc"]),
+                    "ci_auroc_upper": fever_r.get("ci_auroc_upper", fever_r["auroc"]),
+                    "f1": fever_r["f1"],
+                    "scoring_formula": fever_r.get("scoring_formula"),
+                    "y_true": fever_r.get("_y_true", []),
+                    "y_score": fever_r.get("_y_score", []),
+                },
+            }
+            fwd_path.write_text(json.dumps(fwd_data, indent=2))
+            print(f"  Forward-only results saved → {fwd_path}")
 
         # Print comparison table
         print("\n" + "=" * 70)
