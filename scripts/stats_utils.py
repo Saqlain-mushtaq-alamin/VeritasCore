@@ -252,8 +252,8 @@ def paired_bootstrap_test(
         idx = rng.choice(len(y_true), size=len(y_true), replace=True)
         if len(np.unique(y_true[idx])) < 2:
             continue
-        auroc_a = float(roc_auc_score(y_true[idx], y_score_a[idx]))
-        auroc_b = float(roc_auc_score(y_true[idx], y_score_b[idx]))
+        auroc_a = _fast_auc(y_true[idx], y_score_a[idx])
+        auroc_b = _fast_auc(y_true[idx], y_score_b[idx])
         delta_aurocs.append(auroc_a - auroc_b)
 
     arr = np.array(delta_aurocs)
