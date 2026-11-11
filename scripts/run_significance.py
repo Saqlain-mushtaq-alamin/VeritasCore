@@ -41,19 +41,27 @@ def main() -> None:
         default=Path("tests/benchmarks/results"),
         help="Directory containing saved JSON results",
     )
-    parser.add_argument("--n-bootstrap", type=int, default=2000)
+    parser.add_argument("--n-bootstrap", type=int, default=10000)
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     results_dir = args.results_dir
+    fwd_file = results_dir / "forward_only_nli_results.json"
     hu_vc_file = results_dir / "halueval_results_v2.json"
     fv_vc_file = results_dir / "fever_results_v2.json"
 
     vc_results: list[dict[str, Any]] = []
-    if hu_vc_file.exists():
-        vc_results.append(json.loads(hu_vc_file.read_text(encoding="utf-8")))
-    if fv_vc_file.exists():
-        vc_results.append(json.loads(fv_vc_file.read_text(encoding="utf-8")))
+    if fwd_file.exists():
+        fwd_data = json.loads(fwd_file.read_text(encoding="utf-8"))
+        if "halueval" in fwd_data:
+            vc_results.append(fwd_data["halueval"])
+        if "fever" in fwd_data:
+            vc_results.append(fwd_data["fever"])
+    else:
+        if hu_vc_file.exists():
+            vc_results.append(json.loads(hu_vc_file.read_text(encoding="utf-8")))
+        if fv_vc_file.exists():
+            vc_results.append(json.loads(fv_vc_file.read_text(encoding="utf-8")))
 
     if not vc_results:
         print(f"No VeritasCore results found in {results_dir}")
