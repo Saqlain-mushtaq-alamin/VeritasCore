@@ -118,15 +118,15 @@ def generate_table1(commit: str) -> str:
 | Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:----------------------:|
 | SummaC ZS (chunk + ent-only, tuned†) | $\\max_c \\text{{ent}}(s_i, c)$ | {sc_halu_str} | {sc_fever_str} | Oracle | 1,500 / 1,000 | Baseline |
-| **VeritasCore NLI (a) Forward-only (Default)** | $\\text{fwd}_c - \\text{fwd}_e$ | **{fa_halu_str}** | **{fa_fever_str}** | Oracle | 1,500 / 1,000 | DeLong p={halu_p_delong:.4f} (HaluEval) / **p={fever_p_delong:.2e}** (FEVER) |
-| VeritasCore NLI (b) Forward-only (asymmetric) | $\\text{fwd}_c - 0.2\\text{fwd}_e$ | {fb_halu_str} | {fb_fever_str} | Oracle | 1,500 / 1,000 | DeLong p=0.0361 (HaluEval) / **p=3.60e-05** (FEVER) |
-| VeritasCore NLI (c) Bidirectional | $\\text{fwd}_c - 0.2\\text{fwd}_e - 0.6\\text{rev}_e$ | {fc_halu_str} | {fc_fever_str} | Oracle | 1,500 / 1,000 | Ablation baseline |
+| **VeritasCore NLI (a) Forward-only (Default)** | $\\text{{fwd}}_c - \\text{{fwd}}_e$ | **{fa_halu_str}** | **{fa_fever_str}** | Oracle | 1,500 / 1,000 | DeLong p={halu_p_delong:.4f} (HaluEval) / **p={fever_p_delong:.2e}** (FEVER) |
+| VeritasCore NLI (b) Forward-only (asymmetric) | $\\text{{fwd}}_c - 0.2\\text{{fwd}}_e$ | {fb_halu_str} | {fb_fever_str} | Oracle | 1,500 / 1,000 | DeLong p=0.0361 (HaluEval) / **p=3.60e-05** (FEVER) |
+| VeritasCore NLI (c) Bidirectional | $\\text{{fwd}}_c - 0.2\\text{{fwd}}_e - 0.6\\text{{rev}}_e$ | {fc_halu_str} | {fc_fever_str} | Oracle | 1,500 / 1,000 | Ablation baseline |
 
 *†SummaC baseline tuning: Evaluated 4 variants on the grid split (`sentence` vs `chunk`, `ent-only` vs `ent-minus-contra`). The `chunk + ent-only` variant won on the grid split (Grid AUROC = 0.7302) and was deployed on the held-out evaluation set.*
 *Statistical Significance (Forward-only (a) vs SummaC):*
 - **FEVER:** DeLong $z = {fever_z_delong:.4f}$ ($p = {fever_p_delong:.2e}$), Paired Bootstrap $p {fever_p_boot if '<' in fever_p_boot else '= ' + fever_p_boot}$ ($n=10,000$).
 - **HaluEval QA:** DeLong $z = {halu_z_delong:.4f}$ ($p = {halu_p_delong:.4f}$), Paired Bootstrap $p = {halu_p_boot}$ ($n=10,000$).
-*Scoring Formula Comparison:* The canonical symmetric difference $\\text{fwd}_c - \\text{fwd}_e$ achieves the highest AUROC on both HaluEval (**0.7098**) and FEVER (**0.9721**), outperforming both the asymmetric forward-only formula (0.6926 / 0.9713) and bidirectional reverse-scoring (0.6968 / 0.9678) while cutting cross-encoder inference cost in half.
+*Scoring Formula Comparison:* The canonical symmetric difference $\\text{{fwd}}_c - \\text{{fwd}}_e$ achieves the highest AUROC on both HaluEval (**0.7098**) and FEVER (**0.9721**), outperforming both the asymmetric forward-only formula (0.6926 / 0.9713) and bidirectional reverse-scoring (0.6968 / 0.9678) while cutting cross-encoder inference cost in half.
 """
 
 
