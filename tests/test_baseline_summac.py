@@ -162,6 +162,19 @@ class TestSummaCZSReimplemented:
             result = scorer.score("", "claim")
         assert result == 0.5
 
+    def test_score_chunk_granularity(self):
+        """Chunk granularity uses the full document as one premise."""
+        scorer = self._make_scorer([0.85])
+        result = scorer.score("First sentence. Second sentence.", "claim", granularity="chunk")
+        assert abs(result - 0.85) < 1e-6
+
+    def test_score_ent_minus_contra(self):
+        """ent-minus-contra subtracts contradiction prob from entailment."""
+        scorer = self._make_scorer([0.9])
+        scorer._nli_batch_probs = MagicMock(return_value=([0.9], [0.2]))
+        result = scorer.score("one sentence.", "claim", score_fn="ent-minus-contra")
+        assert abs(result - 0.7) < 1e-6
+
     def test_entailment_idx_is_1(self):
         """DeBERTa NLI label order: 0=contradiction, 1=entailment, 2=neutral."""
         scorer = self._make_scorer([0.5])
