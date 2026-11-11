@@ -204,7 +204,7 @@ To prevent inverted signal contamination, the discriminative direction of each r
 - **HaluEval QA:**
   - *NLI Entailment:* AUROC($s$) = **{h_nli_s:.4f}**, AUROC($1-s$) = **{h_nli_1s:.4f}** (higher entailment indicates supported truth; $1-s$ indicates hallucination).
   - *Question-Answer Consistency:* AUROC($s$) = **{h_cons_s:.4f}**, AUROC($1-s$) = **{h_cons_1s:.4f}**.
-    *(Crucial Signal Finding)*: In HaluEval, ChatGPT-generated hallucinations heavily copy and mirror question phrasing. High semantic similarity between question and answer is strongly indicative of **hallucination**, yielding AUROC = **{h_cons_s:.4f}** when predicting hallucination directly. The grid-trained fusion model learned a large negative weight ($\beta = -2.4477$) on consistency, naturally capturing this artifact.
+    *(Crucial Signal Finding)*: In HaluEval, ChatGPT-generated hallucinations heavily copy and mirror question phrasing. High semantic similarity between question and answer is strongly indicative of **hallucination**, yielding AUROC = **{h_cons_s:.4f}** when predicting hallucination directly. The grid-trained fusion model learned a large negative weight ($\\beta = -2.4477$) on consistency, naturally capturing this artifact.
 - **FEVER (Validation):**
   - *NLI Entailment:* AUROC($s$) = **{f_nli_s:.4f}**, AUROC($1-s$) = **{f_nli_1s:.4f}**.
   - *Question-Answer Consistency:* Treated as **N/A** (FEVER claims are declarative sentences without user questions; zero artificial queries are injected).

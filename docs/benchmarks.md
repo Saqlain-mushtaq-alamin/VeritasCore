@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `2f19965574bc`).
+> All numbers generated automatically from saved raw experimental runs (commit `5a1d902c2a89`).
 
 ---
 
@@ -55,7 +55,7 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, n_bootstrap=10,000 resamples).
-> *Git commit:* `2f19965574bc`
+> *Git commit:* `5a1d902c2a89`
 
 | Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Significance vs SummaC |
 |--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:----------------------:|
@@ -109,7 +109,7 @@ On FEVER (where claims are clean Wikipedia declarative statements free of genera
 
 > **Protocol:** Evaluates the contribution of each signal combination on held-out evaluation sets (n=500 per dataset, 10,000 bootstrap resamples).
 > **Fusion Model Specification:** Logistic Regression (`class_weight='balanced'`, `max_iter=1000`, `random_state=42`) trained exclusively on the disjoint 500-sample grid split (`models/fusion/model.joblib`) with zero synthetic data. Evaluated on the held-out evaluation split.
-> *Git commit:* `2f19965574bc`
+> *Git commit:* `5a1d902c2a89`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
@@ -136,7 +136,7 @@ To prevent inverted signal contamination, the discriminative direction of each r
 - **HaluEval QA:**
   - *NLI Entailment:* AUROC($s$) = **0.3002**, AUROC($1-s$) = **0.6998** (higher entailment indicates supported truth; $1-s$ indicates hallucination).
   - *Question-Answer Consistency:* AUROC($s$) = **0.9244**, AUROC($1-s$) = **0.0756**.
-    *(Crucial Signal Finding)*: In HaluEval, ChatGPT-generated hallucinations heavily copy and mirror question phrasing. High semantic similarity between question and answer is strongly indicative of **hallucination**, yielding AUROC = **0.9244** when predicting hallucination directly. The grid-trained fusion model learned a large negative weight ($eta = -2.4477$) on consistency, naturally capturing this artifact.
+    *(Crucial Signal Finding)*: In HaluEval, ChatGPT-generated hallucinations heavily copy and mirror question phrasing. High semantic similarity between question and answer is strongly indicative of **hallucination**, yielding AUROC = **0.9244** when predicting hallucination directly. The grid-trained fusion model learned a large negative weight ($\beta = -2.4477$) on consistency, naturally capturing this artifact.
 - **FEVER (Validation):**
   - *NLI Entailment:* AUROC($s$) = **0.0556**, AUROC($1-s$) = **0.9444**.
   - *Question-Answer Consistency:* Treated as **N/A** (FEVER claims are declarative sentences without user questions; zero artificial queries are injected).
