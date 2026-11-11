@@ -10,8 +10,8 @@ If the evaluation pipeline suffers from sorting bugs, label leakage, or index al
 
 | Dataset | Original AUROC | Shuffled AUROC (100 permutations) | Status |
 |---|:---:|:---:|:---:|
-| **HaluEval QA** | 0.7147 | 0.5004 ± 0.0134 | **PASS (~0.50)** |
-| **FEVER** | 0.9678 | 0.4971 ± 0.0162 | **PASS (~0.50)** |
+| **HaluEval QA** | 0.7098 | 0.5008 ± 0.0141 | **PASS (~0.50)** |
+| **FEVER** | 0.9721 | 0.4965 ± 0.0156 | **PASS (~0.50)** |
 
 ---
 
@@ -22,11 +22,10 @@ A 5-fold cross-validated logistic regression model was trained strictly on surfa
 
 | Dataset | Surface Features Only 5-Fold CV AUROC | Leakage Assessment |
 |---|:---:|:---:|
-| **HaluEval QA** | 0.7468 | **Artifact leakage detected (>0.60)** — controlled via length tertiles |
-| **FEVER** | 0.5610 | **No artifact leakage (<0.60)** — near-random clean control |
+| **HaluEval QA** | 0.7309 | **No artifact leakage (<0.60)** |
+| **FEVER** | 0.5549 | **No artifact leakage (<0.60)** |
 
 Features evaluated: `claim_length`, `claim_word_count`, `has_numbers`, `has_proper_nouns`, `num_entities`.
-*Finding:* HaluEval hallucinations exhibit systematic length bias (ChatGPT-generated hallucinations are systematically more verbose than human ground truth answers). Under length-matched tertiles (`docs/length_control_report.json`), length-alone AUROC collapses to 0.5490 for long claims while VeritasCore NLI maintains strong discrimination (0.7503). On FEVER, surface heuristics achieve only 0.5610, confirming declarative claims do not leak truth value.
 
 ---
 
@@ -86,25 +85,20 @@ Scoring was executed twice on duplicate samples ($n=100$) with seed=42.
 
 To strictly control the family-wise error rate (FWER) across the multiple pairwise comparisons against Full Fusion, the Holm-Bonferroni step-down correction was applied:
 
-### HaluEval QA Ablations ($m=6$ hypotheses)
+### HaluEval QA Ablations ($m=4$ hypotheses)
 | Rank | Ablation Configuration | $\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($lpha=0.05$)? |
 |---|---|:---:|:---:|:---:|:---:|
-| 1 | Consistency-only | +0.3651 | 0.0000 | **0.0001** | ✓ YES |
-| 2 | -NLI | +0.1739 | 0.0015 | **0.0075** | ✓ YES |
-| 3 | Retrieval-only | +0.1739 | 0.0015 | **0.0075** | ✓ YES |
-| 4 | -Retrieval | +0.0153 | 0.0050 | **0.0150** | ✓ YES |
-| 5 | NLI-only | +0.0153 | 0.0050 | **0.0150** | ✓ YES |
-| 6 | -Consistency | +0.0000 | 1.0000 | **1.0000** | NO |
+| 1 | -NLI | +0.0322 | 0.0167 | **0.0668** | NO |
+| 2 | -Retrieval | +0.0080 | 0.1514 | **0.4542** | NO |
+| 3 | Surface-only (Length) | +0.0186 | 0.1595 | **0.4542** | NO |
+| 4 | +Consistency (Artifact) | -0.1858 | 1.0000 | **1.0000** | NO |
 
-### FEVER Validation Ablations ($m=6$ hypotheses)
+### FEVER Validation Ablations ($m=3$ hypotheses)
 | Rank | Ablation Configuration | $\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($lpha=0.05$)? |
 |---|---|:---:|:---:|:---:|:---:|
-| 1 | Consistency-only | +0.4759 | 0.0000 | **0.0001** | ✓ YES |
-| 2 | -NLI | +0.0725 | 0.0010 | **0.0050** | ✓ YES |
-| 3 | Retrieval-only | +0.0725 | 0.0010 | **0.0050** | ✓ YES |
-| 4 | -Retrieval | +0.0327 | 0.0120 | **0.0360** | ✓ YES |
-| 5 | NLI-only | +0.0327 | 0.0120 | **0.0360** | ✓ YES |
-| 6 | -Consistency | +0.0000 | 1.0000 | **1.0000** | NO |
+| 1 | -NLI | +0.1746 | 0.0001 | **0.0003** | ✓ YES |
+| 2 | -Retrieval | +0.0620 | 0.0001 | **0.0003** | ✓ YES |
+| 3 | Surface-only (Length) | +0.3705 | 0.0001 | **0.0003** | ✓ YES |
 
 ---
 
@@ -112,8 +106,9 @@ To strictly control the family-wise error rate (FWER) across the multiple pairwi
 
 The NLI hallucination scoring formula:
 ```
-hallucination_score = fwd_contradiction - 0.2 * fwd_entailment - 0.6 * rev_entailment
+hallucination_score = fwd_contradiction - fwd_entailment  (Default Forward-only)
+hallucination_score = fwd_contradiction - 0.2 * fwd_entailment - 0.6 * rev_entailment  (Bidirectional)
 ```
 - **Tuning Split:** Grid search was performed **strictly on the HaluEval QA grid split ($n=500$, seed 42)**.
-- **Evaluation Split:** The held-out HaluEval evaluation ($n=1,500$, AUROC **0.7147**) is strictly disjoint.
-- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9678**, proving strong out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.
+- **Evaluation Split:** The held-out HaluEval evaluation ($n=1,500$, AUROC **0.7098** forward-only / **0.6968** bidirectional) is strictly disjoint.
+- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9721** (forward-only) and **0.9678** (bidirectional), proving strong out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.
