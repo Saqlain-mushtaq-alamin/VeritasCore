@@ -52,3 +52,4 @@ def test_compute_iaa_partial_agreement(tmp_path: Path):
     assert res["n_annotators"] == 2
     assert res["n_samples"] == 4
     assert res["pairwise_cohen_kappa"][0]["percent_agreement"] == 0.5
+
