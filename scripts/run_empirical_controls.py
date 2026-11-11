@@ -263,51 +263,22 @@ def run_determinism_test(n_samples: int = 100, seed: int = 42) -> dict[str, Any]
 def compute_holm_bonferroni(ablation_data: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
     """Control 6: Apply Holm-Bonferroni step-down correction to ablation p-values."""
     print("\n[Control 6] Applying Holm-Bonferroni Correction to Ablation P-Values...")
-    from stats_utils import paired_bootstrap_test
 
-    # Load ablation results
-    results = ablation_data.get("ablation_results", {})
-    holm_results = {}
-
-    for ds_name in ["halueval", "fever"]:
-        cfgs = results.get(ds_name, [])
-        if not cfgs:
-            continue
-        # Raw comparisons vs Full Fusion
-        comparisons = []
-        for cfg in cfgs[1:]:
-            name = cfg["config"]
-            # Extract p-value if present, or recalculate if scores available
-            comparisons.append({
-                "config": name,
-                "delta": 0.0,
-                "raw_p": 0.0,
-            })
-
-    # Read from the printed significance logs or calculate directly
-    # Pre-calculated paired p-values from Step 5
-    raw_p_values = {
-        "halueval": [
-            ("-NLI", +0.1739, 0.0015),
-            ("-Retrieval", +0.0153, 0.0050),
-            ("-Consistency", 0.0000, 1.0000),
-            ("NLI-only", +0.0153, 0.0050),
-            ("Retrieval-only", +0.1739, 0.0015),
-            ("Consistency-only", +0.3651, 0.00001),
-        ],
-        "fever": [
-            ("-NLI", +0.0725, 0.0010),
-            ("-Retrieval", +0.0327, 0.0120),
-            ("-Consistency", 0.0000, 1.0000),
-            ("NLI-only", +0.0327, 0.0120),
-            ("Retrieval-only", +0.0725, 0.0010),
-            ("Consistency-only", +0.4759, 0.00001),
-        ],
-    }
-
+    paired_sig = ablation_data.get("paired_significance", {})
     holm_corrected = {}
-    for ds, tests in raw_p_values.items():
-        # Sort tests by raw p-value ascending
+
+    for ds in ["halueval", "fever"]:
+        tests = []
+        for item in paired_sig.get(ds, []):
+            cfg = item.get("short") or item.get("config")
+            delta = float(item.get("delta_auroc", 0.0))
+            p_val = item.get("p_value")
+            if p_val is None or (isinstance(p_val, float) and np.isnan(p_val)):
+                continue
+            # When p_val is 0.0 with 10k resamples, resolution is 1e-4
+            p_raw = max(float(p_val), 1e-4) if p_val == 0.0 else float(p_val)
+            tests.append((cfg, delta, p_raw))
+
         sorted_tests = sorted(tests, key=lambda x: x[2])
         m = len(sorted_tests)
         adjusted_records = []
@@ -327,7 +298,7 @@ def compute_holm_bonferroni(ablation_data: dict[str, Any]) -> dict[str, list[dic
                 "holm_p": p_holm,
                 "significant_after_holm": is_sig,
             })
-            print(f"  [{ds}] {cfg:<20}: raw p={p_raw:.4f} -> Holm p={p_holm:.4f} (Sig: {is_sig})")
+            print(f"  [{ds}] {cfg:<25}: raw p={p_raw:.4f} -> Holm p={p_holm:.4f} (Sig: {is_sig})")
 
         holm_corrected[ds] = adjusted_records
 
@@ -428,13 +399,13 @@ def generate_empirical_controls_report() -> None:
     doc.append("")
     doc.append("To strictly control the family-wise error rate (FWER) across the multiple pairwise comparisons against Full Fusion, the Holm-Bonferroni step-down correction was applied:")
     doc.append("")
-    doc.append("### HaluEval QA Ablations ($m=6$ hypotheses)")
+    doc.append(f"### HaluEval QA Ablations ($m={len(holm_res['halueval'])}$ hypotheses)")
     doc.append("| Rank | Ablation Configuration | $\\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($\alpha=0.05$)? |")
     doc.append("|---|---|:---:|:---:|:---:|:---:|")
     for r in holm_res["halueval"]:
         doc.append(f"| {r['rank']} | {r['config']} | {r['delta_auroc']:+.4f} | {r['raw_p']:.4f} | **{r['holm_p']:.4f}** | {'✓ YES' if r['significant_after_holm'] else 'NO'} |")
     doc.append("")
-    doc.append("### FEVER Validation Ablations ($m=6$ hypotheses)")
+    doc.append(f"### FEVER Validation Ablations ($m={len(holm_res['fever'])}$ hypotheses)")
     doc.append("| Rank | Ablation Configuration | $\\Delta$ AUROC | Raw $p$-value | Holm-Adjusted $p$ | Significant ($\alpha=0.05$)? |")
     doc.append("|---|---|:---:|:---:|:---:|:---:|")
     for r in holm_res["fever"]:
@@ -446,11 +417,12 @@ def generate_empirical_controls_report() -> None:
     doc.append("")
     doc.append("The NLI hallucination scoring formula:")
     doc.append("```")
-    doc.append("hallucination_score = fwd_contradiction - 0.2 * fwd_entailment - 0.6 * rev_entailment")
+    doc.append("hallucination_score = fwd_contradiction - fwd_entailment  (Default Forward-only)")
+    doc.append("hallucination_score = fwd_contradiction - 0.2 * fwd_entailment - 0.6 * rev_entailment  (Bidirectional)")
     doc.append("```")
     doc.append("- **Tuning Split:** Grid search was performed **strictly on the HaluEval QA grid split ($n=500$, seed 42)**.")
-    doc.append("- **Evaluation Split:** The held-out HaluEval evaluation ($n=1,500$, AUROC **0.7147**) is strictly disjoint.")
-    doc.append("- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9678**, proving strong out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.")
+    doc.append("- **Evaluation Split:** The held-out HaluEval evaluation ($n=1,500$, AUROC **0.7098** forward-only / **0.6968** bidirectional) is strictly disjoint.")
+    doc.append("- **Out-of-Domain Transfer:** The formula was **NEVER fitted or tuned on FEVER**. FEVER was evaluated zero-shot with the fixed weights, achieving AUROC **0.9721** (forward-only) and **0.9678** (bidirectional), proving strong out-of-domain transfer from QA dialogue to Wikipedia declarative claims without hyperparameter overfitting.")
 
     report_content = "\n".join(doc)
     with open(OUTPUT_REPORT, "w", encoding="utf-8") as f:
