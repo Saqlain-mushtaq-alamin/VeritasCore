@@ -183,7 +183,10 @@ class NLIVerifier(BaseVerifier):
         revision = self.config.models.nli_revision
         try:
             import torch
-            self._tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
+            try:
+                self._tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision)
+            except Exception:
+                self._tokenizer = AutoTokenizer.from_pretrained(model_name, revision=revision, local_files_only=True)
             self._device = self._resolve_device()
 
             load_kwargs: dict[str, Any] = {}
@@ -194,7 +197,11 @@ class NLIVerifier(BaseVerifier):
             else:
                 load_kwargs["torch_dtype"] = torch.float32
 
-            self._model = AutoModelForSequenceClassification.from_pretrained(model_name, **load_kwargs)
+            try:
+                self._model = AutoModelForSequenceClassification.from_pretrained(model_name, **load_kwargs)
+            except Exception:
+                load_kwargs["local_files_only"] = True
+                self._model = AutoModelForSequenceClassification.from_pretrained(model_name, **load_kwargs)
             self._model = self._model.to(self._device)
             self._model.eval()
 
