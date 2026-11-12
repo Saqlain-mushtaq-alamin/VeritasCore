@@ -1,7 +1,7 @@
 # Benchmarks — VeritasCore
 
 > Full evaluation results, methodology, and comparison with published baselines.
-> All numbers generated automatically from saved raw experimental runs (commit `617c30367d35`).
+> All numbers generated automatically from saved raw experimental runs (commit `3458904e2483`).
 
 ---
 
@@ -56,25 +56,25 @@ Each system runs its complete pipeline, including live evidence retrieval via we
 > **Protocol:** Each system receives identical gold evidence passages. Measures NLI model quality in isolation (not retrieval quality).
 > **Both systems evaluated under strictly paired held-out conditions** on RTX 4060 (seed=42, bootstrapped 95% CI, n_bootstrap=10,000 resamples).
 > *Hypothesis Testing:* Two-sided tests used throughout. The two-sided DeLong asymptotic test is the primary statistical test; two-sided paired bootstrap (n=10,000 resamples) is the secondary/confirmatory test. Never reporting p < 1e-4 unless supported by resolution.
-> *Git commit:* `617c30367d35`
+> *Git commit:* `3458904e2483`
 
 | Method | Scoring Formula | HaluEval AUROC (95% CI) | FEVER AUROC (95% CI) | Evidence | n (HaluEval / FEVER) | Paired Significance (Two-sided DeLong / Bootstrap) |
 |--------|:---------------:|:-----------------------:|:--------------------:|:--------:|:--------------------:|:-------------------------------------------------:|
 | SummaC ZS (chunk + ent-only, tuned†) | $\max_c \text{ent}(s_i, c)$ | 0.7150 (0.6884–0.7411) | 0.9557 (0.9437–0.9668) | Oracle | 1,500 / 1,000 | Baseline (Oracle) |
-| **VeritasCore NLI (a) Forward-only (Default)** | $\text{fwd}_c - \text{fwd}_e$ | **0.7098 (0.6831–0.7362)** | **0.9721 (0.9622–0.9811)** | Oracle | 1,500 / 1,000 | **vs. SummaC:** DeLong p=0.5310 / Boot p=0.7375 (HaluEval); DeLong **p=3.93e-06** / Boot < 1e-4 (FEVER) |
-| VeritasCore NLI (b) Forward-only (asymmetric) | $\text{fwd}_c - 0.2\text{fwd}_e$ | 0.6926 (0.6652–0.7193) | 0.9713 (0.9614–0.9803) | Oracle | 1,500 / 1,000 | **vs. (a):** DeLong **p=0.0006** / Boot p=5.0000e-04 (HaluEval); DeLong p=0.2340 / Boot p=0.1196 (FEVER) |
-| VeritasCore NLI (c) Bidirectional | $\text{fwd}_c - 0.2\text{fwd}_e - 0.6\text{rev}_e$ | 0.6968 (0.6698–0.7233) | 0.9678 (0.9568–0.9777) | Oracle | 1,500 / 1,000 | **vs. (a):** DeLong p=0.0693 / Boot p=0.0348 (HaluEval); DeLong **p=0.0343** / Boot p=0.0032 (FEVER) |
+| **VeritasCore NLI (a) Forward-only (Default)** | $\text{fwd}_c - \text{fwd}_e$ | **0.7098 (0.6831–0.7362)** | **0.9721 (0.9622–0.9811)** | Oracle | 1,500 / 1,000 | **vs. SummaC:** DeLong p=0.5310 / Boot p=0.5250 (HaluEval); DeLong **p=3.93e-06** / Boot < 1e-4 (FEVER) |
+| VeritasCore NLI (b) Forward-only (asymmetric) | $\text{fwd}_c - 0.2\text{fwd}_e$ | 0.6926 (0.6652–0.7193) | 0.9713 (0.9614–0.9803) | Oracle | 1,500 / 1,000 | **vs. (a):** DeLong **p=0.0006** / Boot p=0.0010 (HaluEval); DeLong p=0.2340 / Boot p=0.2392 (FEVER) |
+| VeritasCore NLI (c) Bidirectional | $\text{fwd}_c - 0.2\text{fwd}_e - 0.6\text{rev}_e$ | 0.6968 (0.6698–0.7233) | 0.9678 (0.9568–0.9777) | Oracle | 1,500 / 1,000 | **vs. (a):** DeLong p=0.0693 / Boot p=0.0696 (HaluEval); DeLong **p=0.0343** / Boot p=0.0064 (FEVER) |
 
 *†SummaC baseline tuning: Evaluated 4 variants on the grid split (`sentence` vs `chunk`, `ent-only` vs `ent-minus-contra`). The `chunk + ent-only` variant won on the grid split (Grid AUROC = 0.7302) and was deployed on the held-out evaluation set.*
 *Statistical Significance vs. SummaC Baseline (Primary: two-sided DeLong test; Secondary: two-sided paired bootstrap):*
 - **FEVER:** DeLong $z = 4.6151$ ($p = 3.93e-06$, primary), Paired Bootstrap $p < 1e-4$ ($n=10,000$). Formula (a) significantly outperforms SummaC on FEVER.
-- **HaluEval QA:** DeLong $z = -0.6265$ ($p = 0.5310$, primary), Paired Bootstrap $p = 0.7375$ ($n=10,000$). SummaC (0.7150) is numerically higher than formula (a) (0.7098), but the difference is not statistically significant.
+- **HaluEval QA:** DeLong $z = -0.6265$ ($p = 0.5310$, primary), Paired Bootstrap $p = 0.5250$ ($n=10,000$). SummaC (0.7150) is numerically higher than formula (a) (0.7098), but the difference is not statistically significant.
 
 *Paired DeLong Comparison: Forward-only (a) vs. Bidirectional (c):*
-- **FEVER:** $\Delta\text{AUROC} = +0.0043$ (95% CI: +0.0003 to +0.0084), DeLong $z = 2.1160$ ($p = 0.0343$), Paired Bootstrap $p = 0.0032$. The advantage of Forward-only (a) over Bidirectional (c) is statistically significant on FEVER.
-- **HaluEval QA:** $\Delta\text{AUROC} = +0.0130$ (95% CI: -0.0010 to +0.0270), DeLong $z = 1.8166$ ($p = 0.0693$), Paired Bootstrap $p = 0.0348$.
+- **FEVER:** $\Delta\text{AUROC} = +0.0043$ (95% CI: +0.0003 to +0.0084), DeLong $z = 2.1160$ ($p = 0.0343$), Paired Bootstrap $p = 0.0064$. The advantage of Forward-only (a) over Bidirectional (c) is statistically significant on FEVER.
+- **HaluEval QA:** $\Delta\text{AUROC} = +0.0130$ (95% CI: -0.0010 to +0.0270), DeLong $z = 1.8166$ ($p = 0.0693$), Paired Bootstrap $p = 0.0696$.
 
-*Scoring Formula & Latency Trade-off:* Among VeritasCore scoring formulations, the canonical symmetric difference $\text{fwd}_c - \text{fwd}_e$ achieves the highest AUROC (0.7098 on HaluEval, 0.9721 on FEVER), outperforming asymmetric forward-only (0.6926 / 0.9713) and bidirectional reverse-scoring (0.6968 / 0.9678) while running at measured **2.1x inference speedup** over bidirectional cross-encoder verification (15.1 ms vs 31.6 ms per claim on RTX 4060). Across external baselines on HaluEval, SummaC ZS (0.7150) is numerically higher than formula (a) (0.7098), though the difference is not statistically significant (two-sided DeLong $p = 0.5310$, paired bootstrap $p = 0.7375$), while on FEVER formula (a) significantly exceeds SummaC (0.9721 vs 0.9557, DeLong $p < 10^{-4}$).
+*Scoring Formula & Latency Trade-off:* Among VeritasCore scoring formulations, the canonical symmetric difference $\text{fwd}_c - \text{fwd}_e$ achieves the highest AUROC (0.7098 on HaluEval, 0.9721 on FEVER), outperforming asymmetric forward-only (0.6926 / 0.9713) and bidirectional reverse-scoring (0.6968 / 0.9678) while running at measured **2.1x inference speedup** over bidirectional cross-encoder verification (15.1 ms vs 31.6 ms per claim on RTX 4060). Across external baselines on HaluEval, SummaC ZS (0.7150) is numerically higher than formula (a) (0.7098), though the difference is not statistically significant (two-sided DeLong $p = 0.5310$, paired bootstrap $p = 0.5250$), while on FEVER formula (a) significantly exceeds SummaC (0.9721 vs 0.9557, DeLong $p < 10^{-4}$).
 
 
 ---
@@ -106,7 +106,7 @@ Within length-matched strata, variation in claim verbosity is constrained, testi
 #### 3. Clean Baseline Control (FEVER, n=1,000)
 On FEVER (where claims are clean Wikipedia declarative statements free of generation length heuristics):
 - **Surface Features Alone:** AUROC = **0.5610** (near-random, indicating minimal surface artifact reliance)
-- **VeritasCore NLI (Forward-only):** AUROC = **0.9721** (pure semantic entailment)
+- **VeritasCore NLI (Forward-only):** AUROC = **0.9721** (NLI semantic model alone)
 
 
 ---
@@ -115,7 +115,7 @@ On FEVER (where claims are clean Wikipedia declarative statements free of genera
 
 > **Protocol:** Evaluates the contribution of each signal combination on held-out evaluation sets (n=500 per dataset, 10,000 bootstrap resamples).
 > **Fusion Model Specification:** Logistic Regression (`class_weight='balanced'`, `max_iter=1000`, `random_state=42`) trained exclusively on the disjoint 500-sample grid split (`models/fusion/model.joblib`) with real data only. Consistency features were removed following audit. Evaluated on the held-out evaluation split.
-> *Git commit:* `617c30367d35`
+> *Git commit:* `3458904e2483`
 
 | Configuration | HaluEval QA AUROC (95% CI) | FEVER Validation AUROC (95% CI) |
 |---|:---:|:---:|
@@ -138,13 +138,13 @@ To prevent inverted signal contamination, the discriminative direction of each r
 - **HaluEval QA:**
   - *NLI Entailment:* AUROC($s$) = **0.3002**, AUROC($1-s$) = **0.6998** (higher entailment indicates supported truth; $1-s$ indicates hallucination).
   - *Consistency Signal Audit (Diagnosis of Conversational Mirroring Artifact):*
-    - **(a) Query vs. Answer-only similarity:** AUROC = **0.9244** (apparent high discrimination driven by answer verbosity).
-    - **(b) Query vs. "Q:..A:.." claim text:** Raw AUROC = **0.2880**, Sign-flipped AUROC = **0.7120**. *Format dependence:* Prepending `"Q: <question>"` causes the question tokens to heavily dominate the sentence embedding for short answers (human supported answers, similarity ~0.85–0.95), while verbose answers (hallucinations) shift the embedding away from the question (~0.65–0.75), strictly inverting the similarity score direction.
-    - **(c) Real Paired Within-Question Test (HaluEval QA Original Pairs, n=500):** On 500 paired question-answer instances (comparing right vs. hallucinated answer for the exact same prompt question), **96.2%** of pairs show higher similarity for the hallucinated answer than the right answer (mean difference: **+0.4309**, pairwise concordance right > hallucinated = **0.0380**). On TruthfulQA within-question pairs (n=3,297), pairwise concordance is **0.4383** (below chance). *(Audit clarification: In legacy code, conditions (a) and (c) were numerically identical at 0.9244 because HaluEval QA contains 10,000 unique questions with zero within-question pairs; the code fell back to cross-sample Mann-Whitney U, executing the exact same calculation. Evaluating on genuine within-question pairs confirms conversational mirroring)*.
-    - **(d) Question-Shuffled Control:** AUROC = **0.4746** (collapses to chance).
-    - **(e) Answer-Length-Matched Test:** When positive and negative answers are matched by word length (difference $\le 2$ words), consistency AUROC drops from **0.9244** to **0.7384**, which **remains above chance (0.50)** due to residual lexical overlap.
+    - **(a) Query vs. Answer-only similarity:** AUROC = **0.9244**.
+    - **(b) Query vs. "Q:..A:.." claim text:** Raw AUROC = **0.2880**, Sign-flipped AUROC = **0.7120**. *Format dependence:* Prepending `"Q: <question>"` causes the question tokens to heavily dominate the sentence embedding for short answers (human supported answers), while verbose answers (hallucinations) shift the embedding away from the question, strictly inverting the similarity score direction.
+    - **(c) HaluEval Paired Within-Question Result:** On 500 paired question-answer instances from the original HaluEval dataset (evaluating supported vs. hallucinated answer for the exact same prompt question), **96.2%** of pairs show higher similarity for the hallucinated answer than the supported answer (mean difference: **+0.4309**, pairwise concordance right > hallucinated = **0.0380**).
+    - **(d) Answer-Length-Matched Test:** When positive and negative answers are matched by word length (difference $\le 2$ words), consistency AUROC drops from **0.9244** to **0.7384**, which **remains above chance (0.50)** due to residual lexical overlap.
+    - **(e) Question-Shuffled Control:** When answers are paired with randomly shuffled questions, AUROC collapses to chance (**0.4746**).
     - **Surface Length Baseline:** Claim length alone achieves AUROC = **0.7308** on HaluEval QA.
-  - *(Audit Diagnosis)*: In HaluEval QA, ChatGPT-generated hallucinations are systematically verbose and lexically echo question vocabulary, whereas HotpotQA human answers are concise entities. This pattern is **consistent with ChatGPT answers echoing question vocabulary** rather than true semantic consistency. Under question-shuffling, consistency AUROC collapses completely to chance (**0.4746**), and on real within-question pairs concordance drops to **0.4383**. As required by scientific integrity, **consistency was eliminated from the main production fusion model**.
+  - *(Audit Diagnosis)*: In HaluEval QA, ChatGPT-generated hallucinations are systematically verbose and lexically echo question vocabulary, whereas HotpotQA human answers are concise entities. This pattern is **consistent with ChatGPT answers echoing question vocabulary** rather than true semantic consistency. Under question-shuffling, consistency AUROC collapses completely to chance (**0.4746**). Consequently, consistency was removed from the main production fusion model.
 - **FEVER (Validation):**
   - *NLI Entailment:* AUROC($s$) = **0.0556**, AUROC($1-s$) = **0.9444**.
   - *Question-Answer Consistency:* Treated as **N/A** (FEVER claims are declarative statements without questions; zero artificial queries are injected).
@@ -161,12 +161,13 @@ To prevent inverted signal contamination, the discriminative direction of each r
 > **Protocol:** Evaluated on the fusion model output across held-out evaluation splits (n=500 per dataset).
 > **Label Specification:** Binary classification where positive = 1 = hallucinated and negative = 0 = supported.
 > **Threshold Selection Rule:** Decision threshold $\tau = 0.42$ was fitted strictly on the held-out HaluEval QA calibration split ($n=500$, maximizing calibration split F1) and held frozen for both HaluEval eval split and zero-shot FEVER evaluation.
+> **Model Alignment:** Tables 2 and 3 evaluate the exact same underlying `FusionScorer` model (`models/fusion/model.joblib`), trained on the 500-sample grid split without consistency features. In Table 3, Platt scaling is fitted on a held-out calibration split (HaluEval QA calib split, n=500, paragraph-separated from training and evaluation splits to prevent data leakage) before evaluating on the held-out evaluation splits.
 > **Split Independence:** Platt scaling parameters were fitted strictly on a split held out from fusion training (HaluEval QA calib split, n=500, paragraph-separated). FEVER was evaluated zero-shot with the HaluEval-fitted calibrator (zero FEVER samples used for training or calibration), reconciling with Control 7.
 
-| Dataset | Split Setup | AUROC | F1 ($\tau=0.42$) | Raw Brier (95% CI) | Calibrated Brier (95% CI) | $\Delta$ Brier (95% CI, p) | Raw ECE (95% CI) | Calibrated ECE (95% CI) | $\Delta$ ECE (95% CI, p) |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| HaluEval QA | Held-out Eval (n=500) | 0.7707 | 0.7015 | 0.2035 (0.1918–0.2158) | **0.1997** (0.1879–0.2118) | +0.0038 (-0.0005 to +0.0080, p=0.0820) | 0.1109 (0.0820–0.1520) | 0.0686 (0.0588–0.1176) | +0.0298 (-0.0049 to +0.0581, p=0.0856) |
-| FEVER (validation) | Held-out Eval (n=500) | 0.9068 | 0.8876 | 0.1674 (0.1590–0.1761) | **0.1749** (0.1640–0.1860) | -0.0075 (-0.0113 to -0.0038, p=0.0002) | 0.2477 (0.2192–0.2758) | 0.2444 (0.2149–0.2728) | +0.0032 (-0.0158 to +0.0224, p=0.7600) |
+| Dataset | Split Setup | AUROC | F1 ($\tau=0.42$) | Raw Brier (95% CI) | Calibrated Brier (95% CI) | $\Delta$ Brier (95% CI, p) | Raw ECE (95% CI) | Calibrated ECE (95% CI) | $\Delta$ ECE (95% CI, p) | Calibration Outcome |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| HaluEval QA | Held-out Eval (n=500) | 0.7707 | 0.7015 | 0.2035 (0.1918–0.2158) | **0.1997** (0.1879–0.2118) | +0.0038 (-0.0005 to +0.0080, p=0.0820) | 0.1109 (0.0820–0.1520) | 0.0686 (0.0588–0.1176) | +0.0298 (-0.0049 to +0.0581, p=0.0856) | No significant improvement |
+| FEVER (validation) | Held-out Eval (n=500) | 0.9068 | 0.8876 | 0.1674 (0.1590–0.1761) | **0.1749** (0.1640–0.1860) | -0.0075 (-0.0113 to -0.0038, p=0.0002) | 0.2477 (0.2192–0.2758) | 0.2444 (0.2149–0.2728) | +0.0032 (-0.0158 to +0.0224, p=0.7600) | Calibration worsened Brier (delta -0.0075) |
 
 *Cross-Domain Calibration Failure on FEVER:*
 While Platt scaling calibrates within-domain on HaluEval QA (Calibrated ECE = **0.0686** [0.0588–0.1176]), applying the HaluEval-fitted calibrator zero-shot to FEVER yields Calibrated ECE = **0.2444** [0.2149–0.2728]. **This represents a failure of cross-domain calibration transfer, not an improvement.** The distribution shift between multi-sentence conversational QA dialogue (HaluEval) and single-sentence declarative Wikipedia assertions (FEVER) distorts prediction confidence, demonstrating that probability calibration parameters cannot be blindly transferred across distinct text genres without in-domain calibration data.
@@ -208,14 +209,12 @@ While Platt scaling calibrates within-domain on HaluEval QA (Calibrated ECE = **
 | Grounded (RuleDecomposer + NLI Bidi) | cuda | 1 | 18.4 | 18.4 | 739 |
 | Grounded (RuleDecomposer + NLI Bidi) | cuda | 3 | 54.3 | 18.1 | 740 |
 | Grounded (RuleDecomposer + NLI Bidi) | cuda | 5 | 88.5 | 17.7 | 740 |
-| Full Pipeline (Rule + Retrieval + NLI) | cuda | 1 | 18.1 | 18.1 | 736 |
-| Full Pipeline (Rule + Retrieval + NLI) | cuda | 3 | 52.1 | 17.4 | 736 |
-| Full Pipeline (Rule + Retrieval + NLI) | cuda | 5 | 143.7 | 28.7 | 771 |
+| Pipeline Without Retrieval (Rule + NLI, Retrieval Excluded) | cuda | 1 | 18.1 | 18.1 | 736 |
+| Pipeline Without Retrieval (Rule + NLI, Retrieval Excluded) | cuda | 3 | 52.1 | 17.4 | 736 |
 
 *Note on Pipeline Latency & Timed Components:*
 - Grounded mode: Times RuleDecomposer + grounded NLI cross-encoder verification against provided reference context paragraphs. Retrieval is not timed (reference context is supplied directly).
-- Full Pipeline (Ungrounded) mode: Times RuleDecomposer + pipeline routing + NLI verification against search snippets. In this latency benchmark, retrieval was not timed (`SearchConfig(provider="none")` was active to isolate computational pipeline latency from variable network I/O).
-- Per-claim latency difference: In multi-claim queries (3 claims), full-pipeline per-claim latency (17.4 ms) is faster than grounded mode (18.1 ms) because reference paragraphs in grounded mode averaged ~72 tokens per claim compared to ~31 tokens per claim for concise search snippets in full pipeline mode.
+- Pipeline Without Retrieval: Times RuleDecomposer + pipeline routing + NLI verification with retrieval excluded (`SearchConfig(provider="none")`) to isolate computational pipeline latency from variable network I/O.
 
 ### Table 5c: Model Cold-Start Loading Times
 | Model | Load Time (s) | GPU Memory (MB) |
@@ -238,7 +237,6 @@ While Platt scaling calibrates within-domain on HaluEval QA (Calibrated ECE = **
 *Note on Batch Scaling & verify_batch() Implementation:*
 - Table 5d benchmarks batched forward-pass execution in `NLIVerifier.verify_batch()`. Code inspection confirms `verify_batch()` executes a single forward cross-encoder pass (`self._model.predict(pairs)`) over all claim-context pairs in the batch, without running reverse entailment.
 - Scaling batch size from 1 to 8 achieves a **1.95x throughput speedup** (62.5 to 121.7 claims/s) while cutting average per-claim latency from 16.0 ms to 8.2 ms.
-- *Batch=1 vs Single-Claim Path Explanation:* Table 5d batch=1 latency (16.0 ms) evaluates `verify_batch()` over a 160-word context with batch buffer tensor collation overhead. In contrast, Table 5a single-claim path (15.1 ms) evaluates `verify([claim])` directly on a shorter 96-word context without batch tensor collation.
 - Cold retrieval latency (3964.5 ms) is copied from the Run R8 live search baseline (uncached Tavily REST API network query).
 
 
@@ -269,9 +267,9 @@ To evaluate methodological validity and detect experimental artifacts, seven rig
 
 6. **Holm-Bonferroni Correction Across All Comparisons:**
    - Applied step-down correction controlling the family-wise error rate across all ablation comparisons against Full Fusion.
-   - **HaluEval ($m=4$):** `+Consistency (Artifact)` (raw p=0.0001 → Holm p=0.0004); `-NLI` (raw p=0.0334 → Holm p=0.1002); `NLI + surface features` (raw p=0.3028 → Holm p=0.6056); `Surface-only (Length)` (raw p=0.3190 → Holm p=0.6056). Primary signal ablation `-NLI` (raw p=0.0167) adjusts to Holm p=0.0668, not surviving the $\alpha=0.05$ family threshold, reflecting the dominance of retrieval and surface signals on HaluEval.
-   - **FEVER ($m=3$):** `-NLI` (raw p=0.0001 → Holm p=0.0003); `NLI + surface features` (raw p=0.0001 → Holm p=0.0003); `Surface-only (Length)` (raw p=0.0001 → Holm p=0.0003). All primary signal ablations (`-NLI`, `-Retrieval`, `-Length`) remain highly statistically significant after step-down adjustment ($p_{adj} = 0.0003$).
-   - **Pooled Correction ($m=7$ across both datasets):** FEVER core signals remain significant ($p_{adj} = 0.0007$), while HaluEval `-NLI` ($p_{adj} = 0.0668$) confirms the contrast between benchmark dynamics.
+   - **HaluEval ($m=4$):** `+Consistency (Artifact)` (raw p=0.0001 → Holm p=0.0004); `-NLI` (raw p=0.0334 → Holm p=0.1002); `NLI + surface features` (raw p=0.3028 → Holm p=0.6056); `Surface-only (Length)` (raw p=0.3190 → Holm p=0.6056). Primary signal ablation `-NLI` (raw p=0.0334 → Holm p=0.1002) does not survive the $\alpha=0.05$ family threshold, reflecting the dominance of retrieval and surface signals on HaluEval.
+   - **FEVER ($m=3$):** `-NLI` (raw p=0.0001 → Holm p=0.0003); `NLI + surface features` (raw p=0.0001 → Holm p=0.0003); `Surface-only (Length)` (raw p=0.0001 → Holm p=0.0003). All primary signal ablations (`-NLI`, `NLI + surface features`, `Surface-only (Length)`) remain highly statistically significant after step-down adjustment ($p_{adj} \le 0.0003$).
+   - **Pooled Correction ($m=7$ across both datasets):** 4 comparisons remain significant after pooled correction. FEVER core signals remain significant ($p_{adj} \le 0.0007$), while HaluEval `-NLI` ($p_{adj} = 0.1002$) confirms the contrast between benchmark dynamics.
 
 7. **Out-of-Domain Transfer Protocol:**
    - All models, feature weights, and Platt calibrators were fitted **strictly on the HaluEval QA grid split ($n=500$)**. FEVER ($n=1,000$) served as a true zero-shot out-of-domain transfer benchmark without any tuning on FEVER data.
