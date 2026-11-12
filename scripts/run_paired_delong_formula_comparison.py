@@ -180,6 +180,7 @@ def run_comparisons_for_dataset(
             "y_score": scores_c,
         },
         "comparison_a_vs_c": {
+            "dataset": dataset_name,
             "method_a": "VeritasCore NLI (a) Forward-only (fwd_c - fwd_e)",
             "method_b": "VeritasCore NLI (c) Bidirectional (fwd_c - 0.2*fwd_e - 0.6*rev_e)",
             "auroc_a": pt_a,
@@ -194,6 +195,7 @@ def run_comparisons_for_dataset(
             "statistically_significant_p05": bool(p_ac < 0.05),
         },
         "comparison_a_vs_b": {
+            "dataset": dataset_name,
             "method_a": "VeritasCore NLI (a) Forward-only (fwd_c - fwd_e)",
             "method_b": "VeritasCore NLI (b) Asymmetric (fwd_c - 0.2*fwd_e)",
             "auroc_a": pt_a,
